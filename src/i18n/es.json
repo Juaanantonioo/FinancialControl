@@ -1,0 +1,19 @@
+{
+  "app": {
+    "nombre": "FinancialControl"
+  },
+  "inicio": {
+    "titulo": "FinancialControl",
+    "entornoListo": "El entorno está listo.",
+    "diagnostico": "Diagnóstico"
+  },
+  "diagnostico": {
+    "titulo": "Diagnóstico",
+    "supabase": "Conexión con Supabase",
+    "supabaseSinConfigurar": "Sin configurar. Falta el fichero .env con la dirección y la clave pública.",
+    "supabaseProbando": "Probando…",
+    "supabaseCorrecto": "Correcto. Filas leídas de la tabla de prueba: {{filas}}",
+    "supabaseError": "Error: {{mensaje}}",
+    "probar": "Probar de nuevo"
+  }
+}
