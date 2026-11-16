@@ -10,7 +10,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactElement } from 'react';
 
-import Movimientos from '@/app/(tabs)/index';
+import Movimientos from '@/app/(tabs)/movimientos';
 import Cuentas from '@/app/(tabs)/cuentas';
 import PantallaDeCategorias from '@/app/categorias';
 import PantallaDeCuenta from '@/app/cuenta';
@@ -25,7 +25,7 @@ jest.mock('expo-router', () => {
   const { Text } = jest.requireActual('react-native');
   const { createElement } = jest.requireActual('react');
   return {
-    router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
+    router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), navigate: jest.fn() },
     useLocalSearchParams: jest.fn(() => ({})),
     Link: ({ children }: { children: unknown }) => createElement(Text, null, children),
   };

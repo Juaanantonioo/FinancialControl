@@ -22,11 +22,47 @@
     "diaAnterior": "Día anterior",
     "diaSiguiente": "Día siguiente",
     "subir": "Subir",
-    "bajar": "Bajar"
+    "bajar": "Bajar",
+    "mesAnterior": "Mes anterior",
+    "mesSiguiente": "Mes siguiente",
+    "volver": "Volver"
   },
   "pestanas": {
+    "inicio": "Inicio",
     "movimientos": "Movimientos",
     "cuentas": "Cuentas"
+  },
+  "inicio": {
+    "titulo": "Inicio",
+    "balanceDelMes": "Balance del mes",
+    "ingresos": "Ingresos",
+    "gastos": "Gastos",
+    "ahorro": "Has guardado el {{porcentaje}} % de lo que has ingresado.",
+    "gastoDeMas": "Has gastado {{importe}} más de lo que has ingresado.",
+    "sinIngresos": "Este mes no hay ingresos anotados.",
+    "sinMovimientos": "Este mes no tiene ingresos ni gastos anotados.",
+    "balanceLeido": "Balance de {{mes}}: {{balance}}. Ingresos: {{ingresos}}. Gastos: {{gastos}}.",
+    "divisa": "Divisa",
+    "cuentas": "Tus cuentas",
+    "cuentasVacio": "Todavía no tienes cuentas. Crea la primera para empezar a anotar lo que entra y lo que sale.",
+    "crearCuenta": "Crear una cuenta",
+    "enElMes": "En el mes: {{variacion}}",
+    "entranYSalen": "Entran {{entradas}} · Salen {{salidas}}",
+    "sinMovimientosEnCuenta": "Sin movimientos en el mes",
+    "archivada": "Archivada",
+    "cuentaLeida": "{{nombre}}. Saldo: {{saldo}}. En el mes entran {{entradas}}, salen {{salidas}} y el cambio es de {{variacion}}.",
+    "gastoPorCategoria": "En qué se ha ido el dinero",
+    "gastoVacio": "Este mes no hay gastos anotados. Cuando anotes uno, aquí verás en qué se reparte.",
+    "anadirMovimiento": "Añadir un movimiento",
+    "gastado": "Gastado",
+    "otras": "Otras",
+    "sinCategoria": "Sin categoría",
+    "parteLeida": "{{nombre}}: {{importe}}, el {{porcentaje}} % del gasto del mes. Abre sus movimientos.",
+    "parteCorta": "{{nombre}}, {{porcentaje}} %",
+    "anilloLeido": "Reparto del gasto de {{mes}}: {{total}} en total. {{partes}}.",
+    "evolucion": "Últimos seis meses",
+    "evolucionVacio": "Todavía no hay ingresos ni gastos anotados en estos meses.",
+    "mesLeido": "{{mes}}: ingresos {{ingresos}}, gastos {{gastos}}."
   },
   "tipoDeMovimiento": {
     "gasto": "Gasto",
@@ -172,7 +208,20 @@
     "mes9": "septiembre",
     "mes10": "octubre",
     "mes11": "noviembre",
-    "mes12": "diciembre"
+    "mes12": "diciembre",
+    "mesCorto1": "ene",
+    "mesCorto2": "feb",
+    "mesCorto3": "mar",
+    "mesCorto4": "abr",
+    "mesCorto5": "may",
+    "mesCorto6": "jun",
+    "mesCorto7": "jul",
+    "mesCorto8": "ago",
+    "mesCorto9": "sep",
+    "mesCorto10": "oct",
+    "mesCorto11": "nov",
+    "mesCorto12": "dic",
+    "diaYMes": "{{dia}} de {{mes}} de {{anio}}"
   },
   "diagnostico": {
     "titulo": "Diagnóstico",
@@ -183,5 +232,17 @@
     "supabaseCorrecto": "Correcto. Filas leídas de la tabla de prueba: {{filas}}",
     "supabaseError": "Error: {{mensaje}}",
     "probar": "Probar de nuevo"
+  },
+  "detalleDeCuenta": {
+    "saldoActual": "Saldo actual",
+    "entradas": "Entradas",
+    "salidas": "Salidas",
+    "cambio": "Cambio en el mes",
+    "editar": "Editar",
+    "movimientosDelMes": "Movimientos del mes",
+    "vacio": "Esta cuenta no tiene movimientos en {{mes}}.",
+    "anteriores": "Los movimientos anteriores al {{fecha}} aparecen en la lista, pero no cuentan: el saldo inicial ya los incluye.",
+    "noEncontrada": "Esta cuenta ya no existe.",
+    "resumenLeido": "Saldo actual: {{saldo}}. En {{mes}} entran {{entradas}}, salen {{salidas}} y el cambio es de {{variacion}}."
   }
 }

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n';
 import { probarConexion, type ResultadoPrueba } from '@/lib/supabase';
-import { Espacio, TactilMinimo, useColores } from '@/theme';
+import { Espacio, Letra, Radio, TactilMinimo, useColores } from '@/theme';
 
 /**
  * Pantalla de diagnóstico, solo para desarrollo. Comprueba que la app lee la
@@ -62,10 +62,10 @@ export default function Diagnostico() {
 
 const estilos = StyleSheet.create({
   contenedor: { flex: 1, padding: Espacio.m, gap: Espacio.s },
-  etiqueta: { fontSize: 17, fontWeight: '600' },
+  etiqueta: { fontSize: Letra.cuerpo, fontWeight: '600' },
   boton: {
     minHeight: TactilMinimo,
-    borderRadius: 10,
+    borderRadius: Radio.m,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Espacio.m,

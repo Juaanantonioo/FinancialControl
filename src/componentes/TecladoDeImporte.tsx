@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { FormatoRegional, TeclaDeImporte } from '@/dominio/dinero';
 import { t } from '@/i18n';
-import { useColores } from '@/theme';
+import { cifrasTabulares, Radio, useColores } from '@/theme';
 
 const FILAS: TeclaDeImporte[][] = [
   ['1', '2', '3'],
@@ -46,9 +46,9 @@ export function TecladoDeImporte({
                 testID={`tecla-${tecla}`}
                 style={({ pressed }) => [
                   estilos.tecla,
-                  { backgroundColor: pressed ? c.borde : 'transparent' },
+                  { backgroundColor: pressed ? c.superficieSuave : c.transparente },
                 ]}>
-                <Text style={[estilos.texto, { color: c.texto }]}>{texto}</Text>
+                <Text style={[estilos.texto, cifrasTabulares, { color: c.texto }]}>{texto}</Text>
               </Pressable>
             );
           })}
@@ -61,6 +61,12 @@ export function TecladoDeImporte({
 const estilos = StyleSheet.create({
   teclado: { borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 4 },
   fila: { flexDirection: 'row' },
-  tecla: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
-  texto: { fontSize: 26, fontVariant: ['tabular-nums'] },
+  tecla: {
+    flex: 1,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radio.m,
+  },
+  texto: { fontSize: 26, fontWeight: '500' },
 });

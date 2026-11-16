@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
+import { useEffect } from 'react';
 
 import { ProveedorDeAvisos } from '@/estado/Aviso';
+import { seguirReducirMovimiento } from '@/estado/animacion';
 import { ProveedorDeDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
 import { useColores } from '@/theme';
@@ -12,12 +14,15 @@ import { useColores } from '@/theme';
  */
 export default function RootLayout() {
   const c = useColores();
+  // Los gráficos necesitan saber si está activado «Reducir movimiento».
+  useEffect(seguirReducirMovimiento, []);
   return (
     <ProveedorDeDatos>
       <ProveedorDeAvisos>
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: c.superficie },
+            headerStyle: { backgroundColor: c.fondo },
+            headerShadowVisible: false,
             headerTintColor: c.acento,
             headerTitleStyle: { color: c.texto },
             contentStyle: { backgroundColor: c.fondo },
@@ -26,6 +31,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="movimiento" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="cuenta" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="detalle-de-cuenta" options={{ headerShown: false }} />
           <Stack.Screen name="categorias" options={{ title: t('categorias.titulo') }} />
           <Stack.Screen name="diagnostico" options={{ title: t('diagnostico.titulo') }} />
         </Stack>

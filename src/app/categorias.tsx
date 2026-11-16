@@ -2,10 +2,20 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Boton, Segmentos, TextoDeError } from '@/componentes/basicos';
+import { DistintivoDeCategoria } from '@/componentes/Tarjeta';
 import type { Categoria, TipoDeCategoria } from '@/dominio/modelo';
+import { aspectoDeCategoria } from '@/estado/aspecto';
 import { textoDeError, useConsulta, useDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
-import { Espacio, TactilMinimo, useColores } from '@/theme';
+import {
+  Espacio,
+  Letra,
+  Radio,
+  sombraDeTarjeta,
+  TactilMinimo,
+  useColores,
+  usePaleta,
+} from '@/theme';
 
 /**
  * Gestión de categorías, parte de P19 (T-027): crear, renombrar, ordenar y
@@ -13,6 +23,7 @@ import { Espacio, TactilMinimo, useColores } from '@/theme';
  */
 export default function PantallaDeCategorias() {
   const c = useColores();
+  const paleta = usePaleta();
   const { repos, notificarCambio } = useDatos();
   const [tipo, setTipo] = useState<TipoDeCategoria>('gasto');
   const [nueva, setNueva] = useState('');
@@ -66,7 +77,8 @@ export default function PantallaDeCategorias() {
     return (
       <View
         key={cat.id}
-        style={[estilos.fila, { backgroundColor: c.superficie, borderBottomColor: c.borde }]}>
+        style={[estilos.fila, sombraDeTarjeta(c), { backgroundColor: c.superficie }]}>
+        <DistintivoDeCategoria aspecto={aspectoDeCategoria(cat, paleta)} lado={32} />
         <TextInput
           value={editando ? edicion.texto : cat.nombre}
           onFocus={() => setEdicion({ id: cat.id, texto: cat.nombre })}
@@ -133,7 +145,7 @@ export default function PantallaDeCategorias() {
         {activas.map(fila)}
       </View>
 
-      <View style={[estilos.fila, { backgroundColor: c.superficie, borderBottomColor: c.borde }]}>
+      <View style={[estilos.fila, sombraDeTarjeta(c), { backgroundColor: c.superficie }]}>
         <TextInput
           value={nueva}
           onChangeText={setNueva}
@@ -193,7 +205,7 @@ function BotonDeIcono({
       accessibilityState={{ disabled: desactivado }}
       testID={testID}
       style={[estilos.icono, { opacity: desactivado ? 0.25 : 1 }]}>
-      <Text style={{ color: c.acento, fontSize: 16 }}>{simbolo}</Text>
+      <Text style={{ color: c.acento, fontSize: Letra.secundario }}>{simbolo}</Text>
     </Pressable>
   );
 }
@@ -206,9 +218,11 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     minHeight: TactilMinimo + Espacio.s,
     paddingLeft: Espacio.m,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: Espacio.s,
+    borderRadius: Radio.m,
+    gap: Espacio.s,
   },
-  nombre: { flex: 1, fontSize: 17, minHeight: TactilMinimo },
+  nombre: { flex: 1, fontSize: Letra.cuerpo, minHeight: TactilMinimo },
   icono: {
     minWidth: TactilMinimo,
     minHeight: TactilMinimo,
@@ -216,5 +230,5 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   botonArchivar: { paddingHorizontal: Espacio.s },
-  ayuda: { fontSize: 14, paddingVertical: Espacio.m },
+  ayuda: { fontSize: Letra.pequeno, paddingVertical: Espacio.m, lineHeight: 18 },
 });

@@ -23,11 +23,20 @@ import {
   tecladoDesdeCentimos,
 } from '@/dominio/dinero';
 import { fechaLocal, type Movimiento } from '@/dominio/modelo';
+import { aspectoDeCategoria } from '@/estado/aspecto';
 import { useAviso } from '@/estado/Aviso';
 import { textoDeError, useConsulta, useDatos } from '@/estado/Datos';
 import { formatoRegional } from '@/estado/formato';
 import { t } from '@/i18n';
-import { Espacio, TactilMinimo, useColores } from '@/theme';
+import {
+  cifrasTabulares,
+  Espacio,
+  Letra,
+  Radio,
+  TactilMinimo,
+  useColores,
+  usePaleta,
+} from '@/theme';
 
 type TipoEditable = 'gasto' | 'ingreso' | 'transferencia';
 
@@ -42,6 +51,7 @@ type TipoEditable = 'gasto' | 'ingreso' | 'transferencia';
  */
 export default function PantallaDeMovimiento() {
   const c = useColores();
+  const paleta = usePaleta();
   const margen = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { repos, notificarCambio } = useDatos();
@@ -145,6 +155,12 @@ export default function PantallaDeMovimiento() {
     ...categoriasElegibles.map((x) => ({ valor: x.id, texto: x.nombre })),
   ];
 
+  /** Emoji de la categoría delante de su nombre; nada si solo tiene inicial. */
+  function iconoDePildora(cat: (typeof fila)[number]): string {
+    const aspecto = aspectoDeCategoria(cat, paleta);
+    return aspecto.esLetra ? '' : aspecto.icono;
+  }
+
   function cambiarTipo(nuevo: TipoEditable) {
     setTipo(nuevo);
     setError(null);
@@ -235,7 +251,8 @@ export default function PantallaDeMovimiento() {
       <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
         {cabecera}
         <View style={estilos.mensaje}>
-          <Text style={{ color: c.textoSecundario, fontSize: 16, textAlign: 'center' }}>
+          <Text
+            style={{ color: c.textoSecundario, fontSize: Letra.secundario, textAlign: 'center' }}>
             {noExiste ? t('movimiento.noEncontrado') : t('movimiento.sinCuentas')}
           </Text>
           {noExiste ? null : (
@@ -270,7 +287,10 @@ export default function PantallaDeMovimiento() {
         />
 
         <Text
-          style={[estilos.importe, { color: c.texto }]}
+          style={[estilos.importe, cifrasTabulares, { color: c.texto }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
           testID="importe"
           accessibilityLabel={t('movimiento.importeLeido', {
             importe: formatearDinero(dinero(centimos, divisa), formato),
@@ -307,7 +327,7 @@ export default function PantallaDeMovimiento() {
           </Fila>
         ) : (
           <View style={[estilos.categorias, { borderBottomColor: c.borde }]}>
-            <Text style={{ color: c.textoSecundario, fontSize: 16, width: 96 }}>
+            <Text style={{ color: c.textoSecundario, fontSize: Letra.secundario, width: 96 }}>
               {t('movimiento.categoria')}
             </Text>
             <ScrollView
@@ -328,17 +348,17 @@ export default function PantallaDeMovimiento() {
                     style={[
                       estilos.pildora,
                       {
-                        backgroundColor: elegida ? c.acento : c.superficie,
+                        backgroundColor: elegida ? c.acentoSuave : c.superficie,
                         borderColor: elegida ? c.acento : c.borde,
                       },
                     ]}>
                     <Text
                       style={{
-                        color: elegida ? c.sobreAcento : c.texto,
-                        fontSize: 15,
-                        fontWeight: elegida ? '700' : '400',
+                        color: elegida ? c.acento : c.texto,
+                        fontSize: Letra.secundario,
+                        fontWeight: elegida ? '700' : '500',
                       }}>
-                      {elegida ? `✓ ${cat.nombre}` : cat.nombre}
+                      {`${elegida ? '✓' : iconoDePildora(cat)} ${cat.nombre}`.trim()}
                     </Text>
                   </Pressable>
                 );
@@ -418,14 +438,14 @@ const estilos = StyleSheet.create({
     paddingBottom: Espacio.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  titulo: { fontSize: 17, fontWeight: '600', flexShrink: 1 },
+  titulo: { fontSize: Letra.cuerpo, fontWeight: '700', flexShrink: 1 },
   contenido: { padding: Espacio.m, paddingBottom: Espacio.l },
   importe: {
-    fontSize: 44,
-    fontWeight: '700',
+    fontSize: 46,
+    fontWeight: '800',
+    letterSpacing: -1,
     textAlign: 'center',
     paddingVertical: Espacio.m,
-    fontVariant: ['tabular-nums'],
   },
   categorias: {
     flexDirection: 'row',
@@ -438,11 +458,16 @@ const estilos = StyleSheet.create({
   pildora: {
     minHeight: TactilMinimo,
     borderWidth: 1,
-    borderRadius: 22,
+    borderRadius: Radio.circulo,
     paddingHorizontal: Espacio.m,
     justifyContent: 'center',
   },
-  campoNombre: { fontSize: 17, minHeight: TactilMinimo, alignSelf: 'stretch', textAlign: 'right' },
+  campoNombre: {
+    fontSize: Letra.cuerpo,
+    minHeight: TactilMinimo,
+    alignSelf: 'stretch',
+    textAlign: 'right',
+  },
   enlace: { alignSelf: 'flex-start', marginTop: Espacio.s, paddingHorizontal: 0 },
   mensaje: {
     flex: 1,

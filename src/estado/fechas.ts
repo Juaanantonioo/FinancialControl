@@ -33,3 +33,18 @@ export function describirMes(mes: string): string {
   const [anio, numero] = mes.split('-').map(Number);
   return t('fechas.mesYAnio', { mes: t(`fechas.mes${numero}` as ClaveTexto), anio });
 }
+
+/** "nov" a partir de "2026-11". */
+export function mesCorto(mes: string): string {
+  return t(`fechas.mesCorto${Number(mes.split('-')[1])}` as ClaveTexto);
+}
+
+/** "15 de noviembre de 2026" a partir de "2026-11-15". */
+export function fechaLarga(fecha: string): string {
+  const d = aFecha(fecha);
+  return t('fechas.diaYMes', {
+    dia: d.getDate(),
+    mes: t(`fechas.mes${d.getMonth() + 1}` as ClaveTexto),
+    anio: d.getFullYear(),
+  });
+}

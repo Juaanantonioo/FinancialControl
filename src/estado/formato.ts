@@ -4,7 +4,7 @@
  */
 import { getLocales } from 'expo-localization';
 
-import { FORMATO_ES, type FormatoRegional } from '@/dominio/dinero';
+import { dinero, FORMATO_ES, formatearDinero, type FormatoRegional } from '@/dominio/dinero';
 
 let formato: FormatoRegional | null = null;
 
@@ -24,4 +24,20 @@ export function formatoRegional(): FormatoRegional {
     formato = FORMATO_ES;
   }
   return formato;
+}
+
+/** Importe con su símbolo en el formato de la región: "1.234,56 €". */
+export function importe(centimos: number, divisa: string): string {
+  return formatearDinero(dinero(centimos, divisa), formatoRegional());
+}
+
+/**
+ * Importe con signo explícito: "+12,00 €" o "-12,00 €". El cero va sin signo.
+ * El signo acompaña siempre al color (docs/03, apartado 8).
+ */
+export function conSigno(centimos: number, divisa: string): string {
+  const texto = importe(Math.abs(centimos), divisa);
+  if (centimos > 0) return `+${texto}`;
+  if (centimos < 0) return `-${texto}`;
+  return texto;
 }

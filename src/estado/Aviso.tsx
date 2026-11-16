@@ -15,7 +15,7 @@ import {
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Espacio, TactilMinimo, useColores } from '@/theme';
+import { Espacio, Letra, Radio, sombraFlotante, TactilMinimo, useColores } from '@/theme';
 
 type Aviso = { texto: string; accion?: { texto: string; alPulsar: () => void } };
 
@@ -51,7 +51,11 @@ export function ProveedorDeAvisos({ children }: { children: ReactNode }) {
       {children}
       {aviso ? (
         <View
-          style={[estilos.aviso, { backgroundColor: c.texto, bottom: margen.bottom + 96 }]}
+          style={[
+            estilos.aviso,
+            sombraFlotante(c),
+            { backgroundColor: c.texto, bottom: margen.bottom + 96 },
+          ]}
           accessibilityLiveRegion="polite"
           accessibilityRole="alert">
           <Text style={[estilos.texto, { color: c.fondo }]}>{aviso.texto}</Text>
@@ -84,18 +88,18 @@ const estilos = StyleSheet.create({
     position: 'absolute',
     left: Espacio.m,
     right: Espacio.m,
-    borderRadius: 12,
+    borderRadius: Radio.m,
     paddingLeft: Espacio.m,
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: TactilMinimo + Espacio.s,
   },
-  texto: { flex: 1, fontSize: 16, paddingVertical: Espacio.s },
+  texto: { flex: 1, fontSize: Letra.secundario, paddingVertical: Espacio.s },
   accion: {
     minHeight: TactilMinimo,
     minWidth: TactilMinimo,
     paddingHorizontal: Espacio.m,
     justifyContent: 'center',
   },
-  textoAccion: { fontSize: 16, fontWeight: '700', textDecorationLine: 'underline' },
+  textoAccion: { fontSize: Letra.secundario, fontWeight: '700', textDecorationLine: 'underline' },
 });

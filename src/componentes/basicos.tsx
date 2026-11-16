@@ -19,7 +19,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fechaLocal } from '@/dominio/modelo';
 import { describirFecha, moverDias } from '@/estado/fechas';
 import { t } from '@/i18n';
-import { Espacio, TactilMinimo, useColores } from '@/theme';
+import {
+  Espacio,
+  Flotante,
+  Letra,
+  Radio,
+  sombraDeTarjeta,
+  sombraFlotante,
+  TactilMinimo,
+  useColores,
+} from '@/theme';
 
 /** Cabecera de una pestaña: título grande y, a la derecha, acciones. */
 export function Cabecera({ titulo, children }: { titulo: string; children?: ReactNode }) {
@@ -56,7 +65,7 @@ export function Boton({
   estilo,
 }: PropsDeBoton) {
   const c = useColores();
-  const fondo = variante === 'primario' ? c.acento : 'transparent';
+  const fondo = variante === 'primario' ? c.acento : c.transparente;
   const color =
     variante === 'primario' ? c.sobreAcento : variante === 'peligro' ? c.negativo : c.acento;
   return (
@@ -77,6 +86,19 @@ export function Boton({
   );
 }
 
+/**
+ * Espacio que una lista deja libre al final para que el botón flotante y la
+ * barra de pestañas no tapen su última fila. Sale de las mismas medidas con
+ * las que se coloca el botón, así no pueden desajustarse.
+ */
+export function margenBajoElFlotante(margenInferior: number): number {
+  return margenInferior + Flotante.separacion + Flotante.lado + Espacio.l;
+}
+
+export function useMargenDeLista(): number {
+  return margenBajoElFlotante(useSafeAreaInsets().bottom);
+}
+
 /** Botón redondo "+" fijo sobre la esquina inferior derecha. */
 export function BotonFlotante({ etiqueta, alPulsar }: { etiqueta: string; alPulsar: () => void }) {
   const c = useColores();
@@ -89,7 +111,12 @@ export function BotonFlotante({ etiqueta, alPulsar }: { etiqueta: string; alPuls
       testID="boton-anadir"
       style={({ pressed }) => [
         estilos.flotante,
-        { backgroundColor: c.acento, bottom: margen.bottom + 64, opacity: pressed ? 0.7 : 1 },
+        sombraFlotante(c),
+        {
+          backgroundColor: c.acento,
+          bottom: margen.bottom + Flotante.separacion,
+          opacity: pressed ? 0.7 : 1,
+        },
       ]}>
       <Text style={[estilos.mas, { color: c.sobreAcento }]}>+</Text>
     </Pressable>
@@ -108,7 +135,9 @@ export function Segmentos<T extends string>({
 }) {
   const c = useColores();
   return (
-    <View style={[estilos.segmentos, { backgroundColor: c.borde }]} accessibilityRole="tablist">
+    <View
+      style={[estilos.segmentos, { backgroundColor: c.superficieSuave }]}
+      accessibilityRole="tablist">
       {opciones.map((o) => {
         const elegido = o.valor === valor;
         return (
@@ -118,9 +147,16 @@ export function Segmentos<T extends string>({
             accessibilityRole="tab"
             accessibilityState={{ selected: elegido }}
             testID={`segmento-${o.valor}`}
-            style={[estilos.segmento, elegido && { backgroundColor: c.superficie }]}>
+            style={[
+              estilos.segmento,
+              elegido && [{ backgroundColor: c.superficie }, sombraDeTarjeta(c)],
+            ]}>
             <Text
-              style={{ color: c.texto, fontWeight: elegido ? '700' : '400', fontSize: 15 }}
+              style={{
+                color: elegido ? c.acento : c.textoSecundario,
+                fontWeight: elegido ? '700' : '500',
+                fontSize: Letra.secundario,
+              }}
               numberOfLines={1}>
               {o.texto}
             </Text>
@@ -183,7 +219,10 @@ export function Selector({
           compacto
             ? [
                 estilos.pildora,
-                { borderColor: activo ? c.acento : c.borde, backgroundColor: c.superficie },
+                {
+                  borderColor: activo ? c.acento : c.borde,
+                  backgroundColor: activo ? c.acentoSuave : c.superficie,
+                },
               ]
             : estilos.campoSelector
         }>
@@ -308,13 +347,13 @@ const estilos = StyleSheet.create({
     paddingHorizontal: Espacio.m,
     paddingBottom: Espacio.s,
   },
-  titulo: { fontSize: 32, fontWeight: '700', flexShrink: 1 },
+  titulo: { fontSize: Letra.titulo, fontWeight: '800', flexShrink: 1, letterSpacing: -0.5 },
   acciones: { flexDirection: 'row', alignItems: 'center' },
   boton: {
     minHeight: TactilMinimo,
     minWidth: TactilMinimo,
     paddingHorizontal: Espacio.m,
-    borderRadius: 10,
+    borderRadius: Radio.m,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -322,23 +361,18 @@ const estilos = StyleSheet.create({
   flotante: {
     position: 'absolute',
     right: Espacio.l,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: Flotante.lado,
+    height: Flotante.lado,
+    borderRadius: Flotante.lado / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
   },
   mas: { fontSize: 34, lineHeight: 38, fontWeight: '400' },
-  segmentos: { flexDirection: 'row', borderRadius: 10, padding: 2 },
+  segmentos: { flexDirection: 'row', borderRadius: Radio.m, padding: 3 },
   segmento: {
     flex: 1,
     minHeight: TactilMinimo,
-    borderRadius: 8,
+    borderRadius: Radio.s,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Espacio.xs,

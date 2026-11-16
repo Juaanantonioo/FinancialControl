@@ -9,7 +9,7 @@ import { useAviso } from '@/estado/Aviso';
 import { textoDeError, useDatos } from '@/estado/Datos';
 import { formatoRegional } from '@/estado/formato';
 import { t } from '@/i18n';
-import { Espacio, TactilMinimo, useColores } from '@/theme';
+import { Espacio, Letra, TactilMinimo, useColores } from '@/theme';
 
 /**
  * Alta y edición de cuenta, parte de P09 (T-022). Sin parámetro `id` crea
@@ -166,7 +166,7 @@ export default function PantallaDeCuenta() {
                 maxLength={20}
                 style={[estilos.campo, { color: c.texto, flex: 1 }]}
               />
-              <Text style={{ color: c.textoSecundario, fontSize: 17 }}>
+              <Text style={{ color: c.textoSecundario, fontSize: Letra.cuerpo }}>
                 {simboloDeDivisa(original?.divisa ?? 'EUR')}
               </Text>
             </View>
@@ -216,12 +216,17 @@ const estilos = StyleSheet.create({
     paddingBottom: Espacio.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  titulo: { fontSize: 17, fontWeight: '600', flexShrink: 1 },
+  titulo: { fontSize: Letra.cuerpo, fontWeight: '700', flexShrink: 1 },
   contenido: { padding: Espacio.m, gap: Espacio.xs },
-  etiqueta: { fontSize: 16, paddingTop: Espacio.m, paddingBottom: Espacio.xs },
-  campo: { fontSize: 17, minHeight: TactilMinimo, alignSelf: 'stretch', textAlign: 'right' },
+  etiqueta: { fontSize: Letra.secundario, paddingTop: Espacio.m, paddingBottom: Espacio.xs },
+  campo: {
+    fontSize: Letra.cuerpo,
+    minHeight: TactilMinimo,
+    alignSelf: 'stretch',
+    textAlign: 'right',
+  },
   saldo: { flexDirection: 'row', alignItems: 'center', gap: Espacio.s, alignSelf: 'stretch' },
-  ayuda: { fontSize: 14, paddingTop: Espacio.s },
+  ayuda: { fontSize: Letra.pequeno, paddingTop: Espacio.s, lineHeight: 18 },
   acciones: { marginTop: Espacio.l },
   accion: { alignSelf: 'flex-start', paddingHorizontal: 0 },
 });

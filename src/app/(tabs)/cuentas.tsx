@@ -2,14 +2,15 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Boton, BotonFlotante, Cabecera } from '@/componentes/basicos';
+import { Boton, BotonFlotante, Cabecera, useMargenDeLista } from '@/componentes/basicos';
+import { EstadoVacio, Tarjeta } from '@/componentes/Tarjeta';
 import type { CuentaConSaldo } from '@/datos/cuentas';
 import { dinero, formatearDinero } from '@/dominio/dinero';
 import { TIPOS_DE_CUENTA } from '@/dominio/modelo';
 import { useConsulta } from '@/estado/Datos';
 import { formatoRegional } from '@/estado/formato';
 import { t } from '@/i18n';
-import { Espacio, TactilMinimo, useColores } from '@/theme';
+import { cifrasTabulares, Espacio, Letra, TactilMinimo, useColores } from '@/theme';
 
 /**
  * Suma los saldos por divisa. Sumar euros con dólares no tiene sentido, así
@@ -28,6 +29,7 @@ export function patrimonioPorDivisa(
 /** P09 · Cuentas: patrimonio neto y lista de cuentas con su saldo (T-022). */
 export default function Cuentas() {
   const c = useColores();
+  const margenDeLista = useMargenDeLista();
   const [verArchivadas, setVerArchivadas] = useState(false);
   const todas = useConsulta((r) => r.cuentas.listarConSaldo({ incluirArchivadas: true }));
   const activas = (todas ?? []).filter((x) => !x.archivada);
@@ -35,25 +37,31 @@ export default function Cuentas() {
   // El patrimonio suma las cuentas activas. Hasta H6 la inversión cuenta por lo aportado.
   const patrimonio = patrimonioPorDivisa(activas);
 
-  const fila = (cuenta: CuentaConSaldo) => {
+  const fila = (cuenta: CuentaConSaldo, indice: number) => {
     const saldo = formatearDinero(dinero(cuenta.saldo, cuenta.divisa), formatoRegional());
     return (
       <Pressable
         key={cuenta.id}
-        onPress={() => router.push({ pathname: '/cuenta', params: { id: cuenta.id } })}
+        onPress={() => router.push({ pathname: '/detalle-de-cuenta', params: { id: cuenta.id } })}
         accessibilityRole="button"
         accessibilityLabel={t('cuentas.saldoDe', { nombre: cuenta.nombre, saldo })}
         testID={`cuenta-${cuenta.nombre}`}
         style={({ pressed }) => [
           estilos.fila,
-          { backgroundColor: c.superficie, borderBottomColor: c.borde, opacity: pressed ? 0.6 : 1 },
+          indice > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.borde },
+          { opacity: pressed ? 0.6 : 1 },
         ]}>
         <Text style={[estilos.nombre, { color: c.texto }]}>{cuenta.nombre}</Text>
         <Text
-          style={[estilos.saldo, { color: cuenta.saldo < 0 ? c.negativo : c.texto }]}
+          style={[
+            estilos.saldo,
+            cifrasTabulares,
+            { color: cuenta.saldo < 0 ? c.negativo : c.texto },
+          ]}
           testID={`saldo-${cuenta.nombre}`}>
           {saldo}
         </Text>
+        <Text style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>›</Text>
       </Pressable>
     );
   };
@@ -61,40 +69,49 @@ export default function Cuentas() {
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
       <Cabecera titulo={t('cuentas.titulo')} />
-      <ScrollView contentContainerStyle={estilos.contenido}>
-        <View style={estilos.patrimonio}>
-          <Text style={{ color: c.textoSecundario, fontSize: 15 }}>{t('cuentas.patrimonio')}</Text>
+      <ScrollView contentContainerStyle={[estilos.contenido, { paddingBottom: margenDeLista }]}>
+        <Tarjeta>
+          <Text style={{ color: c.textoSecundario, fontSize: Letra.secundario }}>
+            {t('cuentas.patrimonio')}
+          </Text>
           {(patrimonio.length > 0 ? patrimonio : [{ divisa: 'EUR', total: 0 }]).map((p) => (
             <Text
               key={p.divisa}
-              style={[estilos.cifra, { color: p.total < 0 ? c.negativo : c.texto }]}
+              style={[
+                estilos.cifra,
+                cifrasTabulares,
+                { color: p.total < 0 ? c.negativo : c.texto },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
               testID={`patrimonio-${p.divisa}`}>
               {formatearDinero(dinero(p.total, p.divisa), formatoRegional())}
             </Text>
           ))}
-        </View>
+        </Tarjeta>
 
         {todas !== undefined && todas.length === 0 ? (
-          <Text style={[estilos.vacio, { color: c.textoSecundario }]}>{t('cuentas.vacio')}</Text>
+          <EstadoVacio texto={t('cuentas.vacio')} />
         ) : null}
 
         {TIPOS_DE_CUENTA.map((tipo) => {
           const delTipo = activas.filter((x) => x.tipo === tipo);
           if (delTipo.length === 0) return null;
           return (
-            <View key={tipo}>
+            <View key={tipo} style={estilos.bloque}>
               <Text
                 style={[estilos.grupo, { color: c.textoSecundario }]}
                 accessibilityRole="header">
                 {t(`tipoDeCuenta.${tipo}`)}
               </Text>
-              {delTipo.map(fila)}
+              <Tarjeta estilo={estilos.tarjetaDeFilas}>{delTipo.map(fila)}</Tarjeta>
             </View>
           );
         })}
 
         {archivadas.length > 0 ? (
-          <View>
+          <View style={estilos.bloque}>
             <Boton
               texto={
                 verArchivadas ? t('cuentas.ocultarArchivadas') : t('cuentas.mostrarArchivadas')
@@ -109,7 +126,7 @@ export default function Cuentas() {
                   accessibilityRole="header">
                   {t('cuentas.archivadas')}
                 </Text>
-                {archivadas.map(fila)}
+                <Tarjeta estilo={estilos.tarjetaDeFilas}>{archivadas.map(fila)}</Tarjeta>
               </>
             ) : null}
           </View>
@@ -128,28 +145,33 @@ export default function Cuentas() {
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
-  contenido: { paddingBottom: 160 },
-  patrimonio: { paddingHorizontal: Espacio.m, paddingBottom: Espacio.m },
-  cifra: { fontSize: 34, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  contenido: { paddingHorizontal: Espacio.m, gap: Espacio.s },
+  cifra: { fontSize: Letra.cifraGrande, fontWeight: '800', letterSpacing: -1 },
+  bloque: { gap: Espacio.xs },
   grupo: {
-    fontSize: 14,
-    fontWeight: '600',
-    paddingHorizontal: Espacio.m,
-    paddingTop: Espacio.m,
+    fontSize: Letra.pequeno,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    paddingHorizontal: Espacio.xs,
+    paddingTop: Espacio.s,
     paddingBottom: Espacio.xs,
   },
+  tarjetaDeFilas: { paddingVertical: Espacio.xs, gap: 0 },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: TactilMinimo + Espacio.s,
-    paddingHorizontal: Espacio.m,
     paddingVertical: Espacio.s,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: Espacio.s,
   },
-  nombre: { flex: 1, fontSize: 17 },
-  saldo: { fontSize: 17, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  vacio: { fontSize: 16, textAlign: 'center', padding: Espacio.xl },
-  botonArchivadas: { alignSelf: 'flex-start', marginTop: Espacio.m },
-  enlace: { padding: Espacio.m, marginTop: Espacio.l, fontSize: 14, minHeight: TactilMinimo },
+  nombre: { flex: 1, fontSize: Letra.cuerpo, fontWeight: '500' },
+  saldo: { fontSize: Letra.cuerpo, fontWeight: '700' },
+  botonArchivadas: { alignSelf: 'flex-start', paddingHorizontal: Espacio.xs },
+  enlace: {
+    padding: Espacio.xs,
+    marginTop: Espacio.l,
+    fontSize: Letra.pequeno,
+    minHeight: TactilMinimo,
+  },
 });
