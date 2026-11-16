@@ -136,6 +136,16 @@ después del lanzamiento gratuito (apartado 4) y queda fuera de esas 18 semanas.
 
 ### H7 · Análisis e Inicio completo (1 semana)
 
+> **Adelantado el 16/11/2026** en la rama `h2b-rediseno-inicio` (decisión D6 de `09`):
+> - **T-080**: HECHA. `react-native-svg` 15.16.0 (MIT), anillo y barras en claro y oscuro.
+> - **T-081**: hecha la parte de Inicio (gasto por categoría y salto a Movimientos
+>   filtrado). **Sigue en H7** la pantalla de Análisis (P17).
+> - **T-082**: hechas solo las barras de seis meses en Inicio. **Sigue en H7** la
+>   tendencia en P17 y la comparativa de dos meses (D7).
+> - **T-083**: HECHA. 2 000 € y 1 600 € muestran 20 %.
+> - **T-084**: hecho el bloque D2 y el armazón de Inicio. **Siguen en H7** D1, D8, D9 y
+>   D4, que dependen de presupuesto, gastos fijos y objetivos.
+
 | Id | Descripción | Dep. | Criterio de aceptación | Pts |
 |---|---|---|---|---|
 | T-080 | Elegir e integrar la biblioteca de gráficos, verificando versión y licencia | T-004 | Un gráfico de barras de ejemplo se dibuja en modo claro y oscuro | 2 |

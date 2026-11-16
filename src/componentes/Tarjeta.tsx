@@ -129,7 +129,10 @@ export function SelectorDeMes({
         estilos.flecha,
         { backgroundColor: fondo, opacity: pressed ? 0.6 : 1 },
       ]}>
-      <Text style={{ color, fontSize: 24, lineHeight: 28, fontWeight: '600' }}>
+      {/* La flecha es un icono: no crece con el tamaño de letra, su botón ya mide 44 puntos. */}
+      <Text
+        allowFontScaling={false}
+        style={{ color, fontSize: 24, lineHeight: 28, fontWeight: '600' }}>
         {salto === -1 ? '‹' : '›'}
       </Text>
     </Pressable>
@@ -139,6 +142,10 @@ export function SelectorDeMes({
       {flecha(-1)}
       <Text
         style={[estilos.mes, { color }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+        maxFontSizeMultiplier={1.8}
         accessibilityRole="header"
         accessibilityLiveRegion="polite"
         testID="mes-elegido">
@@ -164,9 +171,17 @@ export function Dato({
   const c = useColores();
   return (
     <View style={estilos.dato} accessible accessibilityLabel={`${etiqueta}: ${valor}`}>
-      <Text style={{ color: c.textoSecundario, fontSize: Letra.pequeno }}>{etiqueta}</Text>
+      <Text
+        style={{ color: c.textoSecundario, fontSize: Letra.pequeno }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        maxFontSizeMultiplier={1.8}>
+        {etiqueta}
+      </Text>
       <Text
         testID={testID}
+        maxFontSizeMultiplier={1.8}
         style={[estilos.valorDeDato, { color: color ?? c.texto }]}
         numberOfLines={1}
         adjustsFontSizeToFit

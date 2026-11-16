@@ -13,6 +13,17 @@ planificación y sus consecuencias. Manda sobre cualquier texto anterior que lo 
 | D4 | Modelo de negocio | Gratuita al principio para que la gente la pruebe y para promocionarla. Después, suscripción con un periodo de prueba de unos 6 meses | V1 se publica **gratuita y sin compras**. La suscripción se añade después (tareas T-123 a T-127) |
 | D5 | Notion | La app no debe sincronizarse ni integrarse con Notion | Se retiran el spike C, el antiguo hito H4, la entidad de mapeo y el gate de la API de Notion. El usuario sigue con su Notion a mano mientras valida la app |
 
+### Decisión del 16/11/2026
+
+| Id | Decisión | Respuesta del usuario | Consecuencia |
+|---|---|---|---|
+| D6 | Aspecto y panel de inicio | Tras probar H2 en su iPhone: «funciona pero de forma muy básica», «diseño sobrio», «no disponemos de ningún dashboard». Quiere fondo claro y vistoso, y dashboards con el balance del mes, por cuenta y global | Rediseño visual y pestaña **Inicio** en la rama `h2b-rediseno-inicio`. Se **adelantan de H7** T-080, T-083 y parte de T-081, T-082 y T-084. Presupuesto, gastos fijos y objetivos no se adelantan. El modo claro es la prioridad de diseño |
+
+Inferencias adoptadas en D6, reversibles y no decididas por el usuario: no se suman
+divisas distintas (se ve una cada vez); los movimientos de cuentas archivadas cuentan en
+el balance global y la cuenta solo se lista si tiene movimientos ese mes; el patrimonio
+sigue en Cuentas; anillo en lugar de barras horizontales para el gasto por categoría.
+
 ## 2. Datos confirmados
 
 - El usuario trabaja en un Mac con Xcode y la app Apple Developer instalados.

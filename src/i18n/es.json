@@ -237,7 +237,7 @@
     "saldoActual": "Saldo actual",
     "entradas": "Entradas",
     "salidas": "Salidas",
-    "cambio": "Cambio en el mes",
+    "cambio": "Diferencia",
     "editar": "Editar",
     "movimientosDelMes": "Movimientos del mes",
     "vacio": "Esta cuenta no tiene movimientos en {{mes}}.",

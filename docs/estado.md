@@ -261,3 +261,81 @@ Otros hechos del entorno:
 - Con la app recién arrancada y el Mac muy cargado, la pantalla "Preparando tus datos…"
   llegó a verse más de 10 segundos en el simulador. En arranques posteriores, menos de
   8. No se ha medido en un iPhone.
+
+## 7. H2b · Rediseño e Inicio — rama `h2b-rediseno-inicio` (16/11/2026)
+
+Encargo: `docs/prompt-claude-code-rediseno-dashboards.md`. Adelanta parte de H7.
+
+### 7.1 Baseline (antes de modificar nada)
+
+| Dato | Valor |
+|---|---|
+| Rama y commit de partida | `h2-nucleo-movimientos` @ `be01716` |
+| `npm run check` | pasa: 134 pruebas en 8 suites; formato, lint y tipos limpios |
+| `git status` | limpio, salvo el fichero del encargo sin seguimiento |
+| Carpeta `ios/` | **ignorada por git** (`.gitignore`, línea `/ios`). `git ls-files ios` no devuelve nada: no está versionada. El encargo decía que no figuraba en `.gitignore`; sí figura |
+| Ajustes manuales en `ios/` | `DEVELOPMENT_TEAM` fijado, `ENABLE_USER_SCRIPT_SANDBOXING = NO`, entitlements vacíos (sin push) y referencia a `../app-intents` de la rama H1 |
+| Versiones | expo 58.0.25 (`~58.0.25`), react-native 0.88.1, react 19.3.0 |
+| Capturas de partida | `docs/capturas/antes/`: Movimientos, Cuentas y alta, en claro y oscuro. Inicio y detalle de cuenta no existían |
+
+### 7.2 Hecho
+
+| Parte | Estado | Evidencia |
+|---|---|---|
+| Cálculo del mes en `src/dominio/resumen.ts` | HECHA | 33 pruebas en `resumen.test.ts`, incluida la de coherencia entre balance global y variaciones por cuenta |
+| Sistema visual en `src/theme/` | HECHA | Prueba de contraste (77 casos): paleta de 12 colores ≥ 3:1 y textos ≥ 4,5:1, en claro y oscuro. Búsqueda de hexadecimales en `src/app` y `src/componentes`: 0 resultados |
+| Gráficos (T-080) | HECHA | `react-native-svg` 15.16.0, licencia MIT, versión que fija `npx expo install` para SDK 58. `expo-doctor`: 20 de 20. Anillo y barras vistos en claro y oscuro |
+| Inicio (P05, parte) | HECHA | Pruebas de pantalla en `inicio.test.tsx` y capturas `inicio-*.png` |
+| Detalle de cuenta (P10, parte) | HECHA | Pruebas de pantalla y capturas `detalle-de-cuenta-*.png` |
+| Navegación Inicio · Movimientos · Cuentas | HECHA | La app abre en Inicio. Enlace `financialcontrol://movimientos?categoriaId=…&mes=…` comprobado en el simulador |
+| Tema en el resto de pantallas | HECHA | Capturas de Movimientos, Cuentas y alta. Categorías y edición de cuenta usan los mismos componentes; **no se han capturado** |
+| Botón «+» y última fila | HECHA | El margen inferior sale de las medidas del botón (prueba `margen.test.tsx`). Captura `movimientos-fin-de-lista-*.png` |
+| Tasa de ahorro (T-083) | HECHA | 2 000 € y 1 600 € dan 20 %: prueba de dominio y captura de Inicio con esos datos |
+
+`npm run check` al cierre: **284 pruebas en 13 suites, todas pasan**. Ninguna prueba
+anterior se ha borrado ni desactivado. En `pantallas.test.tsx` solo cambian dos líneas: la
+ruta de importación de Movimientos (el fichero pasó de `index.tsx` a `movimientos.tsx`) y
+`navigate` en la navegación simulada.
+
+### 7.3 Casos límite
+
+| Caso | Resultado | Cómo |
+|---|---|---|
+| Mes sin movimientos, mes futuro | Estado vacío con texto, sin gráfico a cero | Prueba y captura `inicio-sin-datos-*` |
+| Gastos sin ingresos | No muestra tasa de ahorro ni divide entre cero | Prueba |
+| Ingresos sin gastos, balance negativo | 100 % y cifra negativa con signo | Prueba y captura de límites |
+| Solo transferencias | Balance 0 y variaciones que suman 0 | Prueba |
+| Ajustes positivos y negativos | No cuentan como ingreso ni gasto; sí en la cuenta | Prueba |
+| Movimiento anterior al saldo inicial | No cuenta en la cuenta y la pantalla lo explica | Prueba |
+| Movimientos borrados | No cuentan | Prueba |
+| Una categoría al 100 %, más de cinco | Anillo cerrado; cinco y «Otras» | Prueba y captura |
+| Color e icono nulos, subcategorías | Valor derivado estable; suman en la principal | Prueba |
+| Sin cuentas, una, ocho | Estado vacío con acción; lista completa | Prueba y captura de límites |
+| Cuenta archivada con movimientos | Aparece solo en ese mes | Prueba |
+| 1.234.567,89 € y nombres largos | Caben sin cortar | Captura de límites |
+| Texto del sistema al máximo | Se corrigieron cortes a media palabra. Visto en Inicio y detalle | Capturas `limite-texto-maximo-*` |
+| Enero a diciembre, primer y último día | Correcto | Prueba |
+| Modo oscuro | Legible en las seis pantallas capturadas | Capturas |
+| «Reducir movimiento» | La decisión de animar tiene prueba. **NO DEMOSTRADO** en pantalla: no se pudo activar el ajuste en el simulador |
+
+### 7.4 Limitaciones
+
+- No se ha probado en un iPhone real: solo en el simulador iPhone 17 con iOS 27.2.
+- El simulador no admite toques desde aquí. La interacción está cubierta por pruebas; las
+  capturas de la parte baja de Inicio y del final de Movimientos se tomaron desplazando la
+  lista con un código temporal que no está en la rama.
+- El botón «+» flota sobre la lista: a mitad de desplazamiento puede quedar encima de una
+  fila. Lo garantizado es que la última fila se puede dejar entera por encima.
+- Tocar en Inicio una categoría principal no incluye los movimientos de sus subcategorías
+  (hoy ninguna pantalla crea subcategorías). «Otras» y «Sin categoría» abren el mes sin
+  filtro de categoría.
+- El icono de categoría se deduce del nombre y el color del orden: al reordenar categorías
+  cambian los colores. No hay todavía pantalla para elegirlos.
+- VoiceOver no se ha probado. Las etiquetas existen y se comprueban en las pruebas.
+
+### 7.5 Acciones del usuario
+
+1. Abrir `ios/FinancialControl.xcworkspace` en Xcode y compilar de nuevo en el iPhone: hay
+   una biblioteca nativa nueva (`react-native-svg`) y ya se ejecutó `pod install`.
+2. Revisar en el iPhone: Inicio, detalle de cuenta, final de la lista de Movimientos,
+   «Reducir movimiento» y VoiceOver.

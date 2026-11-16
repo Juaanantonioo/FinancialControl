@@ -81,7 +81,9 @@ export function Boton({
         { backgroundColor: fondo, opacity: desactivado ? 0.4 : pressed ? 0.6 : 1 },
         estilo,
       ]}>
-      <Text style={[estilos.textoBoton, { color }]}>{texto}</Text>
+      <Text style={[estilos.textoBoton, { color }]} maxFontSizeMultiplier={1.8}>
+        {texto}
+      </Text>
     </Pressable>
   );
 }
@@ -118,7 +120,9 @@ export function BotonFlotante({ etiqueta, alPulsar }: { etiqueta: string; alPuls
           opacity: pressed ? 0.7 : 1,
         },
       ]}>
-      <Text style={[estilos.mas, { color: c.sobreAcento }]}>+</Text>
+      <Text allowFontScaling={false} style={[estilos.mas, { color: c.sobreAcento }]}>
+        +
+      </Text>
     </Pressable>
   );
 }

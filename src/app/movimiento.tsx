@@ -327,52 +327,54 @@ export default function PantallaDeMovimiento() {
           </Fila>
         ) : (
           <View style={[estilos.categorias, { borderBottomColor: c.borde }]}>
-            <Text style={{ color: c.textoSecundario, fontSize: Letra.secundario, width: 96 }}>
+            <Text style={{ color: c.textoSecundario, fontSize: Letra.secundario }}>
               {t('movimiento.categoria')}
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={estilos.pildoras}>
-              {fila.map((cat) => {
-                const elegida = cat.id === categoriaId;
-                return (
-                  <Pressable
-                    key={cat.id}
-                    onPress={() => setCategoriaId(elegida ? null : cat.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: elegida }}
-                    accessibilityLabel={cat.nombre}
-                    testID={`categoria-${cat.nombre}`}
-                    style={[
-                      estilos.pildora,
-                      {
-                        backgroundColor: elegida ? c.acentoSuave : c.superficie,
-                        borderColor: elegida ? c.acento : c.borde,
-                      },
-                    ]}>
-                    <Text
-                      style={{
-                        color: elegida ? c.acento : c.texto,
-                        fontSize: Letra.secundario,
-                        fontWeight: elegida ? '700' : '500',
-                      }}>
-                      {`${elegida ? '✓' : iconoDePildora(cat)} ${cat.nombre}`.trim()}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <Selector
-              compacto
-              titulo={t('movimiento.categoria')}
-              opciones={opcionesDeCategoria}
-              valor={null}
-              alElegir={setCategoriaId}
-              textoVacio={t('movimiento.sinCategoria')}
-              testID="selector-categoria"
-            />
+            <View style={estilos.filaDeCategorias}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={estilos.pildoras}>
+                {fila.map((cat) => {
+                  const elegida = cat.id === categoriaId;
+                  return (
+                    <Pressable
+                      key={cat.id}
+                      onPress={() => setCategoriaId(elegida ? null : cat.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: elegida }}
+                      accessibilityLabel={cat.nombre}
+                      testID={`categoria-${cat.nombre}`}
+                      style={[
+                        estilos.pildora,
+                        {
+                          backgroundColor: elegida ? c.acentoSuave : c.superficie,
+                          borderColor: elegida ? c.acento : c.borde,
+                        },
+                      ]}>
+                      <Text
+                        style={{
+                          color: elegida ? c.acento : c.texto,
+                          fontSize: Letra.secundario,
+                          fontWeight: elegida ? '700' : '500',
+                        }}>
+                        {`${elegida ? '✓' : iconoDePildora(cat)} ${cat.nombre}`.trim()}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              <Selector
+                compacto
+                titulo={t('movimiento.categoria')}
+                opciones={opcionesDeCategoria}
+                valor={null}
+                alElegir={setCategoriaId}
+                textoVacio={t('movimiento.sinCategoria')}
+                testID="selector-categoria"
+              />
+            </View>
           </View>
         )}
 
@@ -447,13 +449,14 @@ const estilos = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: Espacio.m,
   },
+  // La etiqueta va encima y las categorías ocupan todo el ancho de la pantalla.
   categorias: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: TactilMinimo + Espacio.s,
+    paddingTop: Espacio.s + Espacio.xs,
+    paddingBottom: Espacio.s,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: Espacio.s,
   },
+  filaDeCategorias: { flexDirection: 'row', alignItems: 'center', gap: Espacio.s },
   pildoras: { gap: Espacio.s, alignItems: 'center', paddingRight: Espacio.s },
   pildora: {
     minHeight: TactilMinimo,

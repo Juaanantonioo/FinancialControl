@@ -135,6 +135,7 @@ export default function Inicio() {
             </Text>
             <Text
               style={[estilos.cifraGrande, cifrasTabulares, { color: c.sobreDegradado }]}
+              maxFontSizeMultiplier={1.6}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.5}
@@ -395,8 +396,16 @@ function CifraDeCabecera({
   const c = useColores();
   return (
     <View style={[estilos.cifraDeCabecera, { backgroundColor: c.veloSobreDegradado }]}>
-      <Text style={{ color: c.sobreDegradadoSecundario, fontSize: Letra.pequeno }}>{etiqueta}</Text>
       <Text
+        style={{ color: c.sobreDegradadoSecundario, fontSize: Letra.pequeno }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        maxFontSizeMultiplier={1.8}>
+        {etiqueta}
+      </Text>
+      <Text
+        maxFontSizeMultiplier={1.8}
         style={[estilos.valorDeCabecera, cifrasTabulares, { color: c.sobreDegradado }]}
         numberOfLines={1}
         adjustsFontSizeToFit

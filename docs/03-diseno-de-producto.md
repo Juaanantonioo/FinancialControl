@@ -40,6 +40,18 @@ Barra inferior con cinco posiciones: **Inicio · Movimientos · [+] · Plan · C
 - Los avisos del sistema y el widget abren la pantalla exacta (enlace profundo): un aviso
   de captura abre la captura, un aviso de cobro abre el gasto fijo.
 
+### 3.1 Estado tras el rediseño del 16/11/2026 (rama `h2b-rediseno-inicio`)
+
+Barra inferior real: **Inicio · Movimientos · Cuentas**. La app abre en Inicio.
+
+- **Plan** y el botón central **[+]** siguen pendientes: no se añaden pestañas de funciones
+  que aún no existen (presupuesto, gastos fijos, objetivos). Mientras tanto, el alta se abre
+  con un botón flotante «+» en Inicio y en Movimientos, en la misma posición.
+- **Ajustes** (engranaje de Inicio) sigue pendiente por el mismo motivo.
+- Tocar una cuenta, en Inicio o en Cuentas, abre su detalle (P10). La edición se abre
+  desde ahí.
+- Tocar una categoría en Inicio abre Movimientos filtrado por esa categoría y ese mes.
+
 ## 4. Lista de pantallas de V1
 
 | Id | Pantalla | Contenido principal | Flujos |
@@ -249,6 +261,26 @@ Reglas comunes:
 └──────────────────────────────────────┘
 ```
 
+#### Inicio tal como queda el 16/11/2026
+
+Inicio muestra un mes de calendario, con flechas para ir al anterior y al siguiente:
+
+1. **Balance del mes** sobre la cabecera: ingresos menos gastos, las dos cifras y la parte
+   de los ingresos que se ha guardado (D10).
+2. **Tus cuentas**: saldo actual, lo que entra y sale en el mes y la diferencia.
+3. **En qué se ha ido el dinero** (D2): anillo con las cinco categorías de más gasto y
+   «Otras», y lista con importe y porcentaje.
+4. **Últimos seis meses** (D6, parte): barras de ingresos y gastos.
+
+Diferencias con el esquema de arriba, anotadas a propósito:
+
+- No aparecen «Disponible este mes» (D1), próximos cobros (D9), objetivos (D8) ni fin de
+  mes previsto (D4): dependen de presupuesto, gastos fijos y objetivos.
+- D2 pedía barras horizontales y desaconsejaba el gráfico circular con más de cinco
+  categorías. Se usa un anillo, por decisión del usuario de tener un panel más vistoso,
+  limitado a cinco categorías más «Otras» y acompañado siempre de la lista con cifras.
+- El patrimonio sigue en Cuentas, no en Inicio.
+
 ### P07 · Alta de movimiento
 
 ```
@@ -433,3 +465,25 @@ del hito de pulido.
 - Español como idioma inicial. Todas las cadenas en catálogo, ninguna escrita en el código.
 - Importes, fechas y separador decimal según la región del dispositivo.
 - Euro como divisa inicial. El modelo guarda el código de divisa en cada cuenta.
+
+## 11. Sistema visual (16/11/2026)
+
+Todo sale de `src/theme/`. Ninguna pantalla lleva un color fijo.
+
+- **Fondo**: claro con un tinte lavanda. Tarjetas blancas de esquinas amplias y sombra muy
+  suave. Cabecera de Inicio con degradado del color de marca (añil a violeta).
+- **Color de marca**: añil. **Paleta de categorías**: doce colores con una variante por
+  modo. Una prueba calcula que cada uno cumple 3:1 sobre la superficie y que los textos
+  cumplen 4,5:1, en claro y en oscuro.
+- **Gastos e ingresos**: el gasto va en el color del texto con signo menos; el ingreso, en
+  verde con signo más. El rojo queda para balances negativos y errores. Siempre hay signo
+  o etiqueta además del color.
+- **Cifras**: tabulares, una cifra grande por tarjeta, formato de la región.
+- **Categorías**: círculo de color con icono. Si la categoría no tiene color o icono
+  guardados, se derivan en la presentación (el color, del orden; el icono, del nombre o
+  su inicial). No se escribe en la base de datos.
+- **Estados vacíos**: cada bloque sin datos dice qué falta y, si se puede, ofrece el botón
+  que lo resuelve.
+- **Accesibilidad**: áreas táctiles de 44 puntos, descripción textual de cada gráfico, el
+  texto sigue el tamaño del sistema y los gráficos aparecen sin transición con «Reducir
+  movimiento».

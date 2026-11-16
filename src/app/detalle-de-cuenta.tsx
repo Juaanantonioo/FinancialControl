@@ -46,11 +46,14 @@ export default function DetalleDeCuenta() {
         accessibilityLabel={t('comun.volver')}
         testID="volver"
         style={estilos.volver}>
-        <Text style={{ color: c.acento, fontSize: 30, lineHeight: 34 }}>‹</Text>
+        <Text allowFontScaling={false} style={{ color: c.acento, fontSize: 30, lineHeight: 34 }}>
+          ‹
+        </Text>
       </Pressable>
       <Text
         style={[estilos.titulo, { color: c.texto }]}
         numberOfLines={2}
+        maxFontSizeMultiplier={1.4}
         accessibilityRole="header"
         testID="titulo-de-cuenta">
         {cuenta && !noExiste ? cuenta.nombre : ''}
@@ -112,6 +115,7 @@ export default function DetalleDeCuenta() {
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.5}
+              maxFontSizeMultiplier={1.6}
               testID="saldo-actual">
               {importe(resumen.saldo, divisa)}
             </Text>

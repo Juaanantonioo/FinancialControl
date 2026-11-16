@@ -85,7 +85,13 @@ export function FilaDeMovimiento({
         <Text style={[estilos.nombre, { color: c.texto }]}>{nombreVisible(mov)}</Text>
         <Text style={{ color: c.textoSecundario, fontSize: Letra.pequeno }}>{detalle}</Text>
       </View>
-      <Text style={[estilos.importe, cifrasTabulares, { color }]}>{importeConSigno(mov)}</Text>
+      <Text
+        style={[estilos.importe, cifrasTabulares, { color }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.5}>
+        {importeConSigno(mov)}
+      </Text>
     </Pressable>
   );
 }
@@ -100,10 +106,15 @@ const estilos = StyleSheet.create({
     paddingHorizontal: Espacio.m,
     paddingVertical: Espacio.s + 2,
     borderRadius: Radio.m,
-    gap: Espacio.m,
+    columnGap: Espacio.m,
+    rowGap: Espacio.xs,
+    // Con letra muy grande el importe baja a su propia línea en vez de
+    // aplastar el nombre.
+    flexWrap: 'wrap',
   },
-  textos: { flex: 1, gap: 2 },
+  textos: { flexGrow: 1, flexShrink: 1, flexBasis: 120, gap: 2 },
   nombre: { fontSize: Letra.cuerpo, fontWeight: '500' },
-  // El importe no se trunca nunca: la fila crece en vertical si hace falta.
-  importe: { fontSize: Letra.cuerpo, fontWeight: '700' },
+  // El importe no se trunca nunca: se va a la derecha y, si no cabe entero,
+  // reduce su letra antes que cortar cifras.
+  importe: { fontSize: Letra.cuerpo, fontWeight: '700', marginLeft: 'auto', maxWidth: '100%' },
 });

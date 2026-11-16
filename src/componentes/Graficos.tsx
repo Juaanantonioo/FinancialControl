@@ -161,7 +161,7 @@ export function Barras({
               estilos.grupo,
               { backgroundColor: esElegido ? c.acentoSuave : c.transparente },
             ]}>
-            <Svg width={anchoDeGrupo} height={alto} opacity={esElegido ? 1 : 0.55}>
+            <Svg width={anchoDeGrupo} height={alto} opacity={esElegido ? 1 : 0.7}>
               {/* Línea de base tenue: se ve aunque el mes no tenga datos. */}
               <Rect x={0} y={alto - 1} width={anchoDeGrupo} height={1} fill={c.borde} />
               {grupo.valores.map((valor, i) => {
