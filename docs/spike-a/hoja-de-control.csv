@@ -1,0 +1,1 @@
+n,fecha,hora_pago,comercio_real,importe_real,tarjeta_usada,tipo_pago,pago_aceptado,captura_creada,hora_aviso,latencia_s,importe_capturado,importe_exacto,tarjeta_capturada,tarjeta_correcta,comercio_capturado,captura_sin_pago_real,captura_via_notificacion,notas
