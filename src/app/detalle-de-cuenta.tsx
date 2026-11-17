@@ -253,14 +253,12 @@ function Inversion({
             valor={importe(r.aportado, divisa)}
             testID="aportado"
           />
-          <View style={estilos.resultado}>
-            <Text
-              style={{ color: c[ganancia.color], fontSize: Letra.secundario, fontWeight: '700' }}
-              testID="ganancia">
-              {ganancia.texto}
-            </Text>
-          </View>
         </View>
+        <Text
+          style={{ color: c[ganancia.color], fontSize: Letra.cuerpo, fontWeight: '700' }}
+          testID="ganancia">
+          {ganancia.texto}
+        </Text>
         {antiguo && r.ultimo ? (
           <Text
             style={[estilos.aviso, { color: c.aviso, backgroundColor: c.superficieSuave }]}
@@ -359,7 +357,6 @@ const estilos = StyleSheet.create({
   contenido: { padding: Espacio.m, gap: Espacio.s },
   saldo: { fontSize: Letra.cifraGrande, fontWeight: '800', letterSpacing: -1 },
   datos: { flexDirection: 'row', gap: Espacio.s, paddingTop: Espacio.xs },
-  resultado: { flex: 1, justifyContent: 'flex-end' },
   aviso: {
     fontSize: Letra.pequeno,
     lineHeight: 18,

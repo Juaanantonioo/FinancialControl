@@ -29,7 +29,10 @@ export function Tarjeta({
       testID={testID}
       style={[estilos.tarjeta, sombraDeTarjeta(c), { backgroundColor: c.superficie }, estilo]}>
       {titulo ? (
-        <Text style={[estilos.tituloDeTarjeta, { color: c.texto }]} accessibilityRole="header">
+        <Text
+          style={[estilos.tituloDeTarjeta, { color: c.texto }]}
+          accessibilityRole="header"
+          maxFontSizeMultiplier={1.5}>
           {titulo}
         </Text>
       ) : null}

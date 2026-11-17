@@ -172,6 +172,37 @@ Objetivo ∞─0..1 Cuenta
 | Rentabilidad simple | (último valor − aportado) ÷ aportado |
 | Tasa de ahorro | (ingresos − gastos) ÷ ingresos del periodo |
 
+### 4.5 Inversión manual y patrimonio (17/11/2026)
+
+Implementado en `src/dominio/inversion.ts` y `src/dominio/patrimonio.ts`. Nada se guarda:
+todo se calcula. La tabla `valor_de_inversion` (migración 2) guarda solo lo que la persona
+anota: `cuenta_id`, `fecha`, `valor` en céntimos y los campos comunes.
+
+| Cifra | Cálculo |
+|---|---|
+| Aportado neto en una fecha | Saldo de la cuenta con los movimientos hasta esa fecha: saldo inicial más entradas menos salidas |
+| Valor estimado en una fecha | Último valor anotado con fecha igual o anterior, más el efecto de los movimientos posteriores a ese valor y hasta la fecha. Sin valores anotados, el aportado neto |
+| Ganancia o pérdida | Valor estimado menos aportado neto |
+| Rentabilidad simple | Ganancia ÷ aportado neto, solo si el aportado es mayor que cero |
+| Patrimonio en una fecha | Saldo de banco y efectivo más valor estimado de las inversiones. Una cuenta archivada cuenta si su valor no es cero |
+| Evolución del patrimonio | Patrimonio al último día de cada uno de los doce últimos meses; el mes en curso usa hoy |
+
+Reglas del valor anotado: solo en cuentas de inversión, mayor o igual que cero, fecha
+real, no futura y no anterior a la fecha del saldo inicial de la cuenta. Un valor por
+cuenta y día: anotar otro el mismo día lo sustituye. El valor de un día incluye los
+movimientos de ese día.
+
+Limitaciones:
+
+- El valor estimado no es un valor de mercado. Entre dos valores anotados la app solo suma
+  y resta lo que entra y sale.
+- Todo lo que entra en una cuenta de inversión cuenta como aportación, también un ingreso
+  anotado directamente en ella.
+- Antes de la fecha de su saldo inicial una cuenta no tiene valor conocido y no cuenta en
+  el patrimonio. Los meses anteriores a la primera cuenta no se dibujan.
+- La regla 4.4 decía «más el último valor de cada cuenta de inversión». Se usa el valor
+  estimado, que añade las aportaciones y retiradas posteriores a ese valor.
+
 ## 5. Correspondencia con el Notion del primer usuario
 
 Solo sirve para comprobar que el modelo cubre el uso actual. La app no importa ni

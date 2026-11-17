@@ -52,6 +52,21 @@ Barra inferior real: **Inicio · Movimientos · Cuentas**. La app abre en Inicio
   desde ahí.
 - Tocar una categoría en Inicio abre Movimientos filtrado por esa categoría y ese mes.
 
+### 3.2 Estado tras el bloque del 17/11/2026 (rama `h3-vision-completa`)
+
+Barra inferior real: **Inicio · Movimientos · Análisis · Cuentas**.
+
+- **Análisis** (P17) pasa a ser una pestaña, no una pantalla dentro de Inicio, con tres
+  vistas: Día, Mes y Año.
+- El botón **«+»** deja de flotar sobre el contenido y va en la cabecera, arriba a la
+  derecha, en Inicio, Movimientos y Cuentas. El botón central de la barra sigue pendiente.
+- **Plan** y **Ajustes** siguen pendientes.
+- Pantallas nuevas fuera de la barra: **Patrimonio** (desde la cifra de Inicio o de
+  Cuentas), **Inversiones** (desde el bloque de Inicio) y **Valor de inversión** (P21,
+  desde el detalle de una cuenta de inversión).
+- Enlaces: `financialcontrol://analisis?vista=anio&anio=2026`, `…/analisis?dia=2026-11-14`,
+  `…/movimientos?dia=2026-11-14` y `…/?mes=2026-10`.
+
 ## 4. Lista de pantallas de V1
 
 | Id | Pantalla | Contenido principal | Flujos |
@@ -280,6 +295,43 @@ Diferencias con el esquema de arriba, anotadas a propósito:
   categorías. Se usa un anillo, por decisión del usuario de tener un panel más vistoso,
   limitado a cinco categorías más «Otras» y acompañado siempre de la lista con cifras.
 - El patrimonio sigue en Cuentas, no en Inicio.
+
+#### Inicio tal como queda el 17/11/2026
+
+Inicio abre con **lo que se tiene** (patrimonio de hoy), su cambio desde el cierre del mes
+anterior y el reparto entre disponible e invertido. Tocarlo abre Patrimonio. El patrimonio
+es siempre el de hoy: el selector de mes solo cambia los bloques de debajo, que son:
+
+1. Balance del mes, con ingresos, gastos y la parte guardada.
+2. Hoy: gastado hoy y media al día del mes.
+3. Tus cuentas. Una cuenta de inversión aparece por lo que vale.
+4. Tus inversiones, solo si hay alguna: lo que se ha puesto, lo que vale y si se gana o se
+   pierde. Abre el resumen de inversiones.
+5. Gasto por categoría y evolución de seis meses, como el 16/11/2026.
+
+#### Patrimonio, inversiones y Análisis (17/11/2026)
+
+- **Patrimonio** (D5): cifra de hoy, línea de hasta doce meses, reparto por tipo de cuenta
+  y peso de cada cuenta. No dibuja meses anteriores a la primera cuenta.
+- **Cuenta de inversión** (P10 y D11): lo que vale hoy y de qué fecha es el valor, lo que
+  se ha puesto, «Ganas» o «Pierdes» en euros y en porcentaje, línea con las dos series,
+  botón «Actualizar valor» e historial de valores. Aviso en pantalla si el último valor
+  tiene más de 30 días. Sin valores, un texto explica para qué sirve anotarlos.
+- **Inversiones**: totales, reparto en anillo con lista y un texto fijo que dice que los
+  valores los anota la persona y que la app no aconseja.
+- **Análisis · Día**: calendario del mes con la cifra de cada día y una barra de
+  intensidad, gastado hoy, media al día y día de más gasto. Tocar un día muestra sus
+  movimientos. Con la letra del sistema muy grande, el calendario pasa a lista de días.
+- **Análisis · Mes** (D7): cada categoría frente al mes anterior, en euros y en
+  porcentaje, o «Nuevo». Tocar una abre Movimientos filtrado.
+- **Análisis · Año** (D6): balance, ingresos, gastos y parte guardada; barras de los doce
+  meses; mes de más y de menos gasto y media mensual; tabla mes a mes (tocar un mes abre
+  Inicio en ese mes); gasto por categoría y cambio del patrimonio en el año.
+
+Diferencias con los esquemas de este documento: P17 preveía «Categorías, Tendencia,
+Comparar» y queda como «Día, Mes, Año»; D5 situaba la evolución del patrimonio en P09 y
+queda en una pantalla propia; D5 pedía «desglose por tipo de cuenta» y además se da el
+peso por cuenta.
 
 ### P07 · Alta de movimiento
 

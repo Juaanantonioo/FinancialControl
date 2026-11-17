@@ -369,7 +369,7 @@ describe('cuenta de inversión', () => {
     expect(screen.getByTestId('patrimonio-invertido')).toHaveTextContent('2.150,00 €');
     expect(screen.getByTestId('inversiones-aportado')).toHaveTextContent('2.000,00 €');
     expect(screen.getByTestId('inversiones-valor')).toHaveTextContent('2.150,00 €');
-    expect(screen.getByTestId('inversiones-ganancia')).toHaveTextContent('+150,00 € (+7,5 %)');
+    expect(screen.getByTestId('inversiones-ganancia')).toHaveTextContent('Ganas 150,00 € (+7,5 %)');
     // En la lista de cuentas la inversión aparece por lo que vale.
     expect(screen.getByTestId('inicio-saldo-Bróker')).toHaveTextContent('2.150,00 €');
     await fireEvent.press(screen.getByTestId('bloque-inversiones'));

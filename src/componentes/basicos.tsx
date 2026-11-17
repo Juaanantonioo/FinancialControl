@@ -37,7 +37,13 @@ export function Cabecera({ titulo, children }: { titulo: string; children?: Reac
   const margen = useSafeAreaInsets();
   return (
     <View style={[estilos.cabecera, { paddingTop: margen.top + Espacio.s }]}>
-      <Text style={[estilos.titulo, { color: c.texto }]} accessibilityRole="header">
+      <Text
+        style={[estilos.titulo, { color: c.texto }]}
+        accessibilityRole="header"
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+        maxFontSizeMultiplier={1.4}>
         {titulo}
       </Text>
       <View style={estilos.acciones}>{children}</View>
@@ -425,7 +431,7 @@ const estilos = StyleSheet.create({
     textAlign: 'center',
   },
   accionDeCabecera: { minWidth: TactilMinimo, alignItems: 'flex-end' },
-  titulo: { fontSize: Letra.titulo, fontWeight: '800', flexShrink: 1, letterSpacing: -0.5 },
+  titulo: { fontSize: Letra.titulo, fontWeight: '800', flex: 1, letterSpacing: -0.5 },
   acciones: { flexDirection: 'row', alignItems: 'center' },
   boton: {
     minHeight: TactilMinimo,

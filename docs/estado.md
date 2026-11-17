@@ -339,3 +339,98 @@ ruta de importación de Movimientos (el fichero pasó de `index.tsx` a `movimien
    una biblioteca nativa nueva (`react-native-svg`) y ya se ejecutó `pod install`.
 2. Revisar en el iPhone: Inicio, detalle de cuenta, final de la lista de Movimientos,
    «Reducir movimiento» y VoiceOver.
+
+## 8. H3 · Visión completa — rama `h3-vision-completa` (17/11/2026)
+
+Encargo: `docs/prompt-claude-code-h3-vision-completa.md`. Es el bloque 1 de la decisión D7.
+
+### 8.1 Baseline (antes de modificar nada)
+
+| Dato | Valor |
+|---|---|
+| Rama y commit de partida | `h2b-rediseno-inicio` @ `d0d1fe5` |
+| `npm run check` | pasa: 284 pruebas en 13 suites; formato, lint y tipos limpios |
+| `git status` | limpio, salvo el fichero del encargo sin seguimiento. Durante el trabajo aparecieron cambios del usuario en `docs/07` y `docs/09` (decisiones D7 a D9): se han conservado |
+| Esquema de la base de datos | versión 1. Una sola migración: crea `cuenta`, `categoria` y `movimiento` con sus índices |
+
+### 8.2 Hecho
+
+| Parte | Estado | Evidencia |
+|---|---|---|
+| Cálculo de inversión (`src/dominio/inversion.ts`) | HECHA | `inversion.test.ts`. El ejemplo del encargo da 150 € y 7,5 %, y tras aportar 200 € da 2 350 €, 2 200 € y 150 € |
+| Patrimonio (`src/dominio/patrimonio.ts`) | HECHA | `patrimonio.test.ts`, con las dos pruebas de coherencia: banco y efectivo más valor estimado, y sin valores igual a la suma de saldos que mostraba Cuentas |
+| Día, comparativa y año (`src/dominio/tiempo.ts`) | HECHA | `tiempo.test.ts`: la suma del gasto diario es el gasto del mes y la suma de los doce meses es el total del año |
+| Migración 2 y repositorio de valores | HECHA | `valores.test.ts`: una base de datos en versión 1 con datos migra a la 2 sin alterar cuentas, categorías ni movimientos. Comprobado además en el simulador: la base de ejemplo pasó de versión 1 a 2 con sus 44 movimientos |
+| Inicio con patrimonio, Hoy e Inversiones | HECHA | Pruebas en `h3.test.tsx` y capturas `inicio-*` |
+| Pantallas Patrimonio, Inversiones y valor de inversión (P21) | HECHA | Pruebas y capturas |
+| Cuenta de inversión en el detalle de cuenta | HECHA | Pruebas y capturas con y sin valores |
+| Pestaña Análisis: Día, Mes y Año | HECHA | Pruebas y capturas de las tres vistas |
+| Remate 1 · enlace de diagnóstico | YA ESTABA | El enlace solo se pinta si `__DEV__` es verdadero. Se veía en las capturas porque el simulador ejecuta una compilación de desarrollo |
+| Remate 2 · subcategorías en el filtro | HECHA | Prueba de repositorio con dos niveles |
+| Remate 3 · icono y color de categoría | HECHA | Prueba de pantalla. **Sin captura**: la hoja se abre con un toque |
+| Remate 4 · botón «+» | HECHA | El botón pasa a la cabecera, arriba a la derecha, en Inicio, Movimientos y Cuentas. Ya no flota sobre el contenido |
+
+`npm run check` al cierre: **388 pruebas en 18 suites, todas pasan**. Ninguna prueba se ha
+borrado ni desactivado. Pruebas anteriores modificadas: solo `migraciones.test.ts`, que
+enumeraba las tablas y ahora incluye `valor_de_inversion`. Las pruebas de pantalla
+anteriores (`pantallas.test.tsx` e `inicio.test.tsx`) no se han tocado. `package.json` no
+cambia: no hay dependencias nuevas.
+
+### 8.3 Casos límite
+
+| Caso | Resultado | Cómo |
+|---|---|---|
+| Sin cuentas de inversión | No aparece el bloque ni la cifra «Invertido». La pantalla de inversiones explica qué hacer | Prueba |
+| Cuenta de inversión sin valores, con uno y con muchos | Estado vacío explicado; ganancia y porcentaje; historial | Prueba y capturas |
+| Valor menor que lo aportado y valor cero | «Pierdes», con palabra y signo; −100 % | Prueba |
+| Aportado cero o negativo | No se muestra porcentaje | Prueba |
+| Dos valores el mismo día | El segundo sustituye al primero | Prueba |
+| Valor con fecha futura o anterior a la cuenta | Se rechaza con su texto | Prueba |
+| Valor anterior a la primera aportación | Se respeta y las aportaciones se suman | Prueba |
+| Aportación el mismo día y al día siguiente del valor | La del mismo día ya está incluida; la del siguiente se suma | Prueba |
+| Retirada parcial después de un valor | Bajan igual el valor y lo aportado | Prueba |
+| Valor borrado y deshacer | Los cálculos vuelven al estado anterior | Prueba |
+| Cuenta de inversión archivada con saldo | Cuenta en el patrimonio y aparece en el resumen | Prueba |
+| Patrimonio negativo | Cifra en negativo y sin reparto en porcentajes, con explicación | Prueba |
+| Dos meses de historia | La línea tiene dos puntos | Prueba |
+| Cambio de año en los doce meses | Correcto | Prueba |
+| Año sin movimientos, con un solo mes y futuro | Estado vacío; con un mes hay «más gasto» pero no «menos gasto» | Prueba |
+| Febrero bisiesto, 30 y 31 días, mes que empieza en domingo | Correcto. Noviembre de 2026 empieza en domingo | Prueba y captura |
+| Hoy es día 1 | La media divide entre 1 | Prueba |
+| Día con veinte movimientos y día sin ninguno | Correcto | Prueba |
+| 1.234.567,89 € en calendario y tablas | El cálculo tiene prueba. **NO DEMOSTRADO** en pantalla: no se capturó con importes así |
+| Dos divisas | El cálculo no las mezcla (prueba). **NO DEMOSTRADO** en pantalla: hoy no se puede crear una cuenta en otra divisa |
+| Categoría con subcategorías en el filtro | Correcto | Prueba |
+| Modo oscuro | Legible en las 18 pantallas capturadas | Capturas |
+| Texto del sistema al máximo | El calendario pasa a lista de días. Se corrigieron un título y una cifra que se partían | Prueba y capturas `calendario-texto-maximo-*` |
+
+### 8.4 Limitaciones
+
+- Solo se ha visto en el simulador iPhone 17, no en un iPhone real.
+- El simulador no admite toques desde aquí. Para capturar las partes bajas de las pantallas
+  se usó un código temporal de desplazamiento que **no está en la rama**. Las capturas son
+  posteriores al último cambio visual.
+- El valor de una inversión es el que anota la persona. Entre un valor y el siguiente la app
+  solo suma y resta lo que entra y sale: no es un valor de mercado.
+- Todo lo que entra en una cuenta de inversión cuenta como aportación, también un ingreso
+  anotado directamente en ella (por ejemplo, un dividendo). La pantalla lo explica.
+- Antes de la fecha del saldo inicial de una cuenta, esa cuenta no cuenta en el patrimonio.
+  Al añadir una cuenta con saldo, la línea de evolución da un salto en esa fecha.
+- La variación del patrimonio en el año parte del cierre del año anterior o, si no hay
+  datos tan antiguos, de la primera fecha con datos. La pantalla dice de qué fecha parte.
+- El botón «+» está ahora arriba: no tapa nada, pero queda más lejos del pulgar. La barra
+  con botón central de `docs/03` sigue pendiente.
+- En la vista Año las barras no se pueden tocar (doce barras no dan para áreas de 44
+  puntos). Se toca la fila del mes en la tabla.
+- El aviso de valor antiguo solo se ve al abrir la cuenta. No hay notificación (T-077).
+- VoiceOver y «Reducir movimiento» siguen sin probarse en un dispositivo.
+- La hoja de icono y color y la edición de un valor no tienen captura.
+
+### 8.5 Acciones del usuario
+
+1. Abrir la app en el iPhone. Este bloque no añade bibliotecas nativas: si la app instalada
+   es una compilación de desarrollo, basta con arrancar `npx expo start` en el Mac y abrirla.
+   Si no carga, compilar de nuevo desde Xcode como en H2b.
+2. La primera vez, la base de datos pasa sola de la versión 1 a la 2. Los datos se conservan.
+3. Probar con datos reales: anotar el valor de una inversión, mirar Inicio y las tres vistas
+   de Análisis, y revisar VoiceOver y «Reducir movimiento».

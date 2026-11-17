@@ -24,6 +24,28 @@ divisas distintas (se ve una cada vez); los movimientos de cuentas archivadas cu
 el balance global y la cuenta solo se lista si tiene movimientos ese mes; el patrimonio
 sigue en Cuentas; anillo en lugar de barras horizontales para el gasto por categoría.
 
+### Decisiones del 17/11/2026
+
+| Id | Asunto | Lo que dijo el usuario | Decisión |
+|---|---|---|---|
+| D7 | Orden de trabajo | Una app de finanzas debe dejar claro el dinero que se posee, qué se hace con él cada mes y cada día, y las inversiones. Aceptó el plan por bloques | Se trabaja en seis bloques, en este orden: 1) patrimonio, inversiones y vistas por día, mes y año; 2) presupuesto, gastos fijos y objetivos; 3) captura con Apple Pay y widgets; 4) cuentas de usuario y sincronización; 5) versión web; 6) publicación y suscripción. Adelanta T-070 (solo ValorDeInversion), T-075, T-076 y T-082 por delante de H3 y H4. Ver `07`, apartado 2.1 |
+| D8 | Versión web | Quiere una versión web para distribuirla y que sea accesible para todo el mundo | **Sí, después de la sincronización.** Se exporta el mismo proyecto de Expo a web y lee y escribe contra Supabase. La base de datos local en web no se usa como única copia: la documentación de Expo declara en alfa el soporte web de `expo-sqlite`. Sin captura de Apple Pay, widgets ni Atajos en web |
+| D9 | Monetización | Preguntó por anuncios o visitas. Aceptó la propuesta de suscripción | **Suscripción, sin anuncios y sin afiliación.** Plan gratuito permanente: registro manual, cuentas, Inicio y análisis del mes. Premium: sincronización entre dispositivos y web, inversiones, vista anual e informes, presupuestos y objetivos sin límite, y exportación. Prueba de Premium de **1 mes**. Sustituye la prueba de 6 meses de D4. Se mantiene la fase de lanzamiento gratuita de D4, avisando desde el principio de qué será de pago |
+
+Estado de D7 a 17/11/2026: el bloque 1 está hecho en la rama `h3-vision-completa`. El
+detalle y lo que queda pendiente de cada tarea están en `07`, apartado 2.2, y en
+`estado.md`, apartado 8.
+
+Consecuencias de D9 que hay que resolver antes del bloque 6:
+
+- La exportación de datos figura en Premium, pero el RGPD da derecho a la portabilidad. Una
+  exportación básica debe seguir siendo gratuita. Estado: PENDIENTE DE DEFINIR.
+- La sincronización es Premium y D2 la daba por incluida en V1. Hay que decidir si la cuenta
+  de usuario es obligatoria en el plan gratuito o si este funciona solo en el dispositivo.
+  Estado: PENDIENTE DE DEFINIR. Afecta a los supuestos del apartado 3.
+- El precio no está decidido.
+- Cobrar suscripciones exige alta fiscal y declaración de IVA. Consultar con un gestor.
+
 ## 2. Datos confirmados
 
 - El usuario trabaja en un Mac con Xcode y la app Apple Developer instalados.
@@ -67,7 +89,8 @@ Sin verificar todavía:
    ejecutar el spike de Apple Pay.
 2. Confirmar o corregir los cuatro supuestos del apartado 3.
 3. Tope de gasto mensual que acepta mientras la app sea gratuita.
-4. Qué funciones quedarán detrás de la suscripción y qué pasa con quienes ya la usaban.
+4. Resuelto en parte por D9 (17/11/2026). Falta el precio, qué exportación es gratuita, si el
+   plan gratuito exige cuenta y qué pasa con quienes ya usaban la app.
 
 ## 6. Documentos modificados por estas decisiones
 

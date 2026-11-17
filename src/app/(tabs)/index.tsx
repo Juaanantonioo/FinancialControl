@@ -29,6 +29,7 @@ import { resumenDiario } from '@/dominio/tiempo';
 import { aspectoDeParte } from '@/estado/aspecto';
 import { describirMes, fechaLarga, mesCorto } from '@/estado/fechas';
 import { conSigno, importe, porcentaje } from '@/estado/formato';
+import { textoDeGanancia } from '@/estado/inversion';
 import { usePanel } from '@/estado/panel';
 import { t } from '@/i18n';
 import {
@@ -137,12 +138,7 @@ export default function Inicio() {
     aspecto: aspectoDeParte(parte.clave, categorias, paleta),
   }));
 
-  const etiquetaDeGanancia =
-    inversiones.ganancia > 0
-      ? t('inversion.ganas')
-      : inversiones.ganancia < 0
-        ? t('inversion.pierdes')
-        : t('inversion.sinCambio');
+  const ganancia = textoDeGanancia(inversiones.ganancia, inversiones.rentabilidad, divisa);
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
@@ -392,10 +388,9 @@ export default function Inicio() {
               accessibilityLabel={`${t('inicio.inversiones')}. ${t('inversion.aportado')}: ${importe(
                 inversiones.aportado,
                 divisa,
-              )}. ${t('inversion.valor')}: ${importe(inversiones.valor, divisa)}. ${etiquetaDeGanancia} ${importe(
-                Math.abs(inversiones.ganancia),
-                divisa,
-              )}. ${t('inicio.verInversiones')}`}
+              )}. ${t('inversion.valor')}: ${importe(inversiones.valor, divisa)}. ${ganancia.texto}. ${t(
+                'inicio.verInversiones',
+              )}`}
               testID="bloque-inversiones"
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
               <Tarjeta titulo={`${t('inicio.inversiones')}  ›`}>
@@ -410,23 +405,16 @@ export default function Inicio() {
                     valor={importe(inversiones.valor, divisa)}
                     testID="inversiones-valor"
                   />
-                  <Dato
-                    etiqueta={etiquetaDeGanancia}
-                    valor={
-                      inversiones.rentabilidad === null || inversiones.ganancia === 0
-                        ? conSigno(inversiones.ganancia, divisa)
-                        : `${conSigno(inversiones.ganancia, divisa)} (${porcentaje(inversiones.rentabilidad)})`
-                    }
-                    color={
-                      inversiones.ganancia > 0
-                        ? c.positivo
-                        : inversiones.ganancia < 0
-                          ? c.negativo
-                          : c.texto
-                    }
-                    testID="inversiones-ganancia"
-                  />
                 </View>
+                <Text
+                  style={{
+                    color: c[ganancia.color],
+                    fontSize: Letra.secundario,
+                    fontWeight: '700',
+                  }}
+                  testID="inversiones-ganancia">
+                  {ganancia.texto}
+                </Text>
               </Tarjeta>
             </Pressable>
           ) : null}

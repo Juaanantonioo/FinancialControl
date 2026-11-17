@@ -34,6 +34,40 @@ lanzamiento gratuito con suscripción posterior y sin integración con Notion.
 Total: 18 semanas de trabajo, más el tiempo de revisión de Apple. La suscripción se añade
 después del lanzamiento gratuito (apartado 4) y queda fuera de esas 18 semanas.
 
+### 2.1 Orden de trabajo vigente desde el 17/11/2026 (decisiones D7 a D9)
+
+Los hitos y las tareas conservan su identificador. Cambia el orden en que se abordan:
+
+| Bloque | Contenido | Tareas de este documento | Estado |
+|---|---|---|---|
+| Hecho | Preparación, spike de Apple Pay sin medir, núcleo de movimientos, rediseño e Inicio | H0, H1 (parcial), H2, y parte de T-080, T-081, T-083 y T-084 | Ramas `h0` a `h2b` |
+| 1 · Visión completa | Patrimonio, inversión manual, vistas por día, mes y año | T-070 (solo ValorDeInversion), T-075, T-076, T-082, resto de T-081 | Encargo en `docs/prompt-claude-code-h3-vision-completa.md` |
+| 2 · Planificación | Presupuesto, disponible del mes, gastos fijos y objetivos | H5 completo, y T-070 a T-072 de H6 | Pendiente |
+| 3 · Entrada rápida | Captura con Apple Pay integrada, widget y recordatorios | H3, y cierre de H1 con la medición del spike A | Pendiente. Depende de la medición |
+| 4 · Cuentas y sincronización | Registro, inicio de sesión y sincronización con Supabase | H4 | Pendiente |
+| 5 · Versión web | Exportación a web contra Supabase, alojamiento y pruebas en navegador | Sin tareas todavía: se definen al cerrar el bloque 4 | Pendiente (D8) |
+| 6 · Publicación y suscripción | Calidad, beta, envío a revisión y suscripción | H8, H9 y T-120 a T-127 | Pendiente (D9) |
+
+El total de 18 semanas del apartado 2 ya no es válido: el rediseño y la versión web no
+estaban contados. NO RECALCULADO. Se recalculará al cerrar el bloque 1.
+
+T-125 y T-127 hablan de una prueba gratuita de 6 meses. Por D9 pasa a ser de 1 mes.
+
+### 2.2 Estado del bloque 1 a 17/11/2026 (rama `h3-vision-completa`)
+
+| Tarea | Hecho | Sigue pendiente |
+|---|---|---|
+| T-070 | Entidad ValorDeInversion: migración 2 y repositorio con pruebas | Objetivo y AportacionAObjetivo (bloque 2) |
+| T-075 | HECHA. Valor de inversión (P21) y rentabilidad simple (D11). Tres aportaciones y un valor dan aportado, valor, diferencia y porcentaje | — |
+| T-076 | HECHA. Patrimonio y su evolución de doce meses (D5). No dependió de T-074 | — |
+| T-077 | Aviso en pantalla si el último valor tiene más de 30 días | El recordatorio como notificación |
+| T-081 | Gasto por categoría en Inicio y en la vista Año; Análisis como pestaña | — |
+| T-082 | HECHA. Barras de seis y de doce meses (D6) y comparativa con el mes anterior en euros y porcentaje (D7) | Elegir dos meses cualesquiera: hoy se compara siempre con el anterior |
+| T-083 | HECHA el 16/11/2026. Además, parte guardada del año | — |
+| T-084 | Inicio con patrimonio, balance, Hoy, cuentas, inversiones y D2 | D1, D8, D9 y D4, que dependen de presupuesto, gastos fijos y objetivos |
+
+Añadido fuera del backlog: vista por día con calendario (parte de G7).
+
 ## 3. Backlog
 
 ### H0 · Preparación (1 semana)
