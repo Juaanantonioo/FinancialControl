@@ -584,3 +584,25 @@ máximo. Tienen prueba de pantalla, no captura.
 3. Probar con datos reales: crear el presupuesto del mes, dar de alta los fijos, confirmar
    un cobro, crear un objetivo con su aportación mensual y mirar Inicio.
 4. Decidir si se sube la rama `h5-planificacion` a GitHub. Está solo en local.
+
+## 10. B3 · Entrada rápida — rama `b3-entrada-rapida` (17/11/2026)
+
+Encargo: `docs/prompt-claude-code-b3-entrada-rapida.md`. Es el bloque 3 de la decisión D7.
+
+### 10.1 Baseline (antes de modificar nada)
+
+| Dato | Valor |
+|---|---|
+| Rama y commit de partida | `h5-planificacion` @ `d86fa9b` |
+| `npm run check` | pasa: 502 pruebas en 21 suites; formato, lint y tipos limpios |
+| Esquema de la base de datos | versión 3 |
+| `git status` | limpio, salvo el fichero del encargo en `docs/`, sin seguimiento |
+| Copia de la configuración nativa | `docs/notas/ios-antes-de-b3/`: `project.pbxproj`, `FinancialControl.entitlements` e `Info.plist` |
+
+Ajustes manuales encontrados en esos ficheros (la carpeta `ios/` no está en git):
+
+- `DEVELOPMENT_TEAM = 8Z856TA59Z` en las dos configuraciones del target de la app.
+- `ENABLE_USER_SCRIPT_SANDBOXING = NO` en las cuatro configuraciones (target y proyecto).
+- Entitlements vacíos (`<dict/>`): sin `aps-environment`.
+- Referencia a `../app-intents`, resto de haber generado `ios/` desde la rama del spike.
+- `PRODUCT_BUNDLE_IDENTIFIER = es.juanantonio.financialcontrol`.

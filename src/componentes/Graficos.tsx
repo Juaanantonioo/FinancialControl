@@ -469,7 +469,8 @@ export function Calendario({
                   minimumFontScale={0.5}
                   maxFontSizeMultiplier={1.2}
                   style={[estilos.cifraDeDia, cifrasTabulares, { color: c.textoSecundario }]}>
-                  {dia.gasto > 0 ? cifra(dia.gasto) : ' '}
+                  {/* Si la cifra no cabe, la casilla lleva solo su marca. */}
+                  {(dia.gasto > 0 && cifra(dia.gasto)) || ' '}
                 </Text>
                 <View style={[estilos.pistaDeDia, { backgroundColor: c.transparente }]}>
                   {nivel > 0 ? (

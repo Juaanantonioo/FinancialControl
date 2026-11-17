@@ -624,6 +624,8 @@ describe('objetivos (P15 y P16)', () => {
     conParametros({ objetivoId: viajeId });
     await pintar(<PantallaDeAportacion />);
     await screen.findByText(/Aportar a Viaje/);
+    // Desde B3 «Aportar» ofrece dos caminos; este es «Solo anotar».
+    await fireEvent.press(await screen.findByTestId('segmento-anotar'));
     // Sin importe no guarda.
     await fireEvent.press(screen.getByTestId('guardar'));
     expect(await screen.findByText(/importe mayor que cero/)).toBeTruthy();
@@ -949,5 +951,122 @@ describe('Inicio con planificación', () => {
     }
     // El patrimonio sigue siendo la primera cifra de la pantalla.
     expect(screen.getAllByText(/€/)[0].props.testID).toBe('patrimonio-total');
+  });
+});
+
+describe('correcciones de B3 sobre la planificación', () => {
+  it('Inicio llama «En cuentas» a lo que hay en banco y efectivo, y conserva «Disponible este mes»', async () => {
+    await pintar(<Inicio />);
+    await screen.findByTestId('patrimonio-disponible');
+    expect(screen.getByText('En cuentas')).toBeTruthy();
+    expect(screen.queryByText('Disponible')).toBeNull();
+    expect(screen.getByText('Disponible este mes')).toBeTruthy();
+  });
+
+  it('«Mover dinero» crea la transferencia con el objetivo y su aportación enlazada', async () => {
+    const [viaje] = (await repos.objetivos.listar()).filter((o) => o.nombre === 'Viaje');
+    const antes = await repos.objetivos.listarAportaciones(viaje.id);
+    const saldoAntes = await repos.cuentas.saldo(ahorroId);
+    conParametros({ objetivoId: viaje.id });
+    await pintar(<PantallaDeAportacion />);
+    // Es el camino por defecto y propone como destino la cuenta del objetivo.
+    expect(await screen.findByTestId('segmento-mover')).toBeSelected();
+    expect(screen.getByTestId('selector-destino').props.accessibilityLabel).toBe('Hacia: Ahorro');
+    expect(screen.getByTestId('selector-origen').props.accessibilityLabel).toBe('Desde: Banco');
+    await pulsarTeclas('8', '0');
+    await fireEvent.press(screen.getByTestId('guardar'));
+    await fireEvent.press(screen.getByTestId('guardar'));
+    await waitFor(() => expect(router.back).toHaveBeenCalledTimes(1));
+
+    const despues = await repos.objetivos.listarAportaciones(viaje.id);
+    expect(despues).toHaveLength(antes.length + 1);
+    const nueva = despues.find((a) => !antes.some((x) => x.id === a.id));
+    expect(nueva).toMatchObject({ importe: 8000, fecha: HOY });
+    expect(await repos.movimientos.obtener(nueva?.movimientoId ?? '')).toMatchObject({
+      tipo: 'transferencia',
+      importe: 8000,
+      cuentaId: bancoId,
+      cuentaDestinoId: ahorroId,
+      objetivoId: viaje.id,
+      origen: 'manual',
+    });
+    expect(await repos.cuentas.saldo(ahorroId)).toBe(saldoAntes + 8000);
+    // Borrar esa transferencia quita su aportación.
+    await repos.movimientos.borrar(nueva?.movimientoId ?? '');
+    expect(await repos.objetivos.listarAportaciones(viaje.id)).toHaveLength(antes.length);
+  });
+
+  it('«Mover dinero» con la misma cuenta de origen y destino se rechaza y no guarda nada', async () => {
+    const [viaje] = (await repos.objetivos.listar()).filter((o) => o.nombre === 'Viaje');
+    const antes = (await repos.movimientos.listar()).length;
+    conParametros({ objetivoId: viaje.id });
+    await pintar(<PantallaDeAportacion />);
+    await fireEvent.press(await screen.findByTestId('selector-origen'));
+    await waitFor(() => expect(screen.getAllByText('Ahorro').length).toBeGreaterThan(1));
+    // La hoja del selector va antes en la pantalla que el campo «Hacia», que también dice Ahorro.
+    await fireEvent.press(screen.getAllByText('Ahorro')[0]);
+    expect(screen.getByTestId('selector-origen').props.accessibilityLabel).toBe('Desde: Ahorro');
+    await pulsarTeclas('5');
+    await fireEvent.press(screen.getByTestId('guardar'));
+    expect(await screen.findByText(/deben ser distintas/)).toBeTruthy();
+    expect(router.back).not.toHaveBeenCalled();
+    expect((await repos.movimientos.listar()).length).toBe(antes);
+  });
+
+  it('borrar un objetivo borra sus reglas de aportación, y deshacer recupera todo', async () => {
+    const objetivo = await repos.objetivos.crear({ nombre: 'Coche', tipo: 'ahorro', meta: 500000 });
+    const nueva = (nombre: string, dia: number) =>
+      repos.reglas.crear({
+        nombre,
+        clase: 'aportacion',
+        importe: 10000,
+        cuentaId: bancoId,
+        cuentaDestinoId: ahorroId,
+        periodicidad: 'mensual',
+        diaDelMes: dia,
+        objetivoId: objetivo.id,
+      });
+    const primera = await nueva('Coche, primera', 5);
+    const segunda = await nueva('Coche, segunda', 20);
+    // Una regla que la persona ya había borrado a mano no vuelve al deshacer.
+    const antigua = await nueva('Coche, antigua', 10);
+    await repos.reglas.borrar(antigua.id);
+    const ajenas = (await repos.reglas.listar()).filter((r) => r.objetivoId !== objetivo.id);
+
+    conParametros({ id: objetivo.id });
+    await pintar(<PantallaDeObjetivoEditar />);
+    await fireEvent.press(await screen.findByTestId('borrar'));
+    await waitFor(() => expect(router.back).toHaveBeenCalled());
+    const trasBorrar = await repos.reglas.listar();
+    expect(trasBorrar.map((r) => r.id).sort()).toEqual(ajenas.map((r) => r.id).sort());
+
+    await fireEvent.press(screen.getByTestId('aviso-accion'));
+    await waitFor(async () =>
+      expect((await repos.objetivos.obtener(objetivo.id))?.borradoEn).toBeNull(),
+    );
+    const recuperadas = (await repos.reglas.listar()).filter((r) => r.objetivoId === objetivo.id);
+    expect(recuperadas.map((r) => r.id).sort()).toEqual([primera.id, segunda.id].sort());
+    expect((await repos.reglas.obtener(antigua.id))?.borradoEn).not.toBeNull();
+    await repos.objetivos.borrar(objetivo.id);
+  });
+
+  it('el calendario de fijos no redondea: 9,99 € se ve como 9,99 y lo que no cabe, solo con su marca', async () => {
+    const { importeExactoCorto } = jest.requireActual('@/estado/formato');
+    expect(importeExactoCorto(999)).toBe('9,99');
+    expect(importeExactoCorto(62000)).toBe('620');
+    expect(importeExactoCorto(3500)).toBe('35');
+    expect(importeExactoCorto(123456)).toBe('');
+    expect(importeExactoCorto(123400)).toBe('1.234');
+    expect(importeExactoCorto(123456789)).toBe('');
+    expect(importeExactoCorto(1)).toBe('0,01');
+
+    conParametros({ seccion: 'fijos' });
+    await pintar(<Plan />);
+    const musica = (await repos.reglas.listar()).find((r) => r.nombre === 'Música');
+    const dia = String(musica?.diaDelMes).padStart(2, '0');
+    const casilla = await screen.findByTestId(`dia-${MES}-${dia}`);
+    expect(casilla).toHaveTextContent(/9,99/);
+    expect(casilla).not.toHaveTextContent(/10$/);
+    expect(casilla.props.accessibilityLabel).toMatch(/Música -9,99/);
   });
 });

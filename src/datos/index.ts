@@ -16,7 +16,7 @@ import { crearRepositorioDeValores } from './valores';
 
 export function crearRepositorios(bd: BaseDeDatos, entorno: Entorno) {
   const movimientos = crearRepositorioDeMovimientos(bd, entorno);
-  const objetivos = crearRepositorioDeObjetivos(bd, entorno);
+  const objetivos = crearRepositorioDeObjetivos(bd, entorno, movimientos);
   return {
     cuentas: crearRepositorioDeCuentas(bd, entorno),
     categorias: crearRepositorioDeCategorias(bd, entorno),

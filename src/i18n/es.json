@@ -80,7 +80,7 @@
     "variacionDelMes": "{{diferencia}} desde el {{fecha}}",
     "variacionConPorcentaje": "{{diferencia}} ({{porcentaje}}) desde el {{fecha}}",
     "sinVariacion": "Todavía no hay un mes anterior con el que comparar.",
-    "disponible": "Disponible",
+    "disponible": "En cuentas",
     "invertido": "Invertido",
     "hoy": "Hoy",
     "gastoDeHoy": "Gastado hoy",
@@ -511,7 +511,8 @@
     "terminada": "Terminó el {{fecha}}",
     "hasta": "Hasta el {{fecha}}",
     "reglaLeida": "{{nombre}}: {{importe}}. {{cuando}}. Tócala para editarla.",
-    "listaDelMes": "Cobros de {{mes}}"
+    "listaDelMes": "Cobros de {{mes}}",
+    "diaConCobro": "•"
   },
   "regla": {
     "tituloNueva": "Nuevo fijo",
@@ -608,6 +609,13 @@
     "verArchivados": "Mostrar los objetivos archivados",
     "ocultarArchivados": "Ocultar los objetivos archivados",
     "aportacionNombre": "Ahorro para {{nombre}}",
-    "teFalta": "Te falta"
+    "teFalta": "Te falta",
+    "moverDinero": "Mover dinero",
+    "soloAnotar": "Solo anotar",
+    "moverAyuda": "Pasa el dinero de una cuenta a otra y lo suma al objetivo.",
+    "desde": "Desde",
+    "hacia": "Hacia",
+    "elegirCuenta": "Elegir cuenta",
+    "faltaOtraCuenta": "Para mover dinero hacen falta dos cuentas. Puedes anotar la aportación sin moverlo."
   }
 }

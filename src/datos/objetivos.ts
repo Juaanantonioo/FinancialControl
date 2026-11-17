@@ -14,6 +14,7 @@ import {
 } from '@/dominio/objetivos';
 
 import type { BaseDeDatos, Entorno } from './bd';
+import type { RepositorioDeMovimientos } from './movimientos';
 
 type FilaObjetivo = {
   id: string;
@@ -87,7 +88,19 @@ export type DatosDeAportacion = {
   nota?: string | null;
 };
 
-export function crearRepositorioDeObjetivos(bd: BaseDeDatos, entorno: Entorno) {
+export type DatosDeMovimientoDeDinero = {
+  objetivoId: string;
+  fecha: string;
+  importe: number;
+  cuentaId: string;
+  cuentaDestinoId: string;
+};
+
+export function crearRepositorioDeObjetivos(
+  bd: BaseDeDatos,
+  entorno: Entorno,
+  movimientos: RepositorioDeMovimientos,
+) {
   async function obtener(id: string): Promise<Objetivo | null> {
     const filas = await bd.consultar<FilaObjetivo>('SELECT * FROM objetivo WHERE id = ?', [id]);
     return filas[0] ? filaAObjetivo(filas[0]) : null;
@@ -192,20 +205,41 @@ export function crearRepositorioDeObjetivos(bd: BaseDeDatos, entorno: Entorno) {
   async function borrar(id: string): Promise<void> {
     await exigir(id);
     const ahora = entorno.ahora().toISOString();
-    await bd.ejecutar('UPDATE objetivo SET borrado_en = ?, modificado_en = ? WHERE id = ?', [
-      ahora,
-      ahora,
-      id,
-    ]);
+    await bd.transaccion(async () => {
+      await bd.ejecutar('UPDATE objetivo SET borrado_en = ?, modificado_en = ? WHERE id = ?', [
+        ahora,
+        ahora,
+        id,
+      ]);
+      // Sus reglas de aportación mensual se borran con él y con la misma marca
+      // de tiempo: sin objetivo seguirían pidiendo cobros que no suman a nada.
+      await bd.ejecutar(
+        `UPDATE regla_recurrente SET borrado_en = ?, modificado_en = ?
+         WHERE objetivo_id = ? AND borrado_en IS NULL`,
+        [ahora, ahora, id],
+      );
+    });
   }
 
+  /** Deshace un borrado: recupera el objetivo y las reglas que se borraron con él. */
   async function restaurar(id: string): Promise<Objetivo> {
     const objetivo = await obtener(id);
     if (!objetivo) throw new ErrorDeDominio('objetivo_no_encontrado');
-    await bd.ejecutar('UPDATE objetivo SET borrado_en = NULL, modificado_en = ? WHERE id = ?', [
-      entorno.ahora().toISOString(),
-      id,
-    ]);
+    if (objetivo.borradoEn === null) return objetivo;
+    const ahora = entorno.ahora().toISOString();
+    await bd.transaccion(async () => {
+      await bd.ejecutar('UPDATE objetivo SET borrado_en = NULL, modificado_en = ? WHERE id = ?', [
+        ahora,
+        id,
+      ]);
+      // Solo las que se borraron en el mismo instante que el objetivo: una
+      // regla que la persona borró antes a mano sigue borrada.
+      await bd.ejecutar(
+        `UPDATE regla_recurrente SET borrado_en = NULL, modificado_en = ?
+         WHERE objetivo_id = ? AND borrado_en = ?`,
+        [ahora, id, objetivo.borradoEn],
+      );
+    });
     return (await obtener(id))!;
   }
 
@@ -246,6 +280,34 @@ export function crearRepositorioDeObjetivos(bd: BaseDeDatos, entorno: Entorno) {
       ],
     );
     return (await obtenerAportacion(id))!;
+  }
+
+  /**
+   * «Mover dinero»: crea una transferencia entre dos cuentas, marcada con el
+   * objetivo, y la aportación enlazada a ella. O se guardan las dos cosas o
+   * ninguna. Las reglas de la transferencia (cuentas distintas, misma
+   * divisa, importe mayor que cero) son las de cualquier movimiento.
+   */
+  async function moverDinero(datos: DatosDeMovimientoDeDinero): Promise<AportacionAObjetivo> {
+    const objetivo = await exigir(datos.objetivoId);
+    if (objetivo.archivado) throw new ErrorDeDominio('objetivo_archivado');
+    return bd.transaccion(async () => {
+      const mov = await movimientos.crear({
+        tipo: 'transferencia',
+        fecha: datos.fecha,
+        importe: datos.importe,
+        cuentaId: datos.cuentaId,
+        cuentaDestinoId: datos.cuentaDestinoId,
+        nombre: objetivo.nombre,
+        objetivoId: objetivo.id,
+      });
+      return aportar({
+        objetivoId: objetivo.id,
+        fecha: mov.fecha,
+        importe: mov.importe,
+        movimientoId: mov.id,
+      });
+    });
   }
 
   async function borrarAportacion(id: string): Promise<void> {
@@ -291,6 +353,7 @@ export function crearRepositorioDeObjetivos(bd: BaseDeDatos, entorno: Entorno) {
     borrar,
     restaurar,
     aportar,
+    moverDinero,
     obtenerAportacion,
     borrarAportacion,
     restaurarAportacion,

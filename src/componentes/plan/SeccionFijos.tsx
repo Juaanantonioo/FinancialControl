@@ -17,7 +17,7 @@ import {
 import { moverMes } from '@/dominio/resumen';
 import { diasDelMes, type DiaDelMes } from '@/dominio/tiempo';
 import { describirMes, fechaLarga } from '@/estado/fechas';
-import { importe, sinCentimos } from '@/estado/formato';
+import { importe, importeExactoCorto } from '@/estado/formato';
 import type { usePanel } from '@/estado/panel';
 import { useConfirmarCobro, usePlan } from '@/estado/plan';
 import { t, type ClaveTexto } from '@/i18n';
@@ -226,7 +226,7 @@ export function SeccionFijos({
             hoy={hoy}
             elegido={null}
             alElegir={() => undefined}
-            cifra={sinCentimos}
+            cifra={importeExactoCorto}
             descripcion={describirDia}
           />
         )}

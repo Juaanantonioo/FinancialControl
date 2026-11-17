@@ -4,7 +4,13 @@
  */
 import { getLocales } from 'expo-localization';
 
-import { dinero, FORMATO_ES, formatearDinero, type FormatoRegional } from '@/dominio/dinero';
+import {
+  dinero,
+  FORMATO_ES,
+  formatearDinero,
+  formatearNumero,
+  type FormatoRegional,
+} from '@/dominio/dinero';
 
 let formato: FormatoRegional | null = null;
 
@@ -57,4 +63,19 @@ export function sinCentimos(centimos: number): string {
   const euros = Math.round(Math.abs(centimos) / 100);
   const texto = String(euros).replace(/\B(?=(\d{3})+(?!\d))/g, formatoRegional().separadorDeMiles);
   return centimos < 0 ? `-${texto}` : texto;
+}
+
+/** Caracteres que caben en una casilla del calendario. */
+export const ANCHO_DE_CASILLA = 6;
+
+/**
+ * Importe exacto para una casilla pequeña, sin símbolo: "9,99", "620" o
+ * "1.234". Nunca redondea: los céntimos solo se omiten si son cero. Si el
+ * texto no cabe devuelve una cadena vacía y la casilla muestra solo su marca.
+ */
+export function importeExactoCorto(centimos: number, maximo = ANCHO_DE_CASILLA): string {
+  const formato = formatoRegional();
+  const completo = formatearNumero(Math.abs(centimos), formato);
+  const texto = centimos % 100 === 0 ? completo.slice(0, completo.length - 3) : completo;
+  return texto.length <= maximo ? texto : '';
 }
