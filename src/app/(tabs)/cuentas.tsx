@@ -150,6 +150,34 @@ export default function Cuentas() {
           </View>
         ) : null}
 
+        <View style={estilos.bloque}>
+          <Text style={[estilos.grupo, { color: c.textoSecundario }]} accessibilityRole="header">
+            {t('cuentas.ajustes')}
+          </Text>
+          <Tarjeta estilo={estilos.tarjetaDeFilas}>
+            {(
+              [
+                ['/categorias', t('cuentas.categorias'), 'ajuste-categorias'],
+                ['/apple-pay', t('guia.abrir'), 'ajuste-apple-pay'],
+              ] as const
+            ).map(([ruta, texto, testID], i) => (
+              <Pressable
+                key={ruta}
+                onPress={() => router.push(ruta)}
+                accessibilityRole="button"
+                testID={testID}
+                style={({ pressed }) => [
+                  estilos.fila,
+                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.borde },
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}>
+                <Text style={[estilos.nombre, { color: c.texto }]}>{texto}</Text>
+                <Text style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>›</Text>
+              </Pressable>
+            ))}
+          </Tarjeta>
+        </View>
+
         {__DEV__ ? (
           <Link href="/diagnostico" style={[estilos.enlace, { color: c.textoSecundario }]}>
             {t('diagnostico.abrir')}

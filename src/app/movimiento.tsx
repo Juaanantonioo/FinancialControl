@@ -22,10 +22,12 @@ import {
   simboloDeDivisa,
   tecladoDesdeCentimos,
 } from '@/dominio/dinero';
+import type { Captura } from '@/dominio/captura';
 import { fechaLocal, type Movimiento } from '@/dominio/modelo';
 import { aspectoDeCategoria } from '@/estado/aspecto';
 import { useAviso } from '@/estado/Aviso';
 import { textoDeError, useConsulta, useDatos } from '@/estado/Datos';
+import { diaLocalDe } from '@/estado/fechas';
 import { formatoRegional } from '@/estado/formato';
 import { t } from '@/i18n';
 import {
@@ -53,7 +55,9 @@ export default function PantallaDeMovimiento() {
   const c = useColores();
   const paleta = usePaleta();
   const margen = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  // `id` edita un movimiento. `capturaId` abre el alta con los datos de una
+  // captura de la bandeja y, al guardar, la da por resuelta.
+  const { id, capturaId } = useLocalSearchParams<{ id?: string; capturaId?: string }>();
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const formato = formatoRegional();
@@ -88,6 +92,26 @@ export default function PantallaDeMovimiento() {
     (r) => (tipo === 'transferencia' ? Promise.resolve([]) : r.categorias.frecuentes(tipo)),
     [tipo],
   );
+
+  // Alta desde una captura: se rellena una vez con lo que la captura ya trae.
+  const [captura, setCaptura] = useState<Captura | null>(null);
+  useEffect(() => {
+    if (id || !capturaId) return;
+    let vigente = true;
+    repos.capturas.obtener(capturaId).then((encontrada) => {
+      if (!vigente || !encontrada || encontrada.borradoEn !== null) return;
+      if (encontrada.estado === 'guardada') return;
+      setCaptura(encontrada);
+      if (encontrada.importe !== null) setImporte(tecladoDesdeCentimos(encontrada.importe));
+      if (encontrada.cuentaId !== null) setCuentaId(encontrada.cuentaId);
+      if (encontrada.categoriaId !== null) setCategoriaId(encontrada.categoriaId);
+      setNombre(encontrada.comercioTexto.slice(0, 80));
+      setFecha(diaLocalDe(encontrada.recibidaEn));
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [id, capturaId, repos]);
 
   // Edición: carga el movimiento una vez.
   useEffect(() => {
@@ -196,6 +220,7 @@ export default function PantallaDeMovimiento() {
         nombre,
       };
       if (original) await repos.movimientos.modificar(original.id, datos);
+      else if (captura) await repos.capturas.guardarEditada(captura.id, datos);
       else await repos.movimientos.crear(datos);
       notificarCambio();
       router.back();
@@ -299,6 +324,17 @@ export default function PantallaDeMovimiento() {
         </Text>
 
         <TextoDeError texto={error} />
+        {captura ? (
+          <Text
+            style={{ color: c.textoSecundario, fontSize: Letra.pequeno, textAlign: 'center' }}
+            testID="origen-captura">
+            {t('movimiento.deCaptura', {
+              texto: [captura.importeTexto, captura.comercioTexto, captura.tarjetaTexto]
+                .filter((x) => x !== '')
+                .join(' · '),
+            })}
+          </Text>
+        ) : null}
 
         <Fila
           etiqueta={

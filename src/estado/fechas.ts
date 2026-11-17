@@ -57,3 +57,14 @@ export function diaYMes(fecha: string): string {
     mes: t(`fechas.mes${d.getMonth() + 1}` as ClaveTexto),
   });
 }
+
+/** Día local "AAAA-MM-DD" de un instante en UTC (texto ISO 8601). */
+export function diaLocalDe(instante: string): string {
+  return fechaLocal(new Date(instante));
+}
+
+/** Hora local "HH:MM" de un instante en UTC (texto ISO 8601). */
+export function horaLocalDe(instante: string): string {
+  const d = new Date(instante);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}

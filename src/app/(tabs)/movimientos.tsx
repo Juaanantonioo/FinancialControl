@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import {
+  Boton,
   BotonAnadir,
   Cabecera,
   Selector,
@@ -83,6 +84,7 @@ export default function Movimientos() {
   const cuentas = useConsulta((r) => r.cuentas.listar({ incluirArchivadas: true }));
   const categorias = useConsulta((r) => r.categorias.listar({ incluirArchivadas: true }));
   const meses = useConsulta((r) => r.movimientos.mesesConMovimientos());
+  const pendientes = useConsulta((r) => r.capturas.contarPendientes());
 
   const secciones = useMemo(
     () => agruparPorDia(lista ?? []).map((g) => ({ fecha: g.fecha, data: g.movimientos })),
@@ -125,6 +127,14 @@ export default function Movimientos() {
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
       <Cabecera titulo={t('movimientos.titulo')}>
+        <Boton
+          texto={
+            pendientes ? t('bandeja.accesoConNumero', { total: pendientes }) : t('bandeja.acceso')
+          }
+          etiqueta={t('bandeja.accesoLeido', { total: pendientes ?? 0 })}
+          alPulsar={() => router.push('/capturas')}
+          testID="abrir-bandeja"
+        />
         <BotonAnadir
           etiqueta={t('movimientos.nuevo')}
           alPulsar={() => router.push('/movimiento')}

@@ -33,6 +33,8 @@ export default function RootLayout() {
           <Stack.Screen name="cuenta" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="detalle-de-cuenta" options={{ headerShown: false }} />
           <Stack.Screen name="patrimonio" options={{ headerShown: false }} />
+          <Stack.Screen name="capturas" options={{ headerShown: false }} />
+          <Stack.Screen name="apple-pay" options={{ headerShown: false }} />
           <Stack.Screen name="objetivo" options={{ headerShown: false }} />
           <Stack.Screen
             name="presupuesto"

@@ -28,6 +28,7 @@ import {
 } from '@/dominio/resumen';
 import { resumenDiario } from '@/dominio/tiempo';
 import { aspectoDeParte } from '@/estado/aspecto';
+import { useConsulta } from '@/estado/Datos';
 import { describirMes, fechaLarga, mesCorto } from '@/estado/fechas';
 import { conSigno, importe, porcentaje } from '@/estado/formato';
 import { textoDeGanancia } from '@/estado/inversion';
@@ -61,6 +62,7 @@ export default function Inicio() {
   const panel = usePanel();
   const { hoy, divisa, divisas, cuentas, movimientos, valores, categorias, sinCuentas } = panel;
   const [mes, setMes] = useState(mesDe());
+  const pendientesDeRevisar = useConsulta((r) => r.capturas.contarPendientes());
   // Cuenta las veces que se ha pedido abrir Movimientos con un filtro.
   const peticiones = useRef(0);
 
@@ -212,6 +214,21 @@ export default function Inicio() {
               valor={divisa}
               alCambiar={panel.elegirDivisa}
             />
+          ) : null}
+
+          {/* Pagos capturados por revisar. Solo aparece si hay alguno. */}
+          {pendientesDeRevisar ? (
+            <Pressable
+              onPress={() => router.push('/capturas')}
+              accessibilityRole="button"
+              testID="bloque-capturas"
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+              <Tarjeta titulo={`${t('bandeja.enInicio', { total: pendientesDeRevisar })}  ›`}>
+                <Text style={{ color: c.textoSecundario, fontSize: Letra.secundario }}>
+                  {t('bandeja.enInicioAyuda')}
+                </Text>
+              </Tarjeta>
+            </Pressable>
           ) : null}
 
           {/* Planificación: lo que queda por gastar y lo que viene. Siempre del mes en curso. */}
