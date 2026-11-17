@@ -11,6 +11,14 @@ import { t } from '@/i18n';
 import { useColores } from '@/theme';
 
 /**
+ * Las pestañas son siempre la base de la pila. Así, un enlace que abre la
+ * app directamente en otra pantalla (el widget abre el alta de movimiento,
+ * un aviso abre la bandeja) la pinta sobre las pestañas, con su forma de
+ * volver, y no como única pantalla.
+ */
+export const unstable_settings = { anchor: '(tabs)' };
+
+/**
  * Raíz de la navegación. Expo Router convierte cada fichero de `src/app` en
  * una pantalla; este fichero define el contenedor que las envuelve y da
  * acceso a los datos a todas ellas.

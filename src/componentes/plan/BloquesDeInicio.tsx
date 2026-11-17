@@ -98,6 +98,7 @@ export function BloqueDisponible({ panel }: { panel: Panel }) {
               {importe(Math.max(0, d1.disponible), divisa)}
             </Text>
             <Text
+              maxFontSizeMultiplier={1.6}
               style={{
                 color: d1.exceso > 0 ? c.negativo : c.textoSecundario,
                 fontSize: Letra.secundario,
@@ -116,7 +117,7 @@ export function BloqueDisponible({ panel }: { panel: Panel }) {
             )}
             marca={estado.marcaDelDia}
           />
-          <Text style={[estilos.nota, { color: c.textoSecundario }]}>
+          <Text maxFontSizeMultiplier={1.6} style={[estilos.nota, { color: c.textoSecundario }]}>
             {t('inicio.comprometido', { porcentaje: d1.avance })}
           </Text>
         </>
@@ -173,7 +174,10 @@ export function BloquePendiente({ panel }: { panel: Panel }) {
     <Tarjeta titulo={t('inicio.pendiente')} testID="bloque-pendiente">
       {hayCobros ? (
         <View testID="bloque-por-confirmar">
-          <Text style={[estilos.grupo, { color: c.textoSecundario }]} accessibilityRole="header">
+          <Text
+            maxFontSizeMultiplier={1.6}
+            style={[estilos.grupo, { color: c.textoSecundario }]}
+            accessibilityRole="header">
             {t('inicio.porConfirmar')}
           </Text>
           {cobros.visibles.map((o, i) => (
@@ -209,10 +213,12 @@ export function BloquePendiente({ panel }: { panel: Panel }) {
             { opacity: pressed ? 0.6 : 1 },
           ]}>
           <View style={estilos.textos}>
-            <Text style={[estilos.nombre, { color: c.texto }]}>
+            <Text maxFontSizeMultiplier={1.6} style={[estilos.nombre, { color: c.texto }]}>
               {t('bandeja.enInicio', { total: porRevisar })}
             </Text>
-            <Text style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
               {t('bandeja.enInicioAyuda')}
             </Text>
           </View>
@@ -228,11 +234,15 @@ export function BloquePendiente({ panel }: { panel: Panel }) {
         <View
           testID="aviso-de-presupuesto"
           style={[estilos.avisos, (hayCobros || porRevisar > 0) && separador]}>
-          <Text style={[estilos.grupo, { color: c.textoSecundario }]} accessibilityRole="header">
+          <Text
+            maxFontSizeMultiplier={1.6}
+            style={[estilos.grupo, { color: c.textoSecundario }]}
+            accessibilityRole="header">
             {`⚠ ${t('presupuesto.avisoTitulo')}`}
           </Text>
           {avisos.visibles.map((l) => (
             <Text
+              maxFontSizeMultiplier={1.6}
               key={l.categoriaId}
               style={{
                 color: l.estado === 'excedida' ? c.negativo : c.aviso,
@@ -294,7 +304,10 @@ export function BloqueProximos({ panel }: { panel: Panel }) {
       ) : (
         <>
           {proximos.visibles.length === 0 ? (
-            <Text style={[estilos.nota, { color: c.textoSecundario }]} testID="proximos-vacio">
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={[estilos.nota, { color: c.textoSecundario }]}
+              testID="proximos-vacio">
               {t('inicio.proximosVacio')}
             </Text>
           ) : (
@@ -407,7 +420,10 @@ export function BloquePrimerosPasos({ panel }: { panel: Panel }) {
 
   return (
     <Tarjeta titulo={t('inicio.primerosPasos')} testID="bloque-primeros-pasos">
-      <Text style={[estilos.nota, { color: c.textoSecundario }]} testID="pasos-hechos">
+      <Text
+        maxFontSizeMultiplier={1.6}
+        style={[estilos.nota, { color: c.textoSecundario }]}
+        testID="pasos-hechos">
         {t('inicio.pasosHechos', { hechos: estado.hechos, total: estado.pasos.length })}
       </Text>
       {estado.pasos.map(({ paso, hecho }, i) => (
@@ -434,6 +450,7 @@ export function BloquePrimerosPasos({ panel }: { panel: Panel }) {
           </Text>
           <View style={estilos.textos}>
             <Text
+              maxFontSizeMultiplier={1.6}
               style={[
                 estilos.nombre,
                 { color: hecho ? c.textoSecundario : c.texto },
@@ -441,7 +458,9 @@ export function BloquePrimerosPasos({ panel }: { panel: Panel }) {
               ]}>
               {TEXTO_DE_PASO[paso]}
             </Text>
-            <Text style={{ color: c.textoSecundario, fontSize: Letra.pequeno }}>
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={{ color: c.textoSecundario, fontSize: Letra.pequeno }}>
               {hecho ? t('inicio.pasoHecho') : t('inicio.pasoPendiente')}
             </Text>
           </View>

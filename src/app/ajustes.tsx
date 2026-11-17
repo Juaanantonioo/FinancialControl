@@ -62,8 +62,12 @@ export default function Ajustes() {
                 { opacity: pressed ? 0.6 : 1 },
               ]}>
               <View style={estilos.textos}>
-                <Text style={[estilos.titulo, { color: c.texto }]}>{acceso.titulo}</Text>
-                <Text style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
+                <Text maxFontSizeMultiplier={1.6} style={[estilos.titulo, { color: c.texto }]}>
+                  {acceso.titulo}
+                </Text>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
                   {acceso.ayuda}
                 </Text>
               </View>

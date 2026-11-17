@@ -6,7 +6,7 @@
  *
  * Los datos son de ejemplo y se colocan en el mes en curso.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
@@ -680,6 +680,13 @@ describe('enlaces de entrada', () => {
     ]) {
       expect([ruta, existe(ruta)]).toEqual([ruta, true]);
     }
+  });
+
+  it('las pestañas son la base de la pila: un enlace con la app cerrada se abre sobre ellas', () => {
+    // Importar la raíz arrastra los módulos nativos; basta con comprobar lo que declara.
+    const raiz = readFileSync(join(__dirname, '../../app/_layout.tsx'), 'utf8');
+    expect(raiz).toMatch(/export const unstable_settings = \{ anchor: '\(tabs\)' \};/);
+    expect(raiz).toMatch(/name="movimiento" options=\{\{ presentation: 'modal'/);
   });
 
   it('el widget sigue abriendo Inicio y el alta de movimiento', async () => {
