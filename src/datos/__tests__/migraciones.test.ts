@@ -13,13 +13,17 @@ describe('migraciones', () => {
       "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
     );
     expect(tablas.map((t) => t.name)).toEqual([
+      'alias_de_tarjeta',
       'aportacion_a_objetivo',
+      'aviso_emitido',
+      'captura',
       'categoria',
       'cuenta',
       'linea_de_presupuesto',
       'movimiento',
       'objetivo',
       'presupuesto',
+      'regla_de_comercio',
       'regla_recurrente',
       'valor_de_inversion',
     ]);

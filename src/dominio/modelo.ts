@@ -120,7 +120,12 @@ export type CodigoDeError =
   | 'meta_no_valida'
   | 'objetivo_no_encontrado'
   | 'objetivo_archivado'
-  | 'aportacion_no_encontrada';
+  | 'aportacion_no_encontrada'
+  | 'captura_no_encontrada'
+  | 'captura_incompleta'
+  | 'captura_ya_resuelta'
+  | 'alias_vacio'
+  | 'alias_no_encontrado';
 
 /**
  * Error de una regla de negocio. Lleva un código, no un texto: la pantalla

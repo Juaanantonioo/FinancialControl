@@ -5,6 +5,8 @@
 import type { TipoDeCategoria } from '@/dominio/modelo';
 
 import type { BaseDeDatos, Entorno } from './bd';
+import { crearRepositorioDeAvisos } from './avisos';
+import { crearRepositorioDeCapturas } from './capturas';
 import { crearRepositorioDeCategorias } from './categorias';
 import { crearRepositorioDeCuentas } from './cuentas';
 import { migrar } from './migraciones';
@@ -24,6 +26,8 @@ export function crearRepositorios(bd: BaseDeDatos, entorno: Entorno) {
     valores: crearRepositorioDeValores(bd, entorno),
     objetivos,
     presupuestos: crearRepositorioDePresupuestos(bd, entorno),
+    capturas: crearRepositorioDeCapturas(bd, entorno, movimientos),
+    avisos: crearRepositorioDeAvisos(bd, entorno),
     // Confirmar un cobro crea un movimiento y, si procede, una aportación.
     reglas: crearRepositorioDeReglas(bd, entorno, movimientos, objetivos),
   };

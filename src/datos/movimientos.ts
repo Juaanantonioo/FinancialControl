@@ -35,6 +35,8 @@ export type DatosDeMovimiento = {
   reglaRecurrenteId?: string | null;
   /** Objetivo al que aporta este movimiento (H5). */
   objetivoId?: string | null;
+  /** Captura de la que nace este movimiento (B3). */
+  capturaId?: string | null;
 };
 
 /** Movimiento con los nombres que la lista necesita mostrar. */
@@ -172,9 +174,9 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
     await bd.ejecutar(
       `INSERT INTO movimiento (id, tipo, fecha, importe, divisa, cuenta_id, cuenta_destino_id,
                                categoria_id, nombre, comercio, nota, origen,
-                               regla_recurrente_id, objetivo_id,
+                               regla_recurrente_id, objetivo_id, captura_id,
                                creado_en, modificado_en, borrado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
       [
         id,
         v.tipo,
@@ -190,6 +192,7 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
         v.origen,
         datos.reglaRecurrenteId ?? null,
         datos.objetivoId ?? null,
+        datos.capturaId ?? null,
         ahora,
         ahora,
       ],
@@ -246,6 +249,14 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
           [ahora, ahora, id],
         );
       }
+      // Si nació de una captura, esta vuelve a la bandeja como pendiente.
+      if (mov.capturaId !== null) {
+        await bd.ejecutar(
+          `UPDATE captura SET estado = 'pendiente', movimiento_id = NULL, modificado_en = ?
+           WHERE id = ? AND estado = 'guardada' AND movimiento_id = ?`,
+          [ahora, mov.capturaId, id],
+        );
+      }
     });
   }
 
@@ -269,6 +280,14 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
           `UPDATE aportacion_a_objetivo SET borrado_en = NULL, modificado_en = ?
            WHERE movimiento_id = ? AND borrado_en = ?`,
           [ahora, id, mov.borradoEn],
+        );
+      }
+      // Su captura vuelve a quedar guardada, salvo que entretanto se haya resuelto de otra forma.
+      if (mov.capturaId !== null) {
+        await bd.ejecutar(
+          `UPDATE captura SET estado = 'guardada', movimiento_id = ?, modificado_en = ?
+           WHERE id = ? AND estado = 'pendiente' AND movimiento_id IS NULL`,
+          [id, ahora, mov.capturaId],
         );
       }
     });

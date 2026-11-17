@@ -94,7 +94,9 @@ describe('migración 3: planificación', () => {
       [antes.cuentas, antes.categorias, antes.movimientos, antes.valores].map((t) => t.length),
     ).toEqual([2, 1, 2, 1]);
 
-    expect(await migrar(bd)).toEqual({ desde: 2, hasta: 3 });
+    // Solo hasta la versión 3, que es la que comprueba esta prueba. El paso a la 4 tiene la suya.
+    const hastaLaTres = MIGRACIONES.filter((m) => m.version <= 3);
+    expect(await migrar(bd, hastaLaTres)).toEqual({ desde: 2, hasta: 3 });
     expect(await volcar()).toEqual(antes);
 
     // Las tablas nuevas funcionan sobre los datos migrados.
@@ -121,9 +123,12 @@ describe('migración 3: planificación', () => {
       expect(sentencia).toMatch(/^CREATE (TABLE|INDEX|UNIQUE INDEX)/);
       expect(sentencia).not.toMatch(/ALTER|DROP|UPDATE|DELETE|INSERT/i);
     }
-    expect(MIGRACIONES.map((m) => m.version)).toEqual([1, 2, 3]);
+    expect(MIGRACIONES.map((m) => m.version).slice(0, 3)).toEqual([1, 2, 3]);
     const bd = crearBdDePrueba();
-    await migrar(bd);
+    await migrar(
+      bd,
+      MIGRACIONES.filter((m) => m.version <= 3),
+    );
     const tablas = await bd.consultar<{ name: string }>(
       "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
     );

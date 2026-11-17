@@ -180,6 +180,60 @@ export const MIGRACIONES: Migracion[] = [
       `CREATE INDEX movimiento_por_regla ON movimiento (regla_recurrente_id)`,
     ],
   },
+  {
+    // B3: capturas de pagos y avisos (T-030 a T-034 y T-040). Solo añade
+    // tablas. `movimiento` ya tenía desde la versión 1 la columna `captura_id`.
+    version: 4,
+    sentencias: [
+      // Los tres textos guardan lo que llegó, sin tocar. `importe` y `divisa`
+      // son lo que la app pudo leer de ellos; quedan vacíos si no pudo.
+      `CREATE TABLE captura (
+        id TEXT PRIMARY KEY NOT NULL,
+        recibida_en TEXT NOT NULL,
+        origen TEXT NOT NULL CHECK (origen IN ('transaccion', 'notificacion', 'manual', 'prueba')),
+        importe_texto TEXT NOT NULL DEFAULT '',
+        comercio_texto TEXT NOT NULL DEFAULT '',
+        tarjeta_texto TEXT NOT NULL DEFAULT '',
+        importe INTEGER CHECK (importe IS NULL OR importe > 0),
+        divisa TEXT,
+        cuenta_id TEXT REFERENCES cuenta (id),
+        categoria_id TEXT REFERENCES categoria (id),
+        estado TEXT NOT NULL DEFAULT 'pendiente'
+          CHECK (estado IN ('pendiente', 'guardada', 'descartada', 'duplicada')),
+        movimiento_id TEXT REFERENCES movimiento (id),
+        id_de_cola TEXT,
+        ${COMUNES},
+        CHECK (estado = 'guardada' OR movimiento_id IS NULL)
+      )`,
+      // La misma entrada de la cola nativa no se importa dos veces.
+      `CREATE UNIQUE INDEX captura_por_id_de_cola
+         ON captura (id_de_cola) WHERE id_de_cola IS NOT NULL AND borrado_en IS NULL`,
+      `CREATE INDEX captura_por_estado ON captura (estado)`,
+      `CREATE TABLE alias_de_tarjeta (
+        id TEXT PRIMARY KEY NOT NULL,
+        texto TEXT NOT NULL CHECK (texto <> ''),
+        cuenta_id TEXT NOT NULL REFERENCES cuenta (id),
+        ${COMUNES}
+      )`,
+      `CREATE UNIQUE INDEX alias_por_texto ON alias_de_tarjeta (texto) WHERE borrado_en IS NULL`,
+      `CREATE TABLE regla_de_comercio (
+        id TEXT PRIMARY KEY NOT NULL,
+        comercio TEXT NOT NULL CHECK (comercio <> ''),
+        categoria_id TEXT NOT NULL REFERENCES categoria (id),
+        ${COMUNES}
+      )`,
+      `CREATE UNIQUE INDEX regla_por_comercio
+         ON regla_de_comercio (comercio) WHERE borrado_en IS NULL`,
+      // Avisos que ya se han mostrado, para no repetirlos.
+      `CREATE TABLE aviso_emitido (
+        id TEXT PRIMARY KEY NOT NULL,
+        clave TEXT NOT NULL,
+        emitido_en TEXT NOT NULL,
+        ${COMUNES}
+      )`,
+      `CREATE UNIQUE INDEX aviso_por_clave ON aviso_emitido (clave) WHERE borrado_en IS NULL`,
+    ],
+  },
 ];
 
 export async function versionDelEsquema(bd: BaseDeDatos): Promise<number> {
