@@ -135,8 +135,13 @@ export function FilaDeCobro({
         })}
         testID={`cobro-${regla.nombre}-${fecha}`}
         style={({ pressed }) => [estilos.textosDeCobro, { opacity: pressed ? 0.6 : 1 }]}>
-        <Text style={[estilos.nombre, { color: c.texto }]}>{regla.nombre}</Text>
-        <Text style={{ color: c.textoSecundario, fontSize: Letra.pequeno }}>
+        {/* La fila comparte ancho con el botón: la letra crece, pero con tope, para no partir palabras. */}
+        <Text style={[estilos.nombre, { color: c.texto }]} maxFontSizeMultiplier={1.6}>
+          {regla.nombre}
+        </Text>
+        <Text
+          style={{ color: c.textoSecundario, fontSize: Letra.pequeno }}
+          maxFontSizeMultiplier={1.6}>
           {`${diaYMes(fecha)} · `}
           <Text
             style={[
@@ -366,8 +371,17 @@ const estilos = StyleSheet.create({
     minHeight: TactilMinimo + Espacio.s,
     paddingVertical: Espacio.s,
     gap: Espacio.s,
+    // Con letra muy grande el botón baja a su propia línea en vez de estrechar el texto.
+    flexWrap: 'wrap',
   },
-  textosDeCobro: { flex: 1, gap: 2, minHeight: TactilMinimo, justifyContent: 'center' },
+  textosDeCobro: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 200,
+    gap: 2,
+    minHeight: TactilMinimo,
+    justifyContent: 'center',
+  },
   nombre: { fontSize: Letra.cuerpo, fontWeight: '600' },
   importeDeCobro: { fontSize: Letra.subtitulo },
   botonConfirmar: {

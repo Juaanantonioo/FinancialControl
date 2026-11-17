@@ -89,6 +89,14 @@ capacidad no bloquea el spike.
 | T-016 Atajo compartido con automatización | PENDIENTE DEL USUARIO | NO DEMOSTRADO. Un atajo solo se crea y se comparte desde un iPhone con tu cuenta de iCloud. Instrucciones, apartado 5 |
 | T-017 Informe del spike | BLOQUEADA | No hay datos reales. No se redacta ni se estima |
 
+> **Actualización del 17/11/2026 (rama `b3-entrada-rapida`).** El spike queda integrado en
+> la app: la carpeta `app-intents/` con la acción «Registrar pago», la biblioteca
+> `expo-app-intents` (ahora 0.5.18), la cola persistente y el aviso local lanzado desde
+> Swift. La pantalla «Capturas del spike» desaparece: la cola se vuelca en la tabla
+> `captura` y se ve en la bandeja. Lo que este apartado marcaba como NO DEMOSTRADO sigue
+> igual: nada de ello se ha visto en un iPhone. La medición del spike A (T-013 a T-017)
+> sigue pendiente del usuario. Detalle en el apartado 10.
+
 ### 3.1 Qué está hecho y qué no en T-010, T-011 y T-012
 
 Compilación de la rama el 16/11/2026: `Build Succeeded`, 0 errores, para el simulador
@@ -606,3 +614,231 @@ Ajustes manuales encontrados en esos ficheros (la carpeta `ios/` no está en git
 - Entitlements vacíos (`<dict/>`): sin `aps-environment`.
 - Referencia a `../app-intents`, resto de haber generado `ios/` desde la rama del spike.
 - `PRODUCT_BUNDLE_IDENTIFIER = es.juanantonio.financialcontrol`.
+
+### 10.2 Hecho
+
+| Fase | Commit | Estado | Evidencia |
+|---|---|---|---|
+| 0 y 1 · Baseline y cuatro correcciones | `072c2b9` | HECHA | Cinco pruebas nuevas en `h5.test.tsx` |
+| 2 · Reglas y datos de la captura | `d9f7c86` | HECHA | `captura.test.ts` (65 pruebas) y `capturas.test.ts` (34). Una base en versión 3 con datos pasa a la 4 con sus nueve tablas idénticas |
+| 3 · Bandeja y guía | `23917f1` | HECHA | `b3.test.tsx` (17 pruebas) |
+| 4 · Base nativa reproducible | `bce2a0b` | HECHA | Ver 10.3 |
+| 6 · Notificaciones locales | `61c485a` | HECHA en JavaScript | `avisos.test.ts` (22) y `avisos.test.tsx` (19), contra un sistema de notificaciones simulado. Que el aviso llegue en un iPhone: NO DEMOSTRADO |
+| 5 · Acciones de Atajos | `6176d86` | HECHA hasta donde se puede sin iPhone | El binario del simulador contiene las dos acciones. Ejecutarlas desde Atajos: NO DEMOSTRADO |
+| 7 · Widget | `d942da9` | Compila y su target está bien firmado | Ver 10.3. Verlo en la pantalla de inicio: NO DEMOSTRADO |
+| 8 y 9 · Capturas y documentación | commit final | Ver 10.6 | — |
+
+La fase 6 se hizo antes que la 5 porque es solo JavaScript y no dependía de la compilación.
+
+`npm run check` al cierre: **672 pruebas en 28 suites, todas pasan** (502 al empezar, 170
+nuevas).
+
+Pruebas anteriores tocadas, todas dentro de lo que permitía el encargo:
+
+| Prueba | Motivo |
+|---|---|
+| `migraciones.test.ts`, lista de tablas | Daba por hecho que la versión 3 era la última: incluye ahora las cuatro tablas nuevas |
+| `plan.test.ts`, paso de la versión 2 a la 3 | Migra solo hasta la 3, que es lo que comprueba |
+| `plan.test.ts`, «la migración 3 solo crea tablas» | Compara las tres primeras versiones y lista las tablas hasta la versión 3 |
+| `h5.test.tsx`, «Aportar anota una aportación sin movimiento» | «Aportar» tiene ahora dos caminos (corrección 1.2): la prueba elige «Solo anotar» y comprueba lo mismo |
+
+Ninguna prueba se ha borrado ni desactivado.
+
+### 10.3 Base nativa: qué se comprobó y con qué órdenes
+
+Dependencias añadidas: `expo-app-intents` 0.5.18 (MIT; es la versión que fija
+`npx expo install` para SDK 58, un parche por encima de la 0.5.17 del spike; se deja fija
+porque la biblioteca está en alfa), `expo-widgets` ~58.0.29 (MIT) y `@expo/ui` ~58.0.29,
+que `expo-widgets` exige de forma directa. Ninguna otra.
+
+Ajustes manuales que ahora están en el repositorio:
+
+| Ajuste | Dónde |
+|---|---|
+| Equipo de firma `8Z856TA59Z` | `app.json`, `ios.appleTeamId` (vía oficial de Expo) |
+| `ENABLE_USER_SCRIPT_SANDBOXING = NO` en todos los targets | `plugins/sin-sandbox-de-scripts.js` |
+| Sin `aps-environment` | `plugins/sin-push.js` |
+
+El segundo plugin no estaba previsto. El primer `prebuild --clean` generó los entitlements
+**con** `aps-environment`: Expo lo añade por su cuenta en cuanto `expo-notifications` está
+instalada, aunque no se use su plugin. El plugin local lo quita.
+
+Órdenes ejecutadas y resultado:
+
+```sh
+npx expo prebuild --clean --platform ios
+cd ios && xcodebuild -workspace FinancialControl.xcworkspace -scheme FinancialControl \
+  -configuration Debug -sdk iphonesimulator -destination 'id=<iPhone 17>' build
+```
+
+| Comprobación | Resultado |
+|---|---|
+| `prebuild --clean` | Termina sin errores. Ejecutado siete veces a lo largo del bloque |
+| Compilación para simulador tras el prebuild, sin abrir Xcode | `BUILD SUCCEEDED` al cerrar las fases 4, 5 y 7. La fase 6 no cambió nada nativo y no se compiló aparte |
+| Equipo | `DEVELOPMENT_TEAM = 8Z856TA59Z` en las cuatro configuraciones de los dos targets |
+| Sandboxing | `ENABLE_USER_SCRIPT_SANDBOXING = NO` en las seis configuraciones; ninguna en `YES` |
+| Push | Ningún `aps-environment` en los entitlements de la app ni del widget |
+| Identificador | `es.juanantonio.financialcontrol`, sin cambios. El widget usa `…​.ExpoWidgetsTarget` |
+| App Group | `group.es.juanantonio.financialcontrol` en los entitlements de la app y del widget |
+| Acciones de Atajos | `Metadata.appintents/extract.actionsdata` del binario contiene `RegistrarPagoIntent` («Registrar pago»: importe, comercio, tarjeta, origen) y `AnadirGastoIntent` («Añadir gasto»: importe, categoría, cuenta), todos los parámetros opcionales y `openAppWhenRun` en falso |
+| Widget | El binario lleva `PlugIns/ExpoWidgetsTarget.appex` |
+| Dos prebuild seguidos | `Podfile`, `Info.plist` y entitlements, idénticos byte a byte. `project.pbxproj` difiere solo en los identificadores internos de 24 caracteres que Expo genera al azar: sustituidos estos, 0 líneas distintas |
+
+Todo esto es para el **simulador**. La compilación para un iPhone, que es la que firma de
+verdad con la cuenta gratuita, no se ha hecho (decisión D-g): **NO DEMOSTRADO**. En
+particular, que la cuenta gratuita firme el App Group del widget es lo que dice el
+encargo, no algo comprobado aquí.
+
+### 10.4 Decisiones tomadas sin consultar
+
+| Decisión | Motivo |
+|---|---|
+| Segundo plugin local, `sin-push.js` | Sin él, cada prebuild devolvía el permiso que la cuenta gratuita no firma |
+| `expo-app-intents` 0.5.18 en lugar de 0.5.17 | Es la que instala `npx expo install` para SDK 58, como preveía D-c |
+| «1.234» y «1,234» quedan sin importe | Pueden ser miles o decimales. El encargo pide no inventar ante la duda |
+| Un importe negativo o cero queda sin importe | Sería una devolución; no se convierte en gasto a ciegas |
+| La divisa que no dice el texto es la de la cuenta propuesta | Atajos puede entregar solo el número |
+| Al guardar una captura con nombre de tarjeta y sin alias, se crea el alias | Es el paso 6 de A.4 («la respuesta crea el alias»). Un alias existente no se pisa |
+| La duplicada no se fusiona con la primera | A.5 habla de «enriquecer» la primera; el encargo pide que quede «visible y recuperable». Manda el encargo |
+| «Añadir gasto» crea el movimiento al abrir la app | La acción no abre la app y la base de datos solo la escribe la app |
+| «Añadir gasto» sin cuenta y con una sola cuenta activa usa esa; con varias, deja la captura pendiente | No elegir una cuenta al azar |
+| Si la captura de «Añadir gasto» repite otra en 10 minutos, queda como duplicada y no crea el gasto | Misma regla que cualquier captura |
+| La bandeja pinta como mucho las 100 pendientes más recientes y lo dice arriba | Para que siga respondiendo con 150 o más |
+| «Por revisar» en Inicio y el número en Movimientos | Así la bandeja se encuentra sin buscarla |
+| Bloque «Ajustes» al pie de Cuentas con Categorías, Apple Pay y Avisos | El encargo pedía enlazar Avisos «desde donde hoy se llega a Categorías», que era solo el alta de movimiento. No existe aún pantalla de Ajustes |
+| Los avisos de cobro miran el mes en curso y los dos siguientes | Con más, el tope de 40 se llenaría de avisos lejanos |
+| El aviso de presupuesto se muestra en el momento, no se programa | Depende de un gasto que acaba de anotarse |
+| Un aviso que se excede de golpe da solo el de «excedida» | Dos avisos seguidos de la misma categoría no aportan |
+| El aviso de capturas no se repite si ya pasaron las 24 horas | La persona lo ve al abrir la app |
+| Las preferencias de avisos van en el almacén de clave y valor de expo-sqlite | No son datos financieros y no necesitan migración |
+| El alta de un fijo permite elegir de 0 a 7 días de antelación | `aviso_dias_antes` existía desde la migración 3 y no se podía editar |
+| El widget usa los colores de la app enviados como datos | Dentro del widget no se puede importar el tema |
+| Fase 6 antes que la 5 | Solo JavaScript; no esperaba a la compilación |
+
+### 10.5 Casos límite
+
+| Caso | Resultado | Cómo |
+|---|---|---|
+| Importe vacío, solo símbolo, dos números, con miles y en otra divisa | Sin importe salvo los dos últimos, que se leen bien | Prueba (40 textos) |
+| Comercio vacío, con emojis, con acentos y de 300 caracteres | Se guarda tal cual, recortado a 200 sin partir un emoji | Prueba |
+| Tarjeta desconocida con una cuenta de banco y con dos | Se propone la única; con dos, sin cuenta | Prueba |
+| Alias cuya cuenta se archiva después | Deja de aplicarse | Prueba |
+| La misma entrada de la cola leída dos veces | Una sola captura | Prueba de repositorio y de importación |
+| Dos capturas iguales a 9 y a 11 minutos | A 9, una pendiente y una duplicada; a 11, dos pendientes | Prueba |
+| Captura y movimiento manual del mismo pago | No se fusionan | Prueba |
+| Guardar, borrar el movimiento y deshacer | Guardada, pendiente y guardada de nuevo | Prueba |
+| 150 capturas pendientes | La bandeja pinta 100 y dice cuántas hay | Prueba |
+| Categoría recordada que luego se archiva | Deja de proponerse | Prueba |
+| Permiso denegado, y concedido después | La pantalla lo explica y enlaza con Ajustes; al concederlo vuelve a programar | Prueba con el sistema simulado |
+| Regla del día 31 en un mes de 30, con aviso tres días antes | Avisa el 27 | Prueba |
+| Aviso cuyo día ya pasó | No se programa | Prueba |
+| Cobro confirmado antes de la hora del aviso | El aviso se cancela; si se borra el movimiento, vuelve | Prueba |
+| Línea que pasa del 80 % dos veces en el mes | Un solo aviso | Prueba |
+| Cambio de hora de verano e invierno | Las 9:00 siguen siendo las 9:00 | Prueba con fechas de cambio de hora. Vale para la zona horaria del equipo donde se ejecuta |
+| Más de 40 avisos candidatos | Se quedan los 40 más cercanos | Prueba |
+| `prebuild --clean` dos veces seguidas | Mismo resultado, salvo identificadores al azar | Ver 10.3 |
+| Base en versión 3 con datos reales | Pasa a la 4 sin perder nada | Prueba. En el simulador: ver 10.6 |
+| Objetivo con dos reglas de aportación, borrado y deshecho | Se borran y vuelven las dos; una borrada antes a mano no vuelve | Prueba |
+| «Mover dinero» con la misma cuenta de origen y destino | Se rechaza y no guarda nada | Prueba |
+| Calendario con 9,99 €, 620,00 € y 1.234.567,89 € | «9,99», «620» y solo la marca | Prueba |
+
+### 10.6 Verificación en el simulador y capturas
+
+En el simulador iPhone 17 se instaló el binario compilado tras el último `prebuild --clean`
+encima de la app que ya había, con sus datos de ejemplo:
+
+- La base de datos pasó sola de la versión 3 a la 4. Sus nueve tablas anteriores (47
+  movimientos, 7 reglas, 2 presupuestos, 3 objetivos…) quedaron idénticas fila a fila.
+- La app arranca y es usable con todos los avisos desactivados y sin automatización.
+- El enlace `financialcontrol://movimiento?capturaId=…` abre el alta con los datos de la
+  captura.
+
+22 capturas en `docs/capturas/b3/`, revisadas una a una y posteriores al último cambio
+visual. En claro y en oscuro: bandeja vacía, bandeja con capturas, guía de Apple Pay,
+pantalla Avisos, alta abierta desde una captura, «Aportar» con sus dos caminos, calendario
+de fijos corregido (el día 20 muestra «9,99»), Inicio con el rótulo «En cuentas»,
+Movimientos con el acceso a la bandeja y Cuentas con el bloque Ajustes. Con el texto al
+máximo, solo en claro: bandeja y fijos.
+
+Defectos vistos en las capturas y corregidos antes de repetirlas: el aviso «se muestran
+las 100 más recientes» quedaba al final de la bandeja, donde no se ve (lo destapó una
+prueba), y con el texto al máximo la fecha de un cobro se partía a media palabra.
+
+Para capturar el calendario se usó un código temporal de desplazamiento que **no está en
+la rama**. Las capturas de ejemplo de la bandeja se sembraron directamente en la base de
+datos del simulador.
+
+Faltan capturas del **widget**: el simulador no permite colocarlo en la pantalla de inicio
+desde aquí. Tampoco hay captura de un aviso del sistema.
+
+### 10.7 Limitaciones
+
+- T-035 parcial (decisión D-e): el aviso de una captura no tiene botones. Tocarlo abre la
+  bandeja en esa captura.
+- «Añadir gasto» no crea el movimiento en el momento: lo crea la app al abrirse.
+- La cola de Atajos guarda como mucho 100 entradas (límite de la biblioteca). Quien pase
+  mucho tiempo sin abrir la app y haga más de 100 pagos perdería las más antiguas.
+- Una captura duplicada no se fusiona con la primera: queda aparte, recuperable.
+- Un importe como «1.234» queda sin importe, por ambiguo. Si Atajos entregara así los
+  importes de más de mil euros, habría que completarlos a mano. Se verá con la medición.
+- La guía no detecta la versión de iOS: enseña los dos nombres del disparador.
+- Dos datos de la guía salen de documentación de terceros y **no se han comprobado en el
+  iPhone**: que el disparador se llame «Transacción» en iOS 17 a 25 y «Wallet» desde iOS
+  26, y que la causa de fallo más citada sea que Wallet no tenga los datos móviles activados.
+- Los avisos de cobro miran el mes en curso y los dos siguientes, con un máximo de 40.
+- El aviso de presupuesto solo se dispara con la app abierta, porque depende de anotar un
+  gasto. El de capturas no se repite pasadas las 24 horas.
+- El widget muestra el dato de la última vez que se abrió la app. Si cambia el día sin
+  abrirla, la cifra por día queda atrasada; por eso lleva la fecha del dato.
+- El presupuesto y el widget se entienden en la divisa principal.
+- `expo-app-intents` y `expo-widgets` son bibliotecas jóvenes; la primera está en alfa.
+- Con la cuenta gratuita la app instalada caduca a los 7 días.
+
+### 10.8 NO DEMOSTRADO
+
+Nada de lo siguiente se ha visto funcionar. No se da por bueno por deducción:
+
+1. La compilación para un iPhone real y su firma con la cuenta gratuita, incluidos el App
+   Group y la extensión del widget.
+2. Que las acciones «Registrar pago» y «Añadir gasto» aparezcan en la app Atajos.
+3. Que la automatización de Apple Pay dispare la acción y qué textos entrega.
+4. Que la acción guarde la captura con la app cerrada y que la app la importe al abrirse.
+5. Que el aviso de la captura se muestre y que al tocarlo se abra la bandeja.
+6. Que las notificaciones locales lleguen a su hora con la app cerrada.
+7. Que el widget aparezca en la galería, muestre la cifra y abra el alta al tocarlo.
+8. VoiceOver y «Reducir movimiento» en las pantallas nuevas.
+
+### 10.9 Lista de comprobación para el iPhone
+
+Antes: `npx expo run:ios --device --configuration Release`, con el iPhone conectado y
+desbloqueado. Si la firma falla por el App Group o por la extensión del widget, anotar el
+mensaje exacto de Xcode: es el punto 1 de 10.8.
+
+| Paso | Qué hacer | Resultado esperado |
+|---|---|---|
+| 1 | Abrir la app | Arranca, conserva los datos y muestra Inicio con «En cuentas» |
+| 2 | Cuentas › Ajustes › Apple Pay y Atajos › «Enviar una captura de prueba» | Aviso «Captura de prueba enviada»; en la bandeja aparece una de 12,34 € |
+| 3 | En la bandeja, «Completar», elegir categoría y Guardar | Se crea el gasto de 12,34 € y la captura desaparece de la bandeja |
+| 4 | App Atajos › nueva acción › buscar «FinancialControl» | Aparecen «Registrar pago» y «Añadir gasto» |
+| 5 | Crear un atajo con «Registrar pago», importe «5,00 €» y comercio «Prueba», y ejecutarlo con la app cerrada | El atajo termina con «Guardado en la bandeja» sin abrir la app. Si los avisos están permitidos, llega uno con «Prueba» y «5,00 €» |
+| 6 | Tocar ese aviso | Se abre la app en la bandeja, con esa captura la primera y resaltada |
+| 7 | Crear un atajo con «Añadir gasto», importe «3,00», una categoría que exista y una cuenta, ejecutarlo y abrir la app | Hay un gasto nuevo de 3,00 € en Movimientos |
+| 8 | Crear la automatización siguiendo la guía y hacer un pago pequeño con Apple Pay | Llega una captura con el importe y el comercio del pago. Anotar qué texto exacto llega en cada campo |
+| 9 | Cuentas › Ajustes › Avisos › activar «Cobros próximos» | El iPhone pide permiso una sola vez; la pantalla dice cuántos avisos quedan programados |
+| 10 | Crear un fijo con día de mañana y esperar a las 9:00, con la app cerrada | Llega el aviso del cobro; tocarlo abre la confirmación de ese cobro |
+| 11 | Anotar un gasto que lleve una categoría por encima del 80 % de su presupuesto | Llega un aviso de presupuesto, una sola vez |
+| 12 | Mantener pulsada la pantalla de inicio › + › buscar FinancialControl | El widget «Disponible este mes» se ofrece en tamaño pequeño y mediano |
+| 13 | Añadir el pequeño y tocarlo | Muestra la cifra y la fecha; al tocarlo se abre el alta de un gasto |
+| 14 | Añadir el mediano | El botón «Añadir gasto» abre el alta; el resto abre Inicio |
+| 15 | Anotar un gasto y volver a la pantalla de inicio | La cifra del widget ha cambiado |
+| 16 | Plan › Fijos, con una suscripción de 9,99 € | El calendario muestra «9,99» en su día, no «10» |
+
+Los pasos 8 y siguientes son, además, la medición pendiente del spike A.
+
+### 10.10 Acciones del usuario
+
+1. Instalar en el iPhone con `npx expo run:ios --device --configuration Release` y seguir
+   la lista de 10.9.
+2. Con la cuenta gratuita, repetir esa orden cada 7 días. Los datos se conservan al
+   instalar encima; no borrar la app antes.
+3. Hacer la medición del spike A con uso real y anotar los textos que entrega Atajos.
