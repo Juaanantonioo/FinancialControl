@@ -43,7 +43,7 @@ Los hitos y las tareas conservan su identificador. Cambia el orden en que se abo
 | Hecho | Preparación, spike de Apple Pay sin medir, núcleo de movimientos, rediseño e Inicio | H0, H1 (parcial), H2, y parte de T-080, T-081, T-083 y T-084 | Ramas `h0` a `h2b` |
 | 1 · Visión completa | Patrimonio, inversión manual, vistas por día, mes y año | T-070 (solo ValorDeInversion), T-075, T-076, T-082, resto de T-081 | Encargo en `docs/prompt-claude-code-h3-vision-completa.md` |
 | 2 · Planificación | Presupuesto, disponible del mes, gastos fijos y objetivos | H5 completo, y T-070 a T-072 de H6 | Hecho en la rama `h5-planificacion`, sin notificaciones (T-066 y T-067 parciales). Ver apartado 2.3 |
-| 3 · Entrada rápida | Captura con Apple Pay integrada, widget y recordatorios | H3, y cierre de H1 con la medición del spike A | Pendiente. Depende de la medición |
+| 3 · Entrada rápida | Captura con Apple Pay integrada, widget y recordatorios | H3, y cierre de H1 con la medición del spike A | Hecho en la rama `b3-entrada-rapida`, sin medir en un iPhone. T-035 parcial. Ver apartado 2.4 |
 | 4 · Cuentas y sincronización | Registro, inicio de sesión y sincronización con Supabase | H4 | Pendiente |
 | 5 · Versión web | Exportación a web contra Supabase, alojamiento y pruebas en navegador | Sin tareas todavía: se definen al cerrar el bloque 4 | Pendiente (D8) |
 | 6 · Publicación y suscripción | Calidad, beta, envío a revisión y suscripción | H8, H9 y T-120 a T-127 | Pendiente (D9) |
@@ -85,6 +85,31 @@ Añadido fuera del backlog: vista por día con calendario (parte de G7).
 | T-071 | HECHA. P15 y P16 con avance y ritmo necesario. El caso de comprobación da 125,00 € al mes | — |
 | T-072 | HECHA. La aportación mensual es una regla recurrente; confirmarla crea la transferencia y suma al objetivo | — |
 | T-084 | Inicio muestra ya D1, D2, D4, D8 y D9, además del patrimonio | — |
+
+### 2.4 Estado del bloque 3 a 17/11/2026 (rama `b3-entrada-rapida`)
+
+| Tarea | Hecho | Sigue pendiente |
+|---|---|---|
+| T-010 a T-012 | Integradas: la acción «Registrar pago», la cola persistente y el aviso local forman parte de la app. Compila y el binario publica la acción | Verla en Atajos, ejecutarla con la app cerrada y ver el aviso en un iPhone: **NO DEMOSTRADO** |
+| T-013 a T-017 | — | La medición del spike A sigue pendiente del usuario. La captura se ha construido sin esperarla |
+| T-030 | HECHA. Entidad Captura (migración 4) y conversión en movimiento con origen `apple_pay` | — |
+| T-031 | HECHA. Extracción de importe y divisa, con los textos del criterio | — |
+| T-032 | HECHA. Tarjeta a cuenta según A.4 | — |
+| T-033 | HECHA. Comercio a categoría, actualizada al guardar | — |
+| T-034 | HECHA. Duplicados a menos de 10 minutos | El «enriquecimiento» de la primera con los datos de la segunda (A.5): hoy la segunda queda como duplicada, sin fusionar |
+| T-035 | **PARCIAL.** El aviso muestra importe y comercio y, al tocarlo, abre la bandeja en esa captura | Los botones Guardar, Editar y Descartar en el propio aviso |
+| T-036 | HECHA. Bandeja (P08) con sus tres acciones | — |
+| T-037 | HECHA con matices. Guía (P04) con captura de prueba, última captura y tarjetas | No ramifica por versión de iOS: muestra los dos nombres del disparador |
+| T-038 | HECHA con matices. Acción «Añadir gasto» | El movimiento se crea al abrir la app, no en el momento de ejecutar el atajo |
+| T-039 | Ver `estado.md`, apartado 10 | — |
+| T-040 | HECHA. Aviso local cuando la pendiente más antigua cumple 24 horas | — |
+| T-066 | HECHA lo que faltaba: aviso local a las 9:00, con `aviso_dias_antes` | — |
+| T-067 | HECHA lo que faltaba: aviso local al pasar del 80 % o excederse | — |
+| T-077 | HECHA. Aviso local cuando el último valor cumple 30 días | — |
+
+Todos los avisos son notificaciones locales. Que lleguen en un iPhone con la app cerrada
+está **NO DEMOSTRADO**: solo se ha probado el cálculo y la programación contra un sistema
+de notificaciones simulado.
 
 ## 3. Backlog
 

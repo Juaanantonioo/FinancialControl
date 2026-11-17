@@ -40,7 +40,22 @@
           "imageWidth": 76
         }
       ],
-      "expo-app-intents"
+      "expo-app-intents",
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "Disponible",
+              "displayName": "Disponible este mes",
+              "description": "Lo que te queda por gastar este mes y cuánto es eso por día.",
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium"]
+              }
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

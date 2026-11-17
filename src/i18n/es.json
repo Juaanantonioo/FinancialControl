@@ -744,5 +744,10 @@
     "inversionTitulo": "{{nombre}}",
     "inversionCuerpo": "Hace {{dias}} días que no anotas cuánto vale. Actualízalo cuando puedas.",
     "categoriaSinNombre": "una categoría"
+  },
+  "widget": {
+    "anadirGasto": "Añadir gasto",
+    "sinPresupuesto": "Crea tu presupuesto",
+    "alDia": "{{importe}} al día"
   }
 }

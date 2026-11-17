@@ -5,6 +5,7 @@ import { ProveedorDeAvisos } from '@/estado/Aviso';
 import { seguirReducirMovimiento } from '@/estado/animacion';
 import { useAvisosAutomaticos } from '@/estado/avisos';
 import { useColaDeAtajos } from '@/estado/colaNativa';
+import { useWidgetAlDia } from '@/estado/widget';
 import { ProveedorDeDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
 import { useColores } from '@/theme';
@@ -15,13 +16,14 @@ import { useColores } from '@/theme';
  * acceso a los datos a todas ellas.
  */
 /**
- * Mantiene al día los avisos locales y vuelca la cola de las acciones de
- * Atajos. No pinta nada: existe como componente
+ * Mantiene al día los avisos locales y el widget, y vuelca la cola de las
+ * acciones de Atajos. No pinta nada: existe como componente
  * para poder leer los datos, que solo están disponibles dentro del proveedor.
  */
 function AvisosDelSistema() {
   useAvisosAutomaticos();
   useColaDeAtajos();
+  useWidgetAlDia();
   return null;
 }
 
