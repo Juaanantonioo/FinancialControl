@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -13,7 +13,8 @@ import {
   Tarjeta,
 } from '@/componentes/Tarjeta';
 import { variacionDelAnio } from '@/dominio/patrimonio';
-import { evolucion, mesDe, moverMes, OTRAS, SIN_CATEGORIA } from '@/dominio/resumen';
+import { esFechaValida } from '@/dominio/modelo';
+import { esMesValido, evolucion, mesDe, moverMes, OTRAS, SIN_CATEGORIA } from '@/dominio/resumen';
 import {
   comparativaConMesAnterior,
   resumenDelAnio,
@@ -43,9 +44,35 @@ export default function Analisis() {
   const c = useColores();
   const margenDeLista = useMargenDeLista();
   const panel = usePanel();
+  // Un enlace puede abrir la pestaña en una vista, un mes, un año o un día concretos:
+  // financialcontrol://analisis?vista=anio&anio=2026
+  const pedido = useLocalSearchParams<{
+    vista?: string;
+    mes?: string;
+    anio?: string;
+    dia?: string;
+  }>();
   const [vista, setVista] = useState<Vista>('dia');
   const [mes, setMes] = useState(mesDe());
   const [anio, setAnio] = useState(Number(panel.hoy.slice(0, 4)));
+  const [diaPedido, setDiaPedido] = useState<string | null>(null);
+  // La pestaña sigue montada entre visitas: lo pedido se aplica una vez por petición.
+  const firma = [pedido.vista, pedido.mes, pedido.anio, pedido.dia].join('|');
+  const [aplicada, setAplicada] = useState('|||');
+  if (firma !== aplicada) {
+    setAplicada(firma);
+    if (pedido.vista === 'dia' || pedido.vista === 'mes' || pedido.vista === 'anio') {
+      setVista(pedido.vista);
+    }
+    if (pedido.anio && /^\d{4}$/.test(pedido.anio)) setAnio(Number(pedido.anio));
+    if (pedido.dia && esFechaValida(pedido.dia)) {
+      setVista('dia');
+      setMes(pedido.dia.slice(0, 7));
+      setDiaPedido(pedido.dia);
+    } else if (pedido.mes && esMesValido(pedido.mes)) {
+      setMes(pedido.mes);
+    }
+  }
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
@@ -72,7 +99,14 @@ export default function Analisis() {
         ) : (
           <SelectorDeMes mes={mes} alCambiar={(salto) => setMes(moverMes(mes, salto))} />
         )}
-        {vista === 'dia' ? <VistaDeDia key={mes} panel={panel} mes={mes} /> : null}
+        {vista === 'dia' ? (
+          <VistaDeDia
+            key={`${mes}-${diaPedido ?? ''}`}
+            panel={panel}
+            mes={mes}
+            diaInicial={diaPedido?.slice(0, 7) === mes ? diaPedido : null}
+          />
+        ) : null}
         {vista === 'mes' ? <VistaDeMes panel={panel} mes={mes} alElegirMes={setMes} /> : null}
         {vista === 'anio' ? <VistaDeAnio panel={panel} anio={anio} /> : null}
       </ScrollView>
@@ -117,12 +151,20 @@ function SelectorDeAnio({ anio, alCambiar }: { anio: number; alCambiar: (salto: 
 
 // -------------------------------------------------------------------- día
 
-function VistaDeDia({ panel, mes }: { panel: Panel; mes: string }) {
+function VistaDeDia({
+  panel,
+  mes,
+  diaInicial,
+}: {
+  panel: Panel;
+  mes: string;
+  diaInicial: string | null;
+}) {
   const c = useColores();
   const paleta = usePaleta();
   const { fontScale } = useWindowDimensions();
   const { hoy, divisa, movimientos, categorias } = panel;
-  const [elegido, setElegido] = useState<string | null>(null);
+  const [elegido, setElegido] = useState<string | null>(diaInicial);
   const r = resumenDiario(movimientos, mes, hoy);
   const hayDatos = r.dias.some((d) => d.movimientos > 0);
   const delDia = useConsulta(

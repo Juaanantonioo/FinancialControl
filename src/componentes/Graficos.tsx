@@ -291,7 +291,10 @@ export function Linea({
           {textoMaximo}
         </Text>
       </View>
-      <View onLayout={(e) => setAncho(e.nativeEvent.layout.width)} style={{ height: alto }}>
+      <View
+        onLayout={(e) => setAncho(e.nativeEvent.layout.width)}
+        style={{ height: alto }}
+        testID="lienzo-de-linea">
         {ancho > 0 ? (
           <Svg width={ancho} height={alto}>
             <Rect x={0} y={alto - 1} width={ancho} height={1} fill={c.borde} />
