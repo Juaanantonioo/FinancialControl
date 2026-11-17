@@ -23,7 +23,7 @@ import { fechaLocal } from '@/dominio/modelo';
 import { mesDe, moverMes } from '@/dominio/resumen';
 import { ProveedorDeAvisos } from '@/estado/Aviso';
 import { ProveedorDeDatos } from '@/estado/Datos';
-import { moverDias } from '@/estado/fechas';
+import { describirMes, moverDias } from '@/estado/fechas';
 import { crearBdDePrueba } from '@/pruebas/bdDePrueba';
 
 jest.mock('expo-router', () => {
@@ -158,8 +158,10 @@ describe('sin cuentas de inversión', () => {
     );
   });
 
-  it('el selector de mes no cambia el patrimonio, solo los bloques del mes', async () => {
-    await pintar(<Inicio />);
+  // B3b: el balance de otro mes se mira en Análisis › Mes. Inicio ya no tiene selector de mes.
+  it('el selector de mes cambia el balance en Análisis; Inicio habla siempre del mes en curso', async () => {
+    conParametros({ vista: 'mes' });
+    const analisis = await pintar(<Analisis />);
     await waitFor(() =>
       expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('+1.635,00 €'),
     );
@@ -167,7 +169,15 @@ describe('sin cuentas de inversión', () => {
     await waitFor(() =>
       expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('-1.020,00 €'),
     );
+    await analisis.unmount();
+
+    conParametros({});
+    await pintar(<Inicio />);
+    await waitFor(() =>
+      expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('+1.635,00 €'),
+    );
     expect(screen.getByTestId('patrimonio-total')).toHaveTextContent('5.615,00 €');
+    expect(screen.queryByTestId('mes-anterior')).toBeNull();
   });
 
   it('tocar el patrimonio abre su evolución y el + abre el alta', async () => {
@@ -178,24 +188,35 @@ describe('sin cuentas de inversión', () => {
     expect(router.push).toHaveBeenCalledWith('/movimiento');
   });
 
-  it('Inicio se abre en el mes pedido por la ruta', async () => {
-    conParametros({ mes: ANTERIOR, peticion: 'anio-1' });
-    await pintar(<Inicio />);
+  // B3b: quien abría Inicio en un mes concreto era la tabla del año, que ahora abre Análisis › Mes.
+  it('Análisis › Mes se abre en el mes pedido por la ruta', async () => {
+    conParametros({ vista: 'mes', mes: ANTERIOR });
+    await pintar(<Analisis />);
     await waitFor(() =>
       expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('-1.020,00 €'),
     );
   });
 
-  it('el bloque Hoy muestra el gasto de hoy y la media diaria del mes', async () => {
-    await pintar(<Inicio />);
-    await screen.findByTestId('bloque-hoy');
+  // B3b: «Hoy» es una línea del bloque «Este mes»; la media diaria se ve en Análisis › Día.
+  it('Inicio muestra el gasto de hoy y Análisis › Día, la media diaria del mes', async () => {
+    const inicio = await pintar(<Inicio />);
+    await screen.findByTestId('bloque-balance');
     const hoyEsDiaUno = HOY.endsWith('-01');
     await waitFor(() =>
       expect(screen.getByTestId('gasto-de-hoy')).toHaveTextContent(
         hoyEsDiaUno ? '365,00 €' : '0,00 €',
       ),
     );
-    expect(screen.getByTestId('media-diaria')).toHaveTextContent(/€/);
+    await inicio.unmount();
+
+    conParametros({ vista: 'dia' });
+    await pintar(<Analisis />);
+    await waitFor(() =>
+      expect(screen.getByTestId('analisis-gasto-de-hoy')).toHaveTextContent(
+        hoyEsDiaUno ? '365,00 €' : '0,00 €',
+      ),
+    );
+    expect(screen.getByTestId('analisis-media-diaria')).toHaveTextContent(/€/);
   });
 
   it('la pantalla de inversiones, sin cuentas de inversión, explica qué hacer', async () => {
@@ -359,20 +380,25 @@ describe('cuenta de inversión', () => {
     expect(screen.getByTestId('guardar')).toBeDisabled();
   });
 
-  it('Inicio suma el valor de la inversión al patrimonio y muestra el bloque de inversiones', async () => {
-    await pintar(<Inicio />);
+  // B3b: el bloque de inversiones pasa de Inicio a la pestaña Cuentas, con las mismas cifras.
+  it('Inicio suma el valor de la inversión al patrimonio y Cuentas muestra la sección de inversiones', async () => {
+    const inicio = await pintar(<Inicio />);
     // Disponible: 5 615 − 2 000 = 3 615 €. Invertido: 2 150 €.
     await waitFor(() =>
       expect(screen.getByTestId('patrimonio-total')).toHaveTextContent('5.765,00 €'),
     );
     expect(screen.getByTestId('patrimonio-disponible')).toHaveTextContent('3.615,00 €');
     expect(screen.getByTestId('patrimonio-invertido')).toHaveTextContent('2.150,00 €');
+    await inicio.unmount();
+
+    await pintar(<Cuentas />);
+    await screen.findByTestId('seccion-inversiones');
     expect(screen.getByTestId('inversiones-aportado')).toHaveTextContent('2.000,00 €');
     expect(screen.getByTestId('inversiones-valor')).toHaveTextContent('2.150,00 €');
     expect(screen.getByTestId('inversiones-ganancia')).toHaveTextContent('Ganas 150,00 € (+7,5 %)');
     // En la lista de cuentas la inversión aparece por lo que vale.
-    expect(screen.getByTestId('inicio-saldo-Bróker')).toHaveTextContent('2.150,00 €');
-    await fireEvent.press(screen.getByTestId('bloque-inversiones'));
+    expect(screen.getByTestId('saldo-Bróker')).toHaveTextContent('2.150,00 €');
+    await fireEvent.press(screen.getByTestId('abrir-inversiones'));
     expect(router.push).toHaveBeenCalledWith('/inversiones');
   });
 
@@ -543,11 +569,11 @@ describe('Análisis', () => {
     expect(screen.getByTestId('gasto-del-anio')).toHaveTextContent(/Comida/);
     expect(screen.getByTestId('patrimonio-del-anio-cifra')).toHaveTextContent(/€/);
 
+    // B3b: la fila de un mes abre Análisis › Mes en ese mes, donde está ahora su balance.
     await fireEvent.press(screen.getByTestId(`fila-${MES}`));
-    expect(router.navigate).toHaveBeenCalledWith({
-      pathname: '/',
-      params: { mes: MES, peticion: 'anio-1' },
-    });
+    expect(await screen.findByTestId('bloque-balance')).toBeTruthy();
+    expect(screen.getByTestId('mes-elegido')).toHaveTextContent(new RegExp(describirMes(MES), 'i'));
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('un año sin movimientos y un año futuro explican el vacío', async () => {

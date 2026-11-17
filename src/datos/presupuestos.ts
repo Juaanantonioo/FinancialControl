@@ -74,6 +74,14 @@ export function crearRepositorioDePresupuestos(bd: BaseDeDatos, entorno: Entorno
     return { ...filaAPresupuesto(filas[0]), lineas: await lineasDe(filas[0].id) };
   }
 
+  /** `true` si existe algún presupuesto no borrado, del mes que sea. */
+  async function hayAlguno(): Promise<boolean> {
+    const filas = await bd.consultar<{ id: string }>(
+      'SELECT id FROM presupuesto WHERE borrado_en IS NULL LIMIT 1',
+    );
+    return filas.length > 0;
+  }
+
   async function validarLineas(lineas: DatosDeLinea[]): Promise<void> {
     const vistas = new Set<string>();
     for (const linea of lineas) {
@@ -188,7 +196,7 @@ export function crearRepositorioDePresupuestos(bd: BaseDeDatos, entorno: Entorno
     return (await delMes(filas[0].periodo))!;
   }
 
-  return { delMes, guardar, borrar, restaurar };
+  return { delMes, hayAlguno, guardar, borrar, restaurar };
 }
 
 export type RepositorioDePresupuestos = ReturnType<typeof crearRepositorioDePresupuestos>;

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Boton, BotonAnadir, Cabecera, Segmentos, useMargenDeLista } from '@/componentes/basicos';
+import { BloqueBalance, BloqueGasto } from '@/componentes/BloquesDelMes';
 import { FilaDeMovimiento } from '@/componentes/FilaDeMovimiento';
 import { Anillo, Barras, Calendario, Leyenda } from '@/componentes/Graficos';
 import {
@@ -51,14 +52,16 @@ export default function Analisis() {
     mes?: string;
     anio?: string;
     dia?: string;
+    peticion?: string;
   }>();
   const [vista, setVista] = useState<Vista>('dia');
   const [mes, setMes] = useState(mesDe());
   const [anio, setAnio] = useState(Number(panel.hoy.slice(0, 4)));
   const [diaPedido, setDiaPedido] = useState<string | null>(null);
   // La pestaña sigue montada entre visitas: lo pedido se aplica una vez por petición.
-  const firma = [pedido.vista, pedido.mes, pedido.anio, pedido.dia].join('|');
-  const [aplicada, setAplicada] = useState('|||');
+  // La marca de petición permite pedir dos veces seguidas la misma vista.
+  const firma = [pedido.vista, pedido.mes, pedido.anio, pedido.dia, pedido.peticion].join('|');
+  const [aplicada, setAplicada] = useState('||||');
   if (firma !== aplicada) {
     setAplicada(firma);
     if (pedido.vista === 'dia' || pedido.vista === 'mes' || pedido.vista === 'anio') {
@@ -108,7 +111,16 @@ export default function Analisis() {
           />
         ) : null}
         {vista === 'mes' ? <VistaDeMes panel={panel} mes={mes} alElegirMes={setMes} /> : null}
-        {vista === 'anio' ? <VistaDeAnio panel={panel} anio={anio} /> : null}
+        {vista === 'anio' ? (
+          <VistaDeAnio
+            panel={panel}
+            anio={anio}
+            alAbrirMes={(elegido) => {
+              setMes(elegido);
+              setVista('mes');
+            }}
+          />
+        ) : null}
       </ScrollView>
       <BotonAnadir />
     </View>
@@ -352,6 +364,8 @@ function VistaDeMes({
 
   return (
     <>
+      <BloqueBalance panel={panel} mes={mes} titulo={t('inicio.balanceDelMes')} />
+      <BloqueGasto panel={panel} mes={mes} />
       <Tarjeta
         titulo={t('analisis.comparativa', { mes: describirMes(comparativa.mesAnterior) })}
         testID="comparativa">
@@ -428,7 +442,7 @@ function VistaDeMes({
         )}
       </Tarjeta>
 
-      <Tarjeta titulo={t('inicio.evolucion')}>
+      <Tarjeta titulo={t('inicio.evolucion')} testID="bloque-evolucion">
         {hayEvolucion ? (
           <>
             <Leyenda
@@ -463,21 +477,21 @@ function VistaDeMes({
 
 // -------------------------------------------------------------------- año
 
-function VistaDeAnio({ panel, anio }: { panel: Panel; anio: number }) {
+function VistaDeAnio({
+  panel,
+  anio,
+  alAbrirMes,
+}: {
+  panel: Panel;
+  anio: number;
+  /** Abre la vista de mes en el mes tocado. */
+  alAbrirMes: (mes: string) => void;
+}) {
   const c = useColores();
   const paleta = usePaleta();
   const { hoy, divisa, cuentas, movimientos, valores, categorias } = panel;
-  const peticiones = useRef(0);
   const r = resumenDelAnio(movimientos, categorias, anio);
   const patrimonio = variacionDelAnio(cuentas, movimientos, valores, anio, hoy);
-
-  function abrirInicioEn(mes: string) {
-    peticiones.current += 1;
-    router.navigate({
-      pathname: '/',
-      params: { mes, peticion: `anio-${peticiones.current}` },
-    });
-  }
 
   const nombreDe = (clave: string) => {
     if (clave === OTRAS) return t('inicio.otras');
@@ -668,7 +682,7 @@ function VistaDeAnio({ panel, anio }: { panel: Panel; anio: number }) {
         {r.meses.map((m) => (
           <Pressable
             key={m.mes}
-            onPress={() => abrirInicioEn(m.mes)}
+            onPress={() => alAbrirMes(m.mes)}
             accessibilityRole="button"
             accessibilityLabel={
               m.movimientos === 0

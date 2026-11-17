@@ -9,6 +9,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactElement } from 'react';
 
+import Analisis from '@/app/(tabs)/analisis';
+import Cuentas from '@/app/(tabs)/cuentas';
 import Inicio from '@/app/(tabs)/index';
 import Plan from '@/app/(tabs)/plan';
 import PantallaDeAportacion from '@/app/aportacion';
@@ -154,17 +156,23 @@ describe('base de datos vacía', () => {
   });
 
   it('Inicio muestra el estado vacío de cada bloque nuevo, nunca un cero engañoso', async () => {
-    await pintar(<Inicio />);
+    const inicio = await pintar(<Inicio />);
     expect(await screen.findByTestId('disponible-vacio')).toHaveTextContent(/Crea tu presupuesto/);
     expect(screen.getByTestId('proximos-sin-fijos')).toHaveTextContent(/Añade tus gastos fijos/);
     expect(screen.getByTestId('objetivos-vacio')).toHaveTextContent(/Crea un objetivo/);
-    expect(screen.getByTestId('fin-de-mes-vacio')).toHaveTextContent(/cuenta de banco o efectivo/);
     expect(screen.queryByTestId('disponible')).toBeNull();
-    expect(screen.queryByTestId('fin-de-mes-previsto')).toBeNull();
     expect(screen.queryByTestId('bloque-por-confirmar')).toBeNull();
     expect(screen.queryByTestId('aviso-de-presupuesto')).toBeNull();
     // Sin cuentas no se ofrece añadir un fijo: primero hace falta una cuenta.
     expect(screen.queryByTestId('anadir-fijo')).toBeNull();
+    await inicio.unmount();
+
+    // B3b: el fin de mes previsto pasa a Plan › Presupuesto.
+    await pintar(<Plan />);
+    expect(await screen.findByTestId('fin-de-mes-vacio')).toHaveTextContent(
+      /cuenta de banco o efectivo/,
+    );
+    expect(screen.queryByTestId('fin-de-mes-previsto')).toBeNull();
   });
 
   it('el alta de un fijo sin cuentas explica que hace falta una', async () => {
@@ -860,9 +868,10 @@ describe('Inicio con planificación', () => {
     expect(aviso).toHaveTextContent(/Comida: te has pasado/);
     expect(aviso).toHaveTextContent(/Casa: llevas el \d+ %/);
     await fireEvent.press(screen.getByTestId('ver-presupuesto'));
+    // B3b: el salto lleva una marca de petición para poder repetirse.
     expect(router.navigate).toHaveBeenCalledWith({
       pathname: '/plan',
-      params: { seccion: 'presupuesto', mes: MES },
+      params: { seccion: 'presupuesto', mes: MES, peticion: expect.any(String) },
     });
   });
 
@@ -897,30 +906,32 @@ describe('Inicio con planificación', () => {
     });
   });
 
-  it('muestra hasta tres objetivos (D8) y el acceso al resto', async () => {
+  // B3b: en Inicio caben dos objetivos (D-f), no tres.
+  it('muestra hasta dos objetivos (D8) y el acceso al resto', async () => {
     await pintar(<Inicio />);
     const bloque = await screen.findByTestId('bloque-objetivos');
     expect(screen.getByTestId('objetivo-Viaje')).toHaveTextContent(/Necesitas/);
-    // Hay cuatro objetivos activos: caben tres y el resto queda tras «Ver todos».
+    // Hay cuatro objetivos activos: caben dos y el resto queda tras «Ver todos».
     // Los tres de la prueba anterior se crearon en el mismo instante, así que
     // no se comprueba cuáles de ellos salen, solo cuántos.
     const visibles = ['Viaje', 'Colchón', 'Bici', 'Portátil'].filter(
       (nombre) => screen.queryByTestId(`objetivo-${nombre}`) !== null,
     );
-    expect(visibles).toHaveLength(3);
+    expect(visibles).toHaveLength(2);
     expect(bloque).toHaveTextContent(/Ver todos/);
     // El archivado no aparece nunca.
     expect(screen.queryByTestId('objetivo-Antiguo')).toBeNull();
     await fireEvent.press(screen.getByTestId('ver-objetivos'));
     expect(router.navigate).toHaveBeenCalledWith({
       pathname: '/plan',
-      params: { seccion: 'objetivos' },
+      params: { seccion: 'objetivos', peticion: expect.any(String) },
     });
   });
 
   it('muestra el fin de mes previsto (D4) con su línea y su descripción', async () => {
     const { prevision } = await esperado();
-    await pintar(<Inicio />);
+    // B3b: el bloque está en Plan › Presupuesto, con la misma cifra.
+    await pintar(<Plan />);
     await waitFor(() =>
       expect(screen.getByTestId('fin-de-mes-previsto')).toHaveTextContent(
         euros(prevision.previsto),
@@ -935,22 +946,33 @@ describe('Inicio con planificación', () => {
     expect(screen.getByTestId('bloque-fin-de-mes')).toHaveTextContent(/Previsto/);
   });
 
-  it('conserva todo lo que Inicio ya mostraba', async () => {
-    await pintar(<Inicio />);
+  // B3b: lo que Inicio mostraba sigue existiendo, repartido entre Inicio y su pestaña.
+  it('conserva todo lo que Inicio ya mostraba, en Inicio o en su pestaña', async () => {
+    const inicio = await pintar(<Inicio />);
     await screen.findByTestId('patrimonio-total');
-    for (const id of [
-      'bloque-balance',
-      'bloque-hoy',
-      'bloque-cuentas',
-      'bloque-gasto',
-      'bloque-evolucion',
-      'balance-del-mes',
-      'gasto-de-hoy',
-    ]) {
+    for (const id of ['bloque-balance', 'balance-del-mes', 'gasto-de-hoy']) {
       expect(screen.getByTestId(id)).toBeTruthy();
     }
     // El patrimonio sigue siendo la primera cifra de la pantalla.
     expect(screen.getAllByText(/€/)[0].props.testID).toBe('patrimonio-total');
+    await inicio.unmount();
+
+    conParametros({ vista: 'mes' });
+    const delMes = await pintar(<Analisis />);
+    await screen.findByTestId('bloque-gasto');
+    for (const id of ['bloque-balance', 'bloque-evolucion']) {
+      expect(screen.getByTestId(id)).toBeTruthy();
+    }
+    await delMes.unmount();
+
+    conParametros({ vista: 'dia' });
+    const delDia = await pintar(<Analisis />);
+    expect(await screen.findByTestId('analisis-gasto-de-hoy')).toBeTruthy();
+    await delDia.unmount();
+
+    conParametros({});
+    await pintar(<Cuentas />);
+    expect(await screen.findByTestId('cuenta-Banco')).toBeTruthy();
   });
 });
 

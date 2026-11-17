@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Boton } from '@/componentes/basicos';
+import { FinDeMes } from '@/componentes/plan/FinDeMes';
 import { BarraDePresupuesto, textoDeEstado } from '@/componentes/plan/Piezas';
 import {
   Dato,
@@ -47,6 +48,8 @@ export function SeccionPresupuesto({
   const selector = (
     <SelectorDeMes mes={mes} alCambiar={(salto) => alCambiarMes(moverMes(mes, salto))} />
   );
+  // La previsión habla de hoy: solo acompaña al mes en curso.
+  const finDeMes = mes === hoy.slice(0, 7) ? <FinDeMes panel={panel} /> : null;
   if (presupuesto === undefined) return selector;
   if (presupuesto === null) {
     return (
@@ -64,6 +67,7 @@ export function SeccionPresupuesto({
             }}
           />
         </Tarjeta>
+        {finDeMes}
       </>
     );
   }
@@ -265,6 +269,7 @@ export function SeccionPresupuesto({
         testID="editar-presupuesto"
         estilo={estilos.editar}
       />
+      {finDeMes}
     </>
   );
 }

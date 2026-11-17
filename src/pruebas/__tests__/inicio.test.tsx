@@ -2,13 +2,19 @@
  * Pruebas de Inicio, del detalle de cuenta y de los filtros de Movimientos
  * que llegan por la ruta, con una base de datos real en memoria.
  *
+ * B3b reubicó varios bloques de Inicio: el reparto del gasto, la evolución y
+ * el balance de otros meses se comprueban ahora en Análisis › Mes, y la lista
+ * de cuentas, en la pestaña Cuentas. Las cifras esperadas son las mismas.
+ *
  * Los datos son de ejemplo y se colocan en el mes en curso para que la
  * pantalla, que abre por defecto en el mes actual, los muestre.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactElement } from 'react';
 
+import Analisis from '@/app/(tabs)/analisis';
+import Cuentas from '@/app/(tabs)/cuentas';
 import Inicio from '@/app/(tabs)/index';
 import Movimientos from '@/app/(tabs)/movimientos';
 import DetalleDeCuenta from '@/app/detalle-de-cuenta';
@@ -59,6 +65,12 @@ function pintar(pantalla: ReactElement) {
   );
 }
 
+/** Análisis abierto en la vista de mes, donde están ahora el balance y el reparto del gasto. */
+function pintarAnalisisDelMes() {
+  conParametros({ vista: 'mes' });
+  return pintar(<Analisis />);
+}
+
 function conParametros(parametros: Record<string, string>) {
   (useLocalSearchParams as jest.Mock).mockReturnValue(parametros);
 }
@@ -80,18 +92,26 @@ beforeEach(() => {
 
 describe('Inicio sin datos', () => {
   it('sin cuentas explica qué falta y ofrece crear la primera', async () => {
-    await pintar(<Inicio />);
-    expect(await screen.findByText(/Todavía no tienes cuentas/)).toBeTruthy();
+    const inicio = await pintar(<Inicio />);
+    // El primer paso pendiente es crear una cuenta.
+    expect(await screen.findByTestId('paso-cuenta')).toHaveTextContent(/Crea una cuenta/);
     expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('0,00 €');
     expect(screen.getByTestId('frase-del-mes')).toHaveTextContent(/no tiene ingresos ni gastos/);
+    await fireEvent.press(screen.getByTestId('paso-cuenta'));
+    expect(router.push).toHaveBeenCalledWith('/cuenta');
+    await inicio.unmount();
+
+    // La pestaña Cuentas también lo explica.
+    const cuentas = await pintar(<Cuentas />);
+    expect(await screen.findByText(/Todavía no hay cuentas/)).toBeTruthy();
+    await cuentas.unmount();
+
     // Ningún bloque queda en blanco ni con un gráfico a cero.
-    expect(screen.getByTestId('gasto-vacio')).toBeTruthy();
+    await pintarAnalisisDelMes();
+    expect(await screen.findByTestId('gasto-vacio')).toBeTruthy();
     expect(screen.getByTestId('evolucion-vacia')).toBeTruthy();
     expect(screen.queryByTestId('grafico-anillo')).toBeNull();
     expect(screen.queryByTestId('grafico-barras')).toBeNull();
-
-    await fireEvent.press(screen.getByTestId('crear-cuenta'));
-    expect(router.push).toHaveBeenCalledWith('/cuenta');
   });
 });
 
@@ -152,18 +172,27 @@ describe('Inicio con datos', () => {
   });
 
   it('muestra cada cuenta con su saldo y el cambio del mes', async () => {
-    await pintar(<Inicio />);
-    await screen.findByTestId('inicio-cuenta-Principal');
+    // El saldo está en la pestaña Cuentas; el cambio del mes, en el detalle de cada una.
+    const cuentas = await pintar(<Cuentas />);
+    await screen.findByTestId('cuenta-Principal');
     // Principal: 1 000 + 2 000 − 1 000 − 500 − 90 − 30 (transferencia) − 25 (mes anterior).
-    expect(screen.getByTestId('inicio-saldo-Principal')).toHaveTextContent('1.355,00 €');
-    expect(screen.getByTestId('inicio-variacion-Principal')).toHaveTextContent('+380,00 €');
+    expect(screen.getByTestId('saldo-Principal')).toHaveTextContent('1.355,00 €');
     // Cartera: 50 − 10 + 30. El gasto anterior a su saldo inicial no cuenta.
-    expect(screen.getByTestId('inicio-saldo-Cartera')).toHaveTextContent('70,00 €');
-    expect(screen.getByTestId('inicio-variacion-Cartera')).toHaveTextContent('+20,00 €');
+    expect(screen.getByTestId('saldo-Cartera')).toHaveTextContent('70,00 €');
+    await cuentas.unmount();
+
+    conParametros({ id: principalId });
+    const principal = await pintar(<DetalleDeCuenta />);
+    await waitFor(() => expect(screen.getByTestId('variacion')).toHaveTextContent('+380,00 €'));
+    await principal.unmount();
+
+    conParametros({ id: carteraId });
+    await pintar(<DetalleDeCuenta />);
+    await waitFor(() => expect(screen.getByTestId('variacion')).toHaveTextContent('+20,00 €'));
   });
 
   it('dibuja el gasto por categoría con su descripción textual', async () => {
-    await pintar(<Inicio />);
+    await pintarAnalisisDelMes();
     const anillo = await screen.findByTestId('grafico-anillo');
     expect(screen.getByTestId('gasto-total')).toHaveTextContent('1.607,00 €');
     expect(anillo.props.accessibilityLabel).toMatch(/Reparto del gasto de/);
@@ -173,12 +202,15 @@ describe('Inicio con datos', () => {
     expect(screen.getByTestId('parte-Comida')).toBeTruthy();
     // Una categoría sin icono conocido se pinta con su inicial.
     // El distintivo es decorativo y está oculto al lector de pantalla.
-    expect(screen.getByText('X', { includeHiddenElements: true })).toBeTruthy();
+    // La comparativa de Análisis pinta el mismo distintivo: se mira dentro del bloque del reparto.
+    expect(
+      within(screen.getByTestId('bloque-gasto')).getByText('X', { includeHiddenElements: true }),
+    ).toBeTruthy();
     expect(screen.getByTestId('grafico-barras')).toBeTruthy();
   });
 
   it('tocar una categoría abre Movimientos filtrado por esa categoría y ese mes', async () => {
-    await pintar(<Inicio />);
+    await pintarAnalisisDelMes();
     await fireEvent.press(await screen.findByTestId('parte-Comida'));
     expect(router.navigate).toHaveBeenCalledTimes(1);
     expect(router.navigate).toHaveBeenCalledWith({
@@ -188,7 +220,7 @@ describe('Inicio con datos', () => {
   });
 
   it('tocar «Sin categoría» abre Movimientos solo con el mes', async () => {
-    await pintar(<Inicio />);
+    await pintarAnalisisDelMes();
     await fireEvent.press(await screen.findByTestId('parte-Sin categoría'));
     expect(router.navigate).toHaveBeenCalledWith({
       pathname: '/movimientos',
@@ -196,12 +228,12 @@ describe('Inicio con datos', () => {
     });
   });
 
-  it('tocar una cuenta abre su detalle en el mes que se está viendo', async () => {
-    await pintar(<Inicio />);
-    await fireEvent.press(await screen.findByTestId('inicio-cuenta-Principal'));
+  it('tocar una cuenta abre su detalle, que empieza en el mes en curso', async () => {
+    await pintar(<Cuentas />);
+    await fireEvent.press(await screen.findByTestId('cuenta-Principal'));
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/detalle-de-cuenta',
-      params: { id: principalId, mes: MES },
+      params: { id: principalId },
     });
   });
 
@@ -212,8 +244,8 @@ describe('Inicio con datos', () => {
   });
 
   it('el mes anterior, con gastos y sin ingresos, no muestra tasa de ahorro', async () => {
-    await pintar(<Inicio />);
-    await screen.findByTestId('inicio-cuenta-Principal');
+    await pintarAnalisisDelMes();
+    await screen.findByTestId('grafico-anillo');
     await fireEvent.press(screen.getByTestId('mes-anterior'));
     await waitFor(() =>
       expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('-25,00 €'),
@@ -228,26 +260,28 @@ describe('Inicio con datos', () => {
   });
 
   it('un mes futuro sin movimientos muestra el estado vacío, no un gráfico a cero', async () => {
-    await pintar(<Inicio />);
-    await screen.findByTestId('inicio-cuenta-Principal');
+    const analisis = await pintarAnalisisDelMes();
+    await screen.findByTestId('grafico-anillo');
     await fireEvent.press(screen.getByTestId('mes-siguiente'));
     await waitFor(() => expect(screen.getByTestId('gasto-vacio')).toBeTruthy());
     expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('0,00 €');
     expect(screen.queryByTestId('grafico-anillo')).toBeNull();
-    // Las cuentas siguen a la vista con su saldo actual.
-    expect(screen.getByTestId('inicio-saldo-Principal')).toHaveTextContent('1.355,00 €');
-    expect(screen.queryByTestId('inicio-variacion-Principal')).toBeNull();
+    await analisis.unmount();
+
+    // El saldo de las cuentas no depende del mes que se mire.
+    await pintar(<Cuentas />);
+    expect(await screen.findByTestId('saldo-Principal')).toHaveTextContent('1.355,00 €');
   });
 
   it('tocar un mes de las barras cambia el mes que se ve', async () => {
-    await pintar(<Inicio />);
+    await pintarAnalisisDelMes();
     await fireEvent.press(await screen.findByTestId(`barras-${ANTERIOR}`));
     await waitFor(() =>
       expect(screen.getByTestId('balance-del-mes')).toHaveTextContent('-25,00 €'),
     );
   });
 
-  it('una cuenta archivada solo aparece si tiene movimientos en el mes', async () => {
+  it('una cuenta archivada no está entre las activas y se ve al mostrar las archivadas', async () => {
     const vieja = await repos.cuentas.crear({
       nombre: 'Vieja',
       tipo: 'banco',
@@ -261,12 +295,12 @@ describe('Inicio con datos', () => {
       cuentaId: vieja.id,
     });
     await repos.cuentas.archivar(vieja.id, true);
-    await pintar(<Inicio />);
-    await screen.findByTestId('inicio-cuenta-Principal');
-    expect(screen.queryByTestId('inicio-cuenta-Vieja')).toBeNull();
-    await fireEvent.press(screen.getByTestId('mes-anterior'));
-    expect(await screen.findByTestId('inicio-cuenta-Vieja')).toBeTruthy();
-    expect(screen.getByText(/Archivada/)).toBeTruthy();
+    await pintar(<Cuentas />);
+    await screen.findByTestId('cuenta-Principal');
+    expect(screen.queryByTestId('cuenta-Vieja')).toBeNull();
+    await fireEvent.press(screen.getByText('Mostrar las cuentas archivadas'));
+    expect(await screen.findByTestId('cuenta-Vieja')).toBeTruthy();
+    expect(screen.getByText('Archivadas')).toBeTruthy();
   });
 });
 
