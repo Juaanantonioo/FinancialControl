@@ -4,9 +4,14 @@ import { t } from '@/i18n';
 import { useColores } from '@/theme';
 
 /**
- * Barra de pestañas nativa del sistema: Inicio (P05), Movimientos (P06),
- * Análisis (P17), Plan (P11, P13 y P15) y Cuentas (P09). La app abre en Inicio. La pestaña Plan y el botón central
- * de docs/03 llegan con los hitos que les dan contenido.
+ * Barra de pestañas nativa del sistema, con una pregunta por pestaña:
+ * Inicio (cómo voy y qué tengo que hacer hoy), Movimientos (en qué se ha ido
+ * el dinero), Análisis (cómo gasto a lo largo del tiempo), Plan (qué puedo
+ * gastar y qué viene) y Cuentas (cuánto tengo y dónde está).
+ *
+ * NativeTabs no admite un botón de acción dentro de la barra, así que añadir
+ * un movimiento es un botón flotante (`BotonAnadir`) que cada pestaña pinta
+ * en el mismo sitio, justo encima de la barra.
  */
 export default function Pestanas() {
   const c = useColores();
