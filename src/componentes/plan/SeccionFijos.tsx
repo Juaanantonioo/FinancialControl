@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { Boton } from '@/componentes/basicos';
 import { Calendario } from '@/componentes/Graficos';
 import { FilaDeCobro, importeDeRegla } from '@/componentes/plan/Piezas';
 import { EstadoVacio, SelectorDeMes, Tarjeta } from '@/componentes/Tarjeta';
@@ -148,6 +149,13 @@ export function SeccionFijos({
 
   return (
     <>
+      <Boton
+        texto={t('fijos.nuevo')}
+        variante="primario"
+        alPulsar={nueva}
+        testID="nuevo-fijo"
+        estilo={estilos.nuevo}
+      />
       <Tarjeta testID="total-de-fijos">
         <View
           accessible
@@ -284,6 +292,7 @@ export function SeccionFijos({
 const estilos = StyleSheet.create({
   cifra: { fontSize: Letra.cifraGrande, fontWeight: '800', letterSpacing: -1 },
   nota: { fontSize: Letra.pequeno, lineHeight: 18 },
+  nuevo: { alignSelf: 'flex-start' },
   regla: {
     flexDirection: 'row',
     alignItems: 'center',

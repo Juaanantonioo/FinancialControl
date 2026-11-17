@@ -43,7 +43,16 @@ export function SeccionObjetivos({ panel }: { panel: ReturnType<typeof usePanel>
         </Tarjeta>
       ) : null}
       {activos.length > 0 ? (
-        <Tarjeta testID="lista-de-objetivos">{activos.map(fila)}</Tarjeta>
+        <>
+          <Boton
+            texto={t('objetivos.nuevo')}
+            variante="primario"
+            alPulsar={() => router.push('/objetivo-editar')}
+            testID="nuevo-objetivo"
+            estilo={estilos.nuevo}
+          />
+          <Tarjeta testID="lista-de-objetivos">{activos.map(fila)}</Tarjeta>
+        </>
       ) : null}
       {archivados.length > 0 ? (
         <>
@@ -62,4 +71,5 @@ export function SeccionObjetivos({ panel }: { panel: ReturnType<typeof usePanel>
 
 const estilos = StyleSheet.create({
   enlace: { alignSelf: 'flex-start', paddingHorizontal: Espacio.xs },
+  nuevo: { alignSelf: 'flex-start' },
 });

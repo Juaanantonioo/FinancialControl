@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { Boton, Cabecera, Segmentos, useMargenDeLista } from '@/componentes/basicos';
+import { Boton, BotonAnadir, Cabecera, Segmentos, useMargenDeLista } from '@/componentes/basicos';
 import { FilaDeMovimiento } from '@/componentes/FilaDeMovimiento';
 import { Anillo, Barras, Calendario, Leyenda } from '@/componentes/Graficos';
 import {
@@ -110,6 +110,7 @@ export default function Analisis() {
         {vista === 'mes' ? <VistaDeMes panel={panel} mes={mes} alElegirMes={setMes} /> : null}
         {vista === 'anio' ? <VistaDeAnio panel={panel} anio={anio} /> : null}
       </ScrollView>
+      <BotonAnadir />
     </View>
   );
 }

@@ -154,11 +154,21 @@ export default function Inicio() {
               accessibilityRole="header">
               {t('inicio.patrimonio')}
             </Text>
-            <BotonAnadir
-              sobreDegradado
-              etiqueta={t('movimientos.nuevo')}
-              alPulsar={() => router.push('/movimiento')}
-            />
+            <Pressable
+              onPress={() => router.push('/ajustes')}
+              accessibilityRole="button"
+              accessibilityLabel={t('ajustes.abrir')}
+              testID="boton-ajustes"
+              hitSlop={4}
+              style={({ pressed }) => [
+                estilos.engranaje,
+                { backgroundColor: c.veloSobreDegradado, opacity: pressed ? 0.6 : 1 },
+              ]}>
+              {/* Es un icono: no crece con el tamaño de letra, su botón ya mide 44 puntos. */}
+              <Text allowFontScaling={false} style={{ color: c.sobreDegradado, fontSize: 24 }}>
+                {'\u2699\uFE0E'}
+              </Text>
+            </Pressable>
           </View>
           <Pressable
             onPress={() => router.push('/patrimonio')}
@@ -551,6 +561,7 @@ export default function Inicio() {
           </Tarjeta>
         </View>
       </ScrollView>
+      <BotonAnadir />
     </View>
   );
 }
@@ -605,6 +616,13 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Espacio.s,
+  },
+  engranaje: {
+    width: TactilMinimo,
+    height: TactilMinimo,
+    borderRadius: TactilMinimo / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rotulo: { flex: 1, fontSize: Letra.cuerpo, fontWeight: '600' },
   patrimonio: { minHeight: TactilMinimo, gap: Espacio.xs },

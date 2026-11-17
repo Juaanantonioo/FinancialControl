@@ -135,10 +135,6 @@ export default function Movimientos() {
           alPulsar={() => router.push('/capturas')}
           testID="abrir-bandeja"
         />
-        <BotonAnadir
-          etiqueta={t('movimientos.nuevo')}
-          alPulsar={() => router.push('/movimiento')}
-        />
       </Cabecera>
       <View style={estilos.busqueda}>
         <TextInput
@@ -251,6 +247,7 @@ export default function Movimientos() {
           )
         }
       />
+      <BotonAnadir />
     </View>
   );
 }

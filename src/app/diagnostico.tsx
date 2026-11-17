@@ -6,9 +6,8 @@ import { probarConexion, type ResultadoPrueba } from '@/lib/supabase';
 import { Espacio, Letra, Radio, TactilMinimo, useColores } from '@/theme';
 
 /**
- * Pantalla de diagnóstico, solo para desarrollo. Comprueba que la app lee la
- * tabla de prueba de Supabase (criterio de T-008). No forma parte del diseño
- * de producto y no se enlaza en la versión publicada.
+ * Diagnóstico: comprueba que la app lee la tabla de prueba de Supabase
+ * (criterio de T-008). Se abre desde Ajustes.
  */
 export default function Diagnostico() {
   const c = useColores();

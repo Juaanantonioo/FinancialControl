@@ -137,8 +137,9 @@ export function Boton({
 }
 
 /**
- * Espacio que una lista deja libre al final para que la barra de pestañas
- * no tape su última fila.
+ * Espacio que una lista deja libre al final para que el botón de añadir y la
+ * barra de pestañas no tapen su última fila. Sale de las mismas medidas con
+ * las que se coloca el botón, así no pueden desajustarse.
  */
 export function margenBajoElFlotante(margenInferior: number): number {
   return margenInferior + Flotante.separacion + Flotante.lado + Espacio.l;
@@ -149,38 +150,34 @@ export function useMargenDeLista(): number {
 }
 
 /**
- * Botón redondo "+" de la cabecera. Va arriba a la derecha, en el mismo
- * sitio en todas las pestañas, y por eso nunca tapa una cifra ni una fila.
- * Sobre el degradado de Inicio usa el velo claro.
+ * Botón redondo «+» para anotar un movimiento. Es el mismo en las cinco
+ * pestañas y va siempre abajo a la derecha, justo encima de la barra, al
+ * alcance del pulgar. El «+» a solas no significa otra cosa en toda la app:
+ * las demás altas usan un botón con texto.
+ *
+ * Las pantallas que lo llevan dejan `useMargenDeLista()` de espacio al final
+ * de su contenido para que la última fila se pueda ver y tocar.
  */
-export function BotonAnadir({
-  etiqueta,
-  alPulsar,
-  sobreDegradado = false,
-}: {
-  etiqueta: string;
-  alPulsar: () => void;
-  sobreDegradado?: boolean;
-}) {
+export function BotonAnadir() {
   const c = useColores();
+  const margen = useSafeAreaInsets();
   return (
     <Pressable
-      onPress={alPulsar}
+      onPress={() => router.push('/movimiento')}
       accessibilityRole="button"
-      accessibilityLabel={etiqueta}
+      accessibilityLabel={t('movimientos.nuevo')}
       testID="boton-anadir"
       hitSlop={4}
       style={({ pressed }) => [
         estilos.anadir,
-        !sobreDegradado && sombraFlotante(c),
+        sombraFlotante(c),
         {
-          backgroundColor: sobreDegradado ? c.sobreDegradado : c.acento,
+          backgroundColor: c.acento,
+          bottom: margen.bottom + Flotante.separacion,
           opacity: pressed ? 0.7 : 1,
         },
       ]}>
-      <Text
-        allowFontScaling={false}
-        style={[estilos.mas, { color: sobreDegradado ? c.degradadoInicio : c.sobreAcento }]}>
+      <Text allowFontScaling={false} style={[estilos.mas, { color: c.sobreAcento }]}>
         +
       </Text>
     </Pressable>
@@ -446,13 +443,15 @@ const estilos = StyleSheet.create({
   },
   textoBoton: { fontSize: 17, fontWeight: '600' },
   anadir: {
-    width: TactilMinimo + 2,
-    height: TactilMinimo + 2,
-    borderRadius: (TactilMinimo + 2) / 2,
+    position: 'absolute',
+    right: Espacio.l,
+    width: Flotante.lado,
+    height: Flotante.lado,
+    borderRadius: Flotante.lado / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mas: { fontSize: 30, lineHeight: 34, fontWeight: '400' },
+  mas: { fontSize: 34, lineHeight: 38, fontWeight: '400' },
   segmentos: { flexDirection: 'row', borderRadius: Radio.m, padding: 3 },
   segmento: {
     flex: 1,

@@ -1,4 +1,4 @@
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -78,9 +78,7 @@ export default function Cuentas() {
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
-      <Cabecera titulo={t('cuentas.titulo')}>
-        <BotonAnadir etiqueta={t('cuentas.nueva')} alPulsar={() => router.push('/cuenta')} />
-      </Cabecera>
+      <Cabecera titulo={t('cuentas.titulo')} />
       <ScrollView contentContainerStyle={[estilos.contenido, { paddingBottom: margenDeLista }]}>
         <Pressable
           onPress={() => router.push('/patrimonio')}
@@ -108,6 +106,14 @@ export default function Cuentas() {
             ))}
           </Tarjeta>
         </Pressable>
+
+        <Boton
+          texto={t('cuentas.nueva')}
+          variante="primario"
+          alPulsar={() => router.push('/cuenta')}
+          testID="nueva-cuenta"
+          estilo={estilos.nueva}
+        />
 
         {todas !== undefined && todas.length === 0 ? (
           <EstadoVacio texto={t('cuentas.vacio')} />
@@ -149,42 +155,8 @@ export default function Cuentas() {
             ) : null}
           </View>
         ) : null}
-
-        <View style={estilos.bloque}>
-          <Text style={[estilos.grupo, { color: c.textoSecundario }]} accessibilityRole="header">
-            {t('cuentas.ajustes')}
-          </Text>
-          <Tarjeta estilo={estilos.tarjetaDeFilas}>
-            {(
-              [
-                ['/categorias', t('cuentas.categorias'), 'ajuste-categorias'],
-                ['/apple-pay', t('guia.abrir'), 'ajuste-apple-pay'],
-                ['/avisos', t('avisos.abrir'), 'ajuste-avisos'],
-              ] as const
-            ).map(([ruta, texto, testID], i) => (
-              <Pressable
-                key={ruta}
-                onPress={() => router.push(ruta)}
-                accessibilityRole="button"
-                testID={testID}
-                style={({ pressed }) => [
-                  estilos.fila,
-                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.borde },
-                  { opacity: pressed ? 0.6 : 1 },
-                ]}>
-                <Text style={[estilos.nombre, { color: c.texto }]}>{texto}</Text>
-                <Text style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>›</Text>
-              </Pressable>
-            ))}
-          </Tarjeta>
-        </View>
-
-        {__DEV__ ? (
-          <Link href="/diagnostico" style={[estilos.enlace, { color: c.textoSecundario }]}>
-            {t('diagnostico.abrir')}
-          </Link>
-        ) : null}
       </ScrollView>
+      <BotonAnadir />
     </View>
   );
 }
@@ -213,11 +185,6 @@ const estilos = StyleSheet.create({
   },
   nombre: { flex: 1, fontSize: Letra.cuerpo, fontWeight: '500' },
   saldo: { fontSize: Letra.cuerpo, fontWeight: '700' },
+  nueva: { alignSelf: 'flex-start', marginTop: Espacio.xs },
   botonArchivadas: { alignSelf: 'flex-start', paddingHorizontal: Espacio.xs },
-  enlace: {
-    padding: Espacio.xs,
-    marginTop: Espacio.l,
-    fontSize: Letra.pequeno,
-    minHeight: TactilMinimo,
-  },
 });

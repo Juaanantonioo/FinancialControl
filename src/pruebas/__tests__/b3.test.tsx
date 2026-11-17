@@ -7,10 +7,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactElement } from 'react';
 
-import Cuentas from '@/app/(tabs)/cuentas';
 import Inicio from '@/app/(tabs)/index';
 import Movimientos from '@/app/(tabs)/movimientos';
 import GuiaDeApplePay from '@/app/apple-pay';
+import Ajustes from '@/app/ajustes';
 import Bandeja from '@/app/capturas';
 import PantallaDeMovimiento from '@/app/movimiento';
 import { prepararBaseDeDatos, type Repositorios } from '@/datos';
@@ -127,8 +127,9 @@ describe('sin capturas', () => {
     expect(router.push).toHaveBeenCalledWith('/capturas');
   });
 
-  it('desde Cuentas se llega a Categorías y a la guía de Apple Pay', async () => {
-    await pintar(<Cuentas />);
+  // B3b: estos accesos pasan del pie de Cuentas a la pantalla Ajustes.
+  it('desde Ajustes se llega a Categorías y a la guía de Apple Pay', async () => {
+    await pintar(<Ajustes />);
     await fireEvent.press(await screen.findByTestId('ajuste-apple-pay'));
     expect(router.push).toHaveBeenCalledWith('/apple-pay');
     await fireEvent.press(screen.getByTestId('ajuste-categorias'));

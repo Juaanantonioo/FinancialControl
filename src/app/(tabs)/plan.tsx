@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -28,9 +28,10 @@ export default function Plan() {
   const [mes, setMes] = useState(mesDe());
 
   // La pestaña sigue montada entre visitas: lo pedido se aplica una vez por petición.
-  const pedido = useLocalSearchParams<{ seccion?: string; mes?: string }>();
-  const firma = `${pedido.seccion ?? ''}|${pedido.mes ?? ''}`;
-  const [aplicada, setAplicada] = useState('|');
+  const pedido = useLocalSearchParams<{ seccion?: string; mes?: string; peticion?: string }>();
+  // La marca de petición permite pedir dos veces seguidas la misma sección.
+  const firma = `${pedido.seccion ?? ''}|${pedido.mes ?? ''}|${pedido.peticion ?? ''}`;
+  const [aplicada, setAplicada] = useState('||');
   if (firma !== aplicada) {
     setAplicada(firma);
     if (
@@ -45,17 +46,7 @@ export default function Plan() {
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
-      <Cabecera titulo={t('plan.titulo')}>
-        {seccion === 'fijos' ? (
-          <BotonAnadir etiqueta={t('fijos.nuevo')} alPulsar={() => router.push('/regla')} />
-        ) : null}
-        {seccion === 'objetivos' ? (
-          <BotonAnadir
-            etiqueta={t('objetivos.nuevo')}
-            alPulsar={() => router.push('/objetivo-editar')}
-          />
-        ) : null}
-      </Cabecera>
+      <Cabecera titulo={t('plan.titulo')} />
       <ScrollView
         contentContainerStyle={[estilos.contenido, { paddingBottom: margenDeLista }]}
         keyboardShouldPersistTaps="handled">
@@ -76,6 +67,7 @@ export default function Plan() {
         ) : null}
         {seccion === 'objetivos' ? <SeccionObjetivos panel={panel} /> : null}
       </ScrollView>
+      <BotonAnadir />
     </View>
   );
 }

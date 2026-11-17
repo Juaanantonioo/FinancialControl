@@ -178,16 +178,15 @@
   },
   "cuentas": {
     "titulo": "Cuentas",
-    "nueva": "Añadir cuenta",
-    "patrimonio": "Patrimonio neto",
-    "vacio": "Todavía no hay cuentas. Toca el botón + para crear la primera.",
+    "nueva": "Nueva cuenta",
+    "patrimonio": "Lo que tienes",
+    "verEvolucion": "Ver evolución",
+    "vacio": "Todavía no hay cuentas. Toca «Nueva cuenta» para crear la primera.",
     "archivadas": "Archivadas",
     "mostrarArchivadas": "Mostrar las cuentas archivadas",
     "ocultarArchivadas": "Ocultar las cuentas archivadas",
     "saldoDe": "{{nombre}}, saldo {{saldo}}",
-    "borrada": "Cuenta borrada",
-    "ajustes": "Ajustes",
-    "categorias": "Categorías"
+    "borrada": "Cuenta borrada"
   },
   "cuenta": {
     "tituloNueva": "Nueva cuenta",
@@ -319,9 +318,16 @@
     "diaCorto6": "S",
     "diaYMesCorto": "{{dia}} de {{mes}}"
   },
+  "ajustes": {
+    "titulo": "Ajustes",
+    "abrir": "Ajustes",
+    "categoriasAyuda": "Crea, ordena y archiva las categorías de gasto e ingreso.",
+    "applePayAyuda": "Cómo capturar los pagos con Atajos y qué cuenta va con cada tarjeta.",
+    "avisosAyuda": "Qué avisos quieres recibir y cuándo.",
+    "diagnosticoAyuda": "Comprueba la conexión con el servidor."
+  },
   "diagnostico": {
     "titulo": "Diagnóstico",
-    "abrir": "Diagnóstico de desarrollo",
     "supabase": "Conexión con Supabase",
     "supabaseSinConfigurar": "Sin configurar. Falta el fichero .env con la dirección y la clave pública.",
     "supabaseProbando": "Probando…",
@@ -495,7 +501,7 @@
     "totalMensual": "Cada mes se te va en fijos",
     "totalMensualAyuda": "Suma de tus gastos fijos y suscripciones mensuales activos.",
     "vacio": "Todavía no tienes gastos fijos. Añade el alquiler, la luz o tus suscripciones para ver qué se te cobra y cuándo.",
-    "nuevo": "Añadir gasto fijo",
+    "nuevo": "Nuevo gasto fijo",
     "nuevaRegla": "Añadir",
     "porConfirmar": "Por confirmar",
     "porConfirmarAyuda": "Ya ha llegado su día. Confírmalos cuando se hayan cobrado.",
@@ -677,7 +683,7 @@
   },
   "guia": {
     "titulo": "Apple Pay",
-    "abrir": "Apple Pay y Atajos",
+    "abrir": "Apple Pay y tarjetas",
     "intro": "Con una automatización de la app Atajos, cada pago con Apple Pay deja aquí una captura con su importe y su comercio. Tú la guardas con un toque.",
     "aviso": "La automatización puede fallar o no saltar con algunos pagos. Anotar a mano sigue funcionando siempre.",
     "pasos": "Cómo crearla",

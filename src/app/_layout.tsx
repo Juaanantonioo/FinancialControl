@@ -50,6 +50,7 @@ export default function RootLayout() {
           <Stack.Screen name="detalle-de-cuenta" options={{ headerShown: false }} />
           <Stack.Screen name="patrimonio" options={{ headerShown: false }} />
           <Stack.Screen name="capturas" options={{ headerShown: false }} />
+          <Stack.Screen name="ajustes" options={{ headerShown: false }} />
           <Stack.Screen name="avisos" options={{ headerShown: false }} />
           <Stack.Screen name="apple-pay" options={{ headerShown: false }} />
           <Stack.Screen name="objetivo" options={{ headerShown: false }} />
