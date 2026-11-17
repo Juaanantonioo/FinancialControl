@@ -7,7 +7,7 @@
  */
 import { normalizarNombre, type Categoria } from '@/dominio/modelo';
 import { OTRAS, SIN_CATEGORIA } from '@/dominio/resumen';
-import { INDICE_NEUTRO } from '@/theme';
+import { INDICE_NEUTRO, PALETA_DE_CATEGORIAS } from '@/theme';
 
 type CategoriaConAspecto = Pick<Categoria, 'id' | 'nombre' | 'tipo' | 'icono' | 'color' | 'orden'>;
 
@@ -67,11 +67,52 @@ export function indiceDeColor(categoria: Pick<Categoria, 'tipo' | 'orden'>): num
   return (orden + desplazamiento) % INDICE_NEUTRO;
 }
 
+/**
+ * Color que la persona eligió para una categoría. Se guarda el color del
+ * modo claro; aquí se devuelve su pareja del modo en uso, para que también
+ * cumpla contraste en oscuro. Un color que no es de la paleta se respeta.
+ */
+export function colorGuardado(color: string | null, paleta: readonly string[]): string | null {
+  if (!esColor(color)) return null;
+  const indice = PALETA_DE_CATEGORIAS.claro.findIndex(
+    (c) => c.toUpperCase() === color.toUpperCase(),
+  );
+  return indice >= 0 ? paleta[indice] : color;
+}
+
+/** Iconos que se ofrecen al elegir el de una categoría. */
+export const ICONOS_DISPONIBLES = [
+  '🍽️',
+  '🛒',
+  '🏠',
+  '💡',
+  '🚌',
+  '🚗',
+  '⛽',
+  '🎬',
+  '🎮',
+  '✈️',
+  '💊',
+  '🏋️',
+  '🛍️',
+  '👕',
+  '📱',
+  '💼',
+  '💰',
+  '🎁',
+  '🐾',
+  '📚',
+  '👶',
+  '☕',
+  '🌱',
+  '📦',
+] as const;
+
 export function aspectoDeCategoria(
   categoria: CategoriaConAspecto,
   paleta: readonly string[],
 ): Aspecto {
-  const color = esColor(categoria.color) ? categoria.color : paleta[indiceDeColor(categoria)];
+  const color = colorGuardado(categoria.color, paleta) ?? paleta[indiceDeColor(categoria)];
   if (categoria.icono && categoria.icono.trim() !== '') {
     return { color, icono: categoria.icono.trim(), esLetra: false };
   }

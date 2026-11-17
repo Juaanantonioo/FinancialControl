@@ -41,3 +41,20 @@ export function conSigno(centimos: number, divisa: string): string {
   if (centimos < 0) return `-${texto}`;
   return texto;
 }
+
+/** Tanto por ciento con coma decimal y signo: 7.5 produce "+7,5 %". */
+export function porcentaje(valor: number, conSignoMas = true): string {
+  const absoluto = Math.abs(valor);
+  const texto = Number.isInteger(absoluto)
+    ? String(absoluto)
+    : absoluto.toFixed(1).replace('.', formatoRegional().separadorDecimal);
+  const signo = valor < 0 ? '-' : valor > 0 && conSignoMas ? '+' : '';
+  return `${signo}${texto} %`;
+}
+
+/** Euros redondeados sin céntimos ni símbolo, para casillas pequeñas: "1.235". */
+export function sinCentimos(centimos: number): string {
+  const euros = Math.round(Math.abs(centimos) / 100);
+  const texto = String(euros).replace(/\B(?=(\d{3})+(?!\d))/g, formatoRegional().separadorDeMiles);
+  return centimos < 0 ? `-${texto}` : texto;
+}

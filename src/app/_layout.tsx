@@ -32,6 +32,12 @@ export default function RootLayout() {
           <Stack.Screen name="movimiento" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="cuenta" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="detalle-de-cuenta" options={{ headerShown: false }} />
+          <Stack.Screen name="patrimonio" options={{ headerShown: false }} />
+          <Stack.Screen name="inversiones" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="valor-de-inversion"
+            options={{ presentation: 'modal', headerShown: false }}
+          />
           <Stack.Screen name="categorias" options={{ title: t('categorias.titulo') }} />
           <Stack.Screen name="diagnostico" options={{ title: t('diagnostico.titulo') }} />
         </Stack>

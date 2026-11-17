@@ -3,6 +3,7 @@
  * táctil mínima de 44 puntos, llevan etiqueta para el lector de pantalla y
  * usan colores semánticos (docs/03, apartados 8 y 9).
  */
+import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import {
   FlatList,
@@ -40,6 +41,47 @@ export function Cabecera({ titulo, children }: { titulo: string; children?: Reac
         {titulo}
       </Text>
       <View style={estilos.acciones}>{children}</View>
+    </View>
+  );
+}
+
+/** Cabecera de una pantalla que se abre sobre otra: volver, título y una acción. */
+export function CabeceraConVuelta({
+  titulo,
+  children,
+  testID = 'titulo-de-pantalla',
+}: {
+  titulo: string;
+  children?: ReactNode;
+  testID?: string;
+}) {
+  const c = useColores();
+  const margen = useSafeAreaInsets();
+  return (
+    <View
+      style={[
+        estilos.cabeceraConVuelta,
+        { paddingTop: margen.top + Espacio.xs, backgroundColor: c.fondo },
+      ]}>
+      <Pressable
+        onPress={() => router.back()}
+        accessibilityRole="button"
+        accessibilityLabel={t('comun.volver')}
+        testID="volver"
+        style={estilos.volver}>
+        <Text allowFontScaling={false} style={{ color: c.acento, fontSize: 30, lineHeight: 34 }}>
+          ‹
+        </Text>
+      </Pressable>
+      <Text
+        style={[estilos.tituloConVuelta, { color: c.texto }]}
+        numberOfLines={2}
+        maxFontSizeMultiplier={1.4}
+        accessibilityRole="header"
+        testID={testID}>
+        {titulo}
+      </Text>
+      <View style={estilos.accionDeCabecera}>{children}</View>
     </View>
   );
 }
@@ -89,9 +131,8 @@ export function Boton({
 }
 
 /**
- * Espacio que una lista deja libre al final para que el botón flotante y la
- * barra de pestañas no tapen su última fila. Sale de las mismas medidas con
- * las que se coloca el botón, así no pueden desajustarse.
+ * Espacio que una lista deja libre al final para que la barra de pestañas
+ * no tape su última fila.
  */
 export function margenBajoElFlotante(margenInferior: number): number {
   return margenInferior + Flotante.separacion + Flotante.lado + Espacio.l;
@@ -101,26 +142,39 @@ export function useMargenDeLista(): number {
   return margenBajoElFlotante(useSafeAreaInsets().bottom);
 }
 
-/** Botón redondo "+" fijo sobre la esquina inferior derecha. */
-export function BotonFlotante({ etiqueta, alPulsar }: { etiqueta: string; alPulsar: () => void }) {
+/**
+ * Botón redondo "+" de la cabecera. Va arriba a la derecha, en el mismo
+ * sitio en todas las pestañas, y por eso nunca tapa una cifra ni una fila.
+ * Sobre el degradado de Inicio usa el velo claro.
+ */
+export function BotonAnadir({
+  etiqueta,
+  alPulsar,
+  sobreDegradado = false,
+}: {
+  etiqueta: string;
+  alPulsar: () => void;
+  sobreDegradado?: boolean;
+}) {
   const c = useColores();
-  const margen = useSafeAreaInsets();
   return (
     <Pressable
       onPress={alPulsar}
       accessibilityRole="button"
       accessibilityLabel={etiqueta}
       testID="boton-anadir"
+      hitSlop={4}
       style={({ pressed }) => [
-        estilos.flotante,
-        sombraFlotante(c),
+        estilos.anadir,
+        !sobreDegradado && sombraFlotante(c),
         {
-          backgroundColor: c.acento,
-          bottom: margen.bottom + Flotante.separacion,
+          backgroundColor: sobreDegradado ? c.sobreDegradado : c.acento,
           opacity: pressed ? 0.7 : 1,
         },
       ]}>
-      <Text allowFontScaling={false} style={[estilos.mas, { color: c.sobreAcento }]}>
+      <Text
+        allowFontScaling={false}
+        style={[estilos.mas, { color: sobreDegradado ? c.degradadoInicio : c.sobreAcento }]}>
         +
       </Text>
     </Pressable>
@@ -351,6 +405,26 @@ const estilos = StyleSheet.create({
     paddingHorizontal: Espacio.m,
     paddingBottom: Espacio.s,
   },
+  cabeceraConVuelta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Espacio.xs,
+    paddingBottom: Espacio.xs,
+    gap: Espacio.xs,
+  },
+  volver: {
+    minWidth: TactilMinimo,
+    minHeight: TactilMinimo,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tituloConVuelta: {
+    flex: 1,
+    fontSize: Letra.subtitulo,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  accionDeCabecera: { minWidth: TactilMinimo, alignItems: 'flex-end' },
   titulo: { fontSize: Letra.titulo, fontWeight: '800', flexShrink: 1, letterSpacing: -0.5 },
   acciones: { flexDirection: 'row', alignItems: 'center' },
   boton: {
@@ -362,16 +436,14 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   textoBoton: { fontSize: 17, fontWeight: '600' },
-  flotante: {
-    position: 'absolute',
-    right: Espacio.l,
-    width: Flotante.lado,
-    height: Flotante.lado,
-    borderRadius: Flotante.lado / 2,
+  anadir: {
+    width: TactilMinimo + 2,
+    height: TactilMinimo + 2,
+    borderRadius: (TactilMinimo + 2) / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mas: { fontSize: 34, lineHeight: 38, fontWeight: '400' },
+  mas: { fontSize: 30, lineHeight: 34, fontWeight: '400' },
   segmentos: { flexDirection: 'row', borderRadius: Radio.m, padding: 3 },
   segmento: {
     flex: 1,

@@ -1,16 +1,23 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BotonFlotante, Segmentos, useMargenDeLista } from '@/componentes/basicos';
+import { BotonAnadir, Segmentos, useMargenDeLista } from '@/componentes/basicos';
 import { Anillo, Barras, Leyenda } from '@/componentes/Graficos';
-import { DistintivoDeCategoria, EstadoVacio, SelectorDeMes, Tarjeta } from '@/componentes/Tarjeta';
+import {
+  Dato,
+  DistintivoDeCategoria,
+  EstadoVacio,
+  SelectorDeMes,
+  Tarjeta,
+} from '@/componentes/Tarjeta';
+import { resumenDeInversiones } from '@/dominio/inversion';
+import { patrimonioEn, variacionDelMes } from '@/dominio/patrimonio';
 import {
   balanceDelMes,
   cuentasDelMes,
-  deDivisa,
-  divisasDe,
+  esMesValido,
   evolucion,
   gastoPorCategoria,
   mesDe,
@@ -18,10 +25,11 @@ import {
   OTRAS,
   SIN_CATEGORIA,
 } from '@/dominio/resumen';
+import { resumenDiario } from '@/dominio/tiempo';
 import { aspectoDeParte } from '@/estado/aspecto';
-import { useConsulta } from '@/estado/Datos';
-import { describirMes, mesCorto } from '@/estado/fechas';
-import { conSigno, importe } from '@/estado/formato';
+import { describirMes, fechaLarga, mesCorto } from '@/estado/fechas';
+import { conSigno, importe, porcentaje } from '@/estado/formato';
+import { usePanel } from '@/estado/panel';
 import { t } from '@/i18n';
 import {
   cifrasTabulares,
@@ -35,52 +43,55 @@ import {
 } from '@/theme';
 
 /**
- * P05 · Inicio: el mes de un vistazo. Balance global, balance por cuenta,
- * gasto por categoría y evolución de los últimos seis meses.
+ * P05 · Inicio. Arriba, lo que la persona tiene hoy (patrimonio), repartido
+ * entre disponible e invertido. Debajo, el mes elegido: balance, el día de
+ * hoy, las cuentas, las inversiones, el gasto por categoría y la evolución.
  *
- * Esta pantalla no suma nada: pide las cifras a `src/dominio/resumen.ts` y
- * las pinta. Presupuesto, gastos fijos y objetivos llegan en hitos
- * posteriores y no aparecen aquí.
+ * El patrimonio es siempre el de hoy; el selector de mes solo cambia los
+ * bloques del mes. Esta pantalla no suma nada: pide las cifras a
+ * `src/dominio` y las pinta.
  */
 export default function Inicio() {
   const c = useColores();
   const paleta = usePaleta();
   const margen = useSafeAreaInsets();
   const margenDeLista = useMargenDeLista();
+  const panel = usePanel();
+  const { hoy, divisa, divisas, cuentas, movimientos, valores, categorias, sinCuentas } = panel;
   const [mes, setMes] = useState(mesDe());
-  const [divisaElegida, setDivisaElegida] = useState<string | null>(null);
   // Cuenta las veces que se ha pedido abrir Movimientos con un filtro.
   const peticiones = useRef(0);
 
-  const todasLasCuentas = useConsulta((r) => r.cuentas.listar({ incluirArchivadas: true }));
-  const todosLosMovimientos = useConsulta((r) => r.movimientos.listar());
-  const categorias = useConsulta((r) => r.categorias.listar({ incluirArchivadas: true }));
-  const cargado =
-    todasLasCuentas !== undefined && todosLosMovimientos !== undefined && categorias !== undefined;
+  // Análisis puede abrir Inicio en un mes concreto. Se aplica una vez por petición.
+  const pedido = useLocalSearchParams<{ mes?: string; peticion?: string }>();
+  const firma = `${pedido.peticion ?? ''}|${pedido.mes ?? ''}`;
+  const [aplicada, setAplicada] = useState('|');
+  if (firma !== aplicada) {
+    setAplicada(firma);
+    if (pedido.mes && esMesValido(pedido.mes)) setMes(pedido.mes);
+  }
 
-  // No se suman importes de divisas distintas: se ve una divisa cada vez.
-  const divisas = divisasDe(todasLasCuentas ?? []);
-  const divisa =
-    divisaElegida && divisas.includes(divisaElegida) ? divisaElegida : (divisas[0] ?? 'EUR');
-  const movimientos = deDivisa(todosLosMovimientos ?? [], divisa);
-  const cuentas = (todasLasCuentas ?? []).filter((x) => x.divisa === divisa);
+  const patrimonio = patrimonioEn(cuentas, movimientos, valores, hoy);
+  const variacion = variacionDelMes(cuentas, movimientos, valores, hoy);
+  const deInversion = cuentas.filter((x) => x.tipo === 'inversion');
+  const inversiones = resumenDeInversiones(deInversion, movimientos, valores, hoy);
 
   const balance = balanceDelMes(movimientos, mes);
+  const diario = resumenDiario(movimientos, mes, hoy);
   const porCuenta = cuentasDelMes(cuentas, movimientos, mes);
-  const gasto = gastoPorCategoria(movimientos, categorias ?? [], mes);
+  const gasto = gastoPorCategoria(movimientos, categorias, mes);
   const meses = evolucion(movimientos, mes);
   const hayEvolucion = meses.some((m) => m.ingresos > 0 || m.gastos > 0);
-  const sinCuentas = cargado && todasLasCuentas.length === 0;
 
   const nombreDeParte = (clave: string): string => {
     if (clave === OTRAS) return t('inicio.otras');
     if (clave === SIN_CATEGORIA) return t('inicio.sinCategoria');
-    return (categorias ?? []).find((x) => x.id === clave)?.nombre ?? t('inicio.sinCategoria');
+    return categorias.find((x) => x.id === clave)?.nombre ?? t('inicio.sinCategoria');
   };
 
   /** Abre Movimientos con el mes puesto y, si es una categoría real, filtrado por ella. */
   function abrirMovimientosDe(clave: string) {
-    const esCategoria = (categorias ?? []).some((x) => x.id === clave);
+    const esCategoria = categorias.some((x) => x.id === clave);
     peticiones.current += 1;
     router.navigate({
       pathname: '/movimientos',
@@ -105,60 +116,95 @@ export default function Inicio() {
     }
   }
 
+  let fraseDelPatrimonio = t('inicio.sinVariacion');
+  if (variacion) {
+    const datos = {
+      diferencia: conSigno(variacion.diferencia, divisa),
+      fecha: fechaLarga(variacion.desde),
+    };
+    fraseDelPatrimonio =
+      variacion.porcentaje === null
+        ? t('inicio.variacionDelMes', datos)
+        : t('inicio.variacionConPorcentaje', {
+            ...datos,
+            porcentaje: porcentaje(variacion.porcentaje),
+          });
+  }
+
   const partes = gasto.partes.map((parte) => ({
     ...parte,
     nombre: nombreDeParte(parte.clave),
-    aspecto: aspectoDeParte(parte.clave, categorias ?? [], paleta),
+    aspecto: aspectoDeParte(parte.clave, categorias, paleta),
   }));
+
+  const etiquetaDeGanancia =
+    inversiones.ganancia > 0
+      ? t('inversion.ganas')
+      : inversiones.ganancia < 0
+        ? t('inversion.pierdes')
+        : t('inversion.sinCambio');
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: margenDeLista }}>
-        {/* Bloque 1 · Balance global del mes, sobre el degradado de la cabecera. */}
+        {/* Lo que tienes hoy, sobre el degradado de la cabecera. */}
         <View style={[estilos.cabecera, degradado(c), { paddingTop: margen.top + Espacio.s }]}>
-          <SelectorDeMes
-            mes={mes}
-            alCambiar={(salto) => setMes(moverMes(mes, salto))}
-            sobreDegradado
-          />
-          <View
-            accessible
-            accessibilityLabel={`${t('inicio.balanceLeido', {
-              mes: describirMes(mes),
-              balance: conSigno(balance.balance, divisa),
-              ingresos: importe(balance.ingresos, divisa),
-              gastos: importe(balance.gastos, divisa),
-            })} ${fraseDelMes}`}
-            style={estilos.balance}>
-            <Text style={{ color: c.sobreDegradadoSecundario, fontSize: Letra.secundario }}>
-              {t('inicio.balanceDelMes')}
-            </Text>
+          <View style={estilos.lineaSuperior}>
             <Text
-              style={[estilos.cifraGrande, cifrasTabulares, { color: c.sobreDegradado }]}
-              maxFontSizeMultiplier={1.6}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.5}
-              testID="balance-del-mes">
-              {conSigno(balance.balance, divisa)}
+              style={[estilos.rotulo, { color: c.sobreDegradadoSecundario }]}
+              accessibilityRole="header">
+              {t('inicio.patrimonio')}
             </Text>
+            <BotonAnadir
+              sobreDegradado
+              etiqueta={t('movimientos.nuevo')}
+              alPulsar={() => router.push('/movimiento')}
+            />
+          </View>
+          <Pressable
+            onPress={() => router.push('/patrimonio')}
+            accessibilityRole="button"
+            accessibilityLabel={t('inicio.patrimonioLeido', {
+              total: importe(patrimonio.total, divisa),
+              variacion: fraseDelPatrimonio,
+            })}
+            testID="patrimonio"
+            style={({ pressed }) => [estilos.patrimonio, { opacity: pressed ? 0.7 : 1 }]}>
+            <View style={estilos.cifraYFlecha}>
+              <Text
+                style={[estilos.cifraGrande, cifrasTabulares, { color: c.sobreDegradado }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+                maxFontSizeMultiplier={1.6}
+                testID="patrimonio-total">
+                {importe(patrimonio.total, divisa)}
+              </Text>
+              <Text
+                allowFontScaling={false}
+                style={{ color: c.sobreDegradadoSecundario, fontSize: 26 }}>
+                ›
+              </Text>
+            </View>
             <Text
               style={{ color: c.sobreDegradadoSecundario, fontSize: Letra.secundario }}
-              testID="frase-del-mes">
-              {fraseDelMes}
+              testID="patrimonio-variacion">
+              {fraseDelPatrimonio}
             </Text>
-            <View style={estilos.pareja}>
+          </Pressable>
+          <View style={estilos.pareja}>
+            <CifraDeCabecera
+              etiqueta={t('inicio.disponible')}
+              valor={importe(patrimonio.disponible, divisa)}
+              testID="patrimonio-disponible"
+            />
+            {deInversion.length > 0 ? (
               <CifraDeCabecera
-                etiqueta={t('inicio.ingresos')}
-                valor={conSigno(balance.ingresos, divisa)}
-                testID="ingresos-del-mes"
+                etiqueta={t('inicio.invertido')}
+                valor={importe(patrimonio.invertido, divisa)}
+                testID="patrimonio-invertido"
               />
-              <CifraDeCabecera
-                etiqueta={t('inicio.gastos')}
-                valor={conSigno(-balance.gastos, divisa)}
-                testID="gastos-del-mes"
-              />
-            </View>
+            ) : null}
           </View>
         </View>
 
@@ -167,11 +213,81 @@ export default function Inicio() {
             <Segmentos
               opciones={divisas.map((d) => ({ valor: d, texto: d }))}
               valor={divisa}
-              alCambiar={setDivisaElegida}
+              alCambiar={panel.elegirDivisa}
             />
           ) : null}
 
-          {/* Bloque 2 · Balance por cuenta. */}
+          <SelectorDeMes mes={mes} alCambiar={(salto) => setMes(moverMes(mes, salto))} />
+
+          {/* Balance del mes. */}
+          <Tarjeta titulo={t('inicio.balanceDelMes')} testID="bloque-balance">
+            <View
+              accessible
+              accessibilityLabel={`${t('inicio.balanceLeido', {
+                mes: describirMes(mes),
+                balance: conSigno(balance.balance, divisa),
+                ingresos: importe(balance.ingresos, divisa),
+                gastos: importe(balance.gastos, divisa),
+              })} ${fraseDelMes}`}>
+              <Text
+                style={[
+                  estilos.cifra,
+                  cifrasTabulares,
+                  { color: balance.balance < 0 ? c.negativo : c.texto },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+                maxFontSizeMultiplier={1.6}
+                testID="balance-del-mes">
+                {conSigno(balance.balance, divisa)}
+              </Text>
+              <Text
+                style={{ color: c.textoSecundario, fontSize: Letra.secundario }}
+                testID="frase-del-mes">
+                {fraseDelMes}
+              </Text>
+            </View>
+            <View style={estilos.datos}>
+              <Dato
+                etiqueta={t('inicio.ingresos')}
+                valor={conSigno(balance.ingresos, divisa)}
+                color={balance.ingresos > 0 ? c.positivo : c.texto}
+                testID="ingresos-del-mes"
+              />
+              <Dato
+                etiqueta={t('inicio.gastos')}
+                valor={conSigno(-balance.gastos, divisa)}
+                testID="gastos-del-mes"
+              />
+            </View>
+          </Tarjeta>
+
+          {/* Hoy. */}
+          <Tarjeta titulo={t('inicio.hoy')} testID="bloque-hoy">
+            <View style={estilos.datos}>
+              <Dato
+                etiqueta={t('inicio.gastoDeHoy')}
+                valor={importe(diario.gastoDeHoy, divisa)}
+                testID="gasto-de-hoy"
+              />
+              <Dato
+                etiqueta={
+                  mes === hoy.slice(0, 7)
+                    ? t('inicio.mediaDiaria')
+                    : t('inicio.mediaDiariaDe', { mes: describirMes(mes) })
+                }
+                valor={
+                  diario.mediaDiaria === null
+                    ? t('analisis.sinDato')
+                    : importe(diario.mediaDiaria, divisa)
+                }
+                testID="media-diaria"
+              />
+            </View>
+          </Tarjeta>
+
+          {/* Balance por cuenta. */}
           <Tarjeta titulo={t('inicio.cuentas')} testID="bloque-cuentas">
             {sinCuentas ? (
               <EstadoVacio
@@ -185,8 +301,11 @@ export default function Inicio() {
             ) : null}
             {porCuenta.map((cuenta, i) => {
               const r = cuenta.resumen;
-              const saldo = importe(r.saldo, divisa);
-              const variacion = conSigno(r.variacion, divisa);
+              // Una cuenta de inversión se muestra por lo que vale, no por lo aportado.
+              const valor =
+                patrimonio.cuentas.find((x) => x.cuentaId === cuenta.id)?.valor ?? r.saldo;
+              const saldo = importe(valor, divisa);
+              const cambio = conSigno(r.variacion, divisa);
               return (
                 <Pressable
                   key={cuenta.id}
@@ -199,7 +318,7 @@ export default function Inicio() {
                     saldo,
                     entradas: importe(r.entradas, divisa),
                     salidas: importe(r.salidas, divisa),
-                    variacion,
+                    variacion: cambio,
                   })}
                   testID={`inicio-cuenta-${cuenta.nombre}`}
                   style={({ pressed }) => [
@@ -220,7 +339,7 @@ export default function Inicio() {
                       style={[
                         estilos.saldo,
                         cifrasTabulares,
-                        { color: r.saldo < 0 ? c.negativo : c.texto },
+                        { color: valor < 0 ? c.negativo : c.texto },
                       ]}
                       testID={`inicio-saldo-${cuenta.nombre}`}>
                       {saldo}
@@ -256,7 +375,7 @@ export default function Inicio() {
                           },
                         ]}
                         testID={`inicio-variacion-${cuenta.nombre}`}>
-                        {variacion}
+                        {cambio}
                       </Text>
                     ) : null}
                   </View>
@@ -265,7 +384,54 @@ export default function Inicio() {
             })}
           </Tarjeta>
 
-          {/* Bloque 3 · Gasto por categoría. */}
+          {/* Inversiones: solo si hay alguna cuenta de inversión. */}
+          {deInversion.length > 0 ? (
+            <Pressable
+              onPress={() => router.push('/inversiones')}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('inicio.inversiones')}. ${t('inversion.aportado')}: ${importe(
+                inversiones.aportado,
+                divisa,
+              )}. ${t('inversion.valor')}: ${importe(inversiones.valor, divisa)}. ${etiquetaDeGanancia} ${importe(
+                Math.abs(inversiones.ganancia),
+                divisa,
+              )}. ${t('inicio.verInversiones')}`}
+              testID="bloque-inversiones"
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+              <Tarjeta titulo={`${t('inicio.inversiones')}  ›`}>
+                <View style={estilos.datos}>
+                  <Dato
+                    etiqueta={t('inversion.aportado')}
+                    valor={importe(inversiones.aportado, divisa)}
+                    testID="inversiones-aportado"
+                  />
+                  <Dato
+                    etiqueta={t('inversion.valor')}
+                    valor={importe(inversiones.valor, divisa)}
+                    testID="inversiones-valor"
+                  />
+                  <Dato
+                    etiqueta={etiquetaDeGanancia}
+                    valor={
+                      inversiones.rentabilidad === null || inversiones.ganancia === 0
+                        ? conSigno(inversiones.ganancia, divisa)
+                        : `${conSigno(inversiones.ganancia, divisa)} (${porcentaje(inversiones.rentabilidad)})`
+                    }
+                    color={
+                      inversiones.ganancia > 0
+                        ? c.positivo
+                        : inversiones.ganancia < 0
+                          ? c.negativo
+                          : c.texto
+                    }
+                    testID="inversiones-ganancia"
+                  />
+                </View>
+              </Tarjeta>
+            </Pressable>
+          ) : null}
+
+          {/* Gasto por categoría. */}
           <Tarjeta titulo={t('inicio.gastoPorCategoria')} testID="bloque-gasto">
             {gasto.total === 0 ? (
               <EstadoVacio
@@ -344,7 +510,7 @@ export default function Inicio() {
             )}
           </Tarjeta>
 
-          {/* Bloque 4 · Evolución de los últimos seis meses. */}
+          {/* Evolución de los últimos seis meses. */}
           <Tarjeta titulo={t('inicio.evolucion')} testID="bloque-evolucion">
             {hayEvolucion ? (
               <>
@@ -376,10 +542,6 @@ export default function Inicio() {
           </Tarjeta>
         </View>
       </ScrollView>
-      <BotonFlotante
-        etiqueta={t('movimientos.nuevo')}
-        alPulsar={() => router.push('/movimiento')}
-      />
     </View>
   );
 }
@@ -395,7 +557,10 @@ function CifraDeCabecera({
 }) {
   const c = useColores();
   return (
-    <View style={[estilos.cifraDeCabecera, { backgroundColor: c.veloSobreDegradado }]}>
+    <View
+      accessible
+      accessibilityLabel={`${etiqueta}: ${valor}`}
+      style={[estilos.cifraDeCabecera, { backgroundColor: c.veloSobreDegradado }]}>
       <Text
         style={{ color: c.sobreDegradadoSecundario, fontSize: Letra.pequeno }}
         numberOfLines={1}
@@ -424,10 +589,23 @@ const estilos = StyleSheet.create({
     paddingBottom: Espacio.l,
     borderBottomLeftRadius: Radio.l + 6,
     borderBottomRightRadius: Radio.l + 6,
-    gap: Espacio.m,
+    gap: Espacio.s,
   },
-  balance: { gap: Espacio.xs },
-  cifraGrande: { fontSize: Letra.cifraGrande, fontWeight: '800', letterSpacing: -1 },
+  lineaSuperior: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Espacio.s,
+  },
+  rotulo: { flex: 1, fontSize: Letra.cuerpo, fontWeight: '600' },
+  patrimonio: { minHeight: TactilMinimo, gap: Espacio.xs },
+  cifraYFlecha: { flexDirection: 'row', alignItems: 'center', gap: Espacio.s },
+  cifraGrande: {
+    flexShrink: 1,
+    fontSize: Letra.cifraGrande,
+    fontWeight: '800',
+    letterSpacing: -1,
+  },
   pareja: { flexDirection: 'row', gap: Espacio.s, marginTop: Espacio.s },
   cifraDeCabecera: {
     flex: 1,
@@ -438,6 +616,8 @@ const estilos = StyleSheet.create({
   },
   valorDeCabecera: { fontSize: Letra.cuerpo, fontWeight: '700' },
   contenido: { padding: Espacio.m, gap: Espacio.m },
+  cifra: { fontSize: Letra.cifra, fontWeight: '800', letterSpacing: -0.5 },
+  datos: { flexDirection: 'row', gap: Espacio.s, paddingTop: Espacio.xs },
   cuenta: { minHeight: TactilMinimo, paddingVertical: Espacio.s + 2, gap: Espacio.xs },
   lineaDeCuenta: {
     flexDirection: 'row',

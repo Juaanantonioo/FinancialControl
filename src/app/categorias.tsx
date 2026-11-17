@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Boton, Segmentos, TextoDeError } from '@/componentes/basicos';
 import { DistintivoDeCategoria } from '@/componentes/Tarjeta';
 import type { Categoria, TipoDeCategoria } from '@/dominio/modelo';
-import { aspectoDeCategoria } from '@/estado/aspecto';
+import { aspectoDeCategoria, ICONOS_DISPONIBLES } from '@/estado/aspecto';
 import { textoDeError, useConsulta, useDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
 import {
@@ -14,6 +15,7 @@ import {
   sombraDeTarjeta,
   TactilMinimo,
   useColores,
+  PALETA_DE_CATEGORIAS,
   usePaleta,
 } from '@/theme';
 
@@ -31,6 +33,9 @@ export default function PantallaDeCategorias() {
   const [verArchivadas, setVerArchivadas] = useState(false);
   // Categoría cuyo nombre se está editando y el texto en curso.
   const [edicion, setEdicion] = useState<{ id: string; texto: string } | null>(null);
+  // Categoría cuyo icono y color se están eligiendo.
+  const [aspectoDe, setAspectoDe] = useState<string | null>(null);
+  const margen = useSafeAreaInsets();
 
   const todas = useConsulta((r) => r.categorias.listar({ tipo, incluirArchivadas: true }), [tipo]);
   const activas = (todas ?? []).filter((x) => !x.archivada);
@@ -62,6 +67,21 @@ export default function PantallaDeCategorias() {
     await aplicar(() => repos.categorias.renombrar(id, texto));
   }
 
+  const enAspecto = (todas ?? []).find((x) => x.id === aspectoDe);
+
+  /** Guarda el icono o el color elegido; lo que no se indica se conserva. */
+  function guardarAspecto(
+    cat: Categoria,
+    cambio: { icono?: string | null; color?: string | null },
+  ) {
+    aplicar(() =>
+      repos.categorias.cambiarAspecto(cat.id, {
+        icono: cambio.icono === undefined ? cat.icono : cambio.icono,
+        color: cambio.color === undefined ? cat.color : cambio.color,
+      }),
+    );
+  }
+
   /** Intercambia una categoría con su vecina de arriba (-1) o de abajo (+1). */
   function mover(indice: number, salto: -1 | 1) {
     const destino = indice + salto;
@@ -78,7 +98,14 @@ export default function PantallaDeCategorias() {
       <View
         key={cat.id}
         style={[estilos.fila, sombraDeTarjeta(c), { backgroundColor: c.superficie }]}>
-        <DistintivoDeCategoria aspecto={aspectoDeCategoria(cat, paleta)} lado={32} />
+        <Pressable
+          onPress={() => setAspectoDe(cat.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t('categorias.aspecto', { nombre: cat.nombre })}
+          testID={`aspecto-${cat.nombre}`}
+          style={estilos.botonDeAspecto}>
+          <DistintivoDeCategoria aspecto={aspectoDeCategoria(cat, paleta)} lado={32} />
+        </Pressable>
         <TextInput
           value={editando ? edicion.texto : cat.nombre}
           onFocus={() => setEdicion({ id: cat.id, texto: cat.nombre })}
@@ -178,7 +205,128 @@ export default function PantallaDeCategorias() {
           {verArchivadas ? archivadas.map(fila) : null}
         </View>
       ) : null}
+
+      <Modal
+        visible={enAspecto !== undefined}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setAspectoDe(null)}>
+        {enAspecto ? (
+          <View style={[estilos.hoja, { backgroundColor: c.fondo, paddingBottom: margen.bottom }]}>
+            <View style={estilos.cabeceraDeHoja}>
+              <DistintivoDeCategoria aspecto={aspectoDeCategoria(enAspecto, paleta)} lado={40} />
+              <Text
+                style={[estilos.tituloDeHoja, { color: c.texto }]}
+                accessibilityRole="header"
+                numberOfLines={2}>
+                {enAspecto.nombre}
+              </Text>
+              <Boton
+                texto={t('comun.hecho')}
+                alPulsar={() => setAspectoDe(null)}
+                testID="aspecto-hecho"
+              />
+            </View>
+            <ScrollView contentContainerStyle={estilos.contenidoDeHoja}>
+              <Text style={[estilos.rotulo, { color: c.textoSecundario }]}>
+                {t('categorias.icono')}
+              </Text>
+              <View style={estilos.rejilla}>
+                <Opcion
+                  elegida={!enAspecto.icono}
+                  etiqueta={`${t('categorias.icono')}: ${t('comun.automatico')}`}
+                  testID="icono-automatico"
+                  alPulsar={() => guardarAspecto(enAspecto, { icono: null })}>
+                  <Text style={{ color: c.texto, fontSize: Letra.pequeno, fontWeight: '700' }}>
+                    {t('comun.automatico')}
+                  </Text>
+                </Opcion>
+                {ICONOS_DISPONIBLES.map((icono) => (
+                  <Opcion
+                    key={icono}
+                    elegida={enAspecto.icono === icono}
+                    etiqueta={t('categorias.iconoLeido', { icono })}
+                    testID={`icono-${icono}`}
+                    alPulsar={() => guardarAspecto(enAspecto, { icono })}>
+                    <Text allowFontScaling={false} style={estilos.emoji}>
+                      {icono}
+                    </Text>
+                  </Opcion>
+                ))}
+              </View>
+              <Text style={[estilos.rotulo, { color: c.textoSecundario }]}>
+                {t('categorias.color')}
+              </Text>
+              <View style={estilos.rejilla}>
+                <Opcion
+                  elegida={!enAspecto.color}
+                  etiqueta={`${t('categorias.color')}: ${t('comun.automatico')}`}
+                  testID="color-automatico"
+                  alPulsar={() => guardarAspecto(enAspecto, { color: null })}>
+                  <Text style={{ color: c.texto, fontSize: Letra.pequeno, fontWeight: '700' }}>
+                    {t('comun.automatico')}
+                  </Text>
+                </Opcion>
+                {PALETA_DE_CATEGORIAS.claro.map((color, i) => (
+                  <Opcion
+                    key={color}
+                    elegida={enAspecto.color?.toUpperCase() === color}
+                    etiqueta={t('categorias.colorNumero', { numero: i + 1 })}
+                    testID={`color-${i + 1}`}
+                    alPulsar={() => guardarAspecto(enAspecto, { color })}>
+                    {/* Se guarda el color del modo claro y se pinta su pareja del modo en uso. */}
+                    <View style={[estilos.muestra, { backgroundColor: paleta[i] }]} />
+                  </Opcion>
+                ))}
+              </View>
+              <Text style={[estilos.ayuda, { color: c.textoSecundario }]}>
+                {t('categorias.automaticoAyuda')}
+              </Text>
+              <TextoDeError texto={error} />
+            </ScrollView>
+          </View>
+        ) : null}
+      </Modal>
     </ScrollView>
+  );
+}
+
+/** Casilla elegible de la hoja de icono y color. La elegida lleva borde y marca. */
+function Opcion({
+  elegida,
+  etiqueta,
+  testID,
+  alPulsar,
+  children,
+}: {
+  elegida: boolean;
+  etiqueta: string;
+  testID: string;
+  alPulsar: () => void;
+  children: ReactNode;
+}) {
+  const c = useColores();
+  return (
+    <Pressable
+      onPress={alPulsar}
+      accessibilityRole="button"
+      accessibilityLabel={etiqueta}
+      accessibilityState={{ selected: elegida }}
+      testID={testID}
+      style={[
+        estilos.opcion,
+        {
+          borderColor: elegida ? c.acento : c.borde,
+          backgroundColor: elegida ? c.acentoSuave : c.superficie,
+        },
+      ]}>
+      {children}
+      {elegida ? (
+        <Text allowFontScaling={false} style={[estilos.marca, { color: c.acento }]}>
+          ✓
+        </Text>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -217,7 +365,7 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: TactilMinimo + Espacio.s,
-    paddingLeft: Espacio.m,
+    paddingLeft: Espacio.s,
     marginBottom: Espacio.s,
     borderRadius: Radio.m,
     gap: Espacio.s,
@@ -230,5 +378,36 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   botonArchivar: { paddingHorizontal: Espacio.s },
+  botonDeAspecto: {
+    minWidth: TactilMinimo,
+    minHeight: TactilMinimo,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hoja: { flex: 1 },
+  cabeceraDeHoja: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Espacio.s,
+    paddingLeft: Espacio.m,
+    paddingTop: Espacio.m,
+    paddingBottom: Espacio.s,
+  },
+  tituloDeHoja: { flex: 1, fontSize: Letra.subtitulo, fontWeight: '700' },
+  contenidoDeHoja: { padding: Espacio.m, gap: Espacio.s },
+  rotulo: { fontSize: Letra.pequeno, fontWeight: '700', textTransform: 'uppercase' },
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: Espacio.s, paddingBottom: Espacio.s },
+  opcion: {
+    minWidth: TactilMinimo + 8,
+    height: TactilMinimo + 8,
+    paddingHorizontal: Espacio.s,
+    borderRadius: Radio.m,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emoji: { fontSize: 24 },
+  muestra: { width: 28, height: 28, borderRadius: 14 },
+  marca: { position: 'absolute', top: 1, right: 4, fontSize: 11, fontWeight: '800' },
   ayuda: { fontSize: Letra.pequeno, paddingVertical: Espacio.m, lineHeight: 18 },
 });

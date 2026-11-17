@@ -6,12 +6,15 @@
  * descripción textual para el lector de pantalla y aparece sin transición si
  * está activado «Reducir movimiento».
  */
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
+
+import { intensidad, semanasDelMes, type DiaDelMes } from '@/dominio/tiempo';
 
 import { useEntrada } from '@/estado/animacion';
-import { Espacio, Letra, Radio, TactilMinimo, useColores } from '@/theme';
+import { t, type ClaveTexto } from '@/i18n';
+import { cifrasTabulares, Espacio, Letra, Radio, TactilMinimo, useColores } from '@/theme';
 
 // ------------------------------------------------------------------ anillo
 
@@ -135,33 +138,28 @@ export function Barras({
   /** Color de la primera y de la segunda barra de cada grupo. */
   colores: [string, string];
   /** Clave del grupo resaltado. */
-  elegido: string;
-  alElegir: (clave: string) => void;
+  elegido?: string;
+  /** Sin esta función las barras no se pueden tocar (por ejemplo, con doce meses). */
+  alElegir?: (clave: string) => void;
   alto?: number;
 }) {
   const c = useColores();
   const entrada = useEntrada(grupos.map((g) => g.clave).join());
   const maximo = Math.max(0, ...grupos.flatMap((g) => g.valores));
-  const anchoDeBarra = 12;
-  const separacion = 4;
+  // Con muchos grupos las barras se estrechan para caber en el ancho.
+  const anchoDeBarra = grupos.length > 8 ? 7 : 12;
+  const separacion = grupos.length > 8 ? 2 : 4;
   const anchoDeGrupo = anchoDeBarra * 2 + separacion;
   return (
     <Animated.View style={[estilos.barras, { opacity: entrada }]} testID="grafico-barras">
       {grupos.map((grupo) => {
         const esElegido = grupo.clave === elegido;
-        return (
-          <Pressable
-            key={grupo.clave}
-            onPress={() => alElegir(grupo.clave)}
-            accessibilityRole="button"
-            accessibilityLabel={grupo.descripcion}
-            accessibilityState={{ selected: esElegido }}
-            testID={`barras-${grupo.clave}`}
-            style={[
-              estilos.grupo,
-              { backgroundColor: esElegido ? c.acentoSuave : c.transparente },
-            ]}>
-            <Svg width={anchoDeGrupo} height={alto} opacity={esElegido ? 1 : 0.7}>
+        const contenido = (
+          <>
+            <Svg
+              width={anchoDeGrupo}
+              height={alto}
+              opacity={esElegido || elegido === undefined ? 1 : 0.7}>
               {/* Línea de base tenue: se ve aunque el mes no tenga datos. */}
               <Rect x={0} y={alto - 1} width={anchoDeGrupo} height={1} fill={c.borde} />
               {grupo.valores.map((valor, i) => {
@@ -181,18 +179,288 @@ export function Barras({
             </Svg>
             <Text
               numberOfLines={1}
-              maxFontSizeMultiplier={1.6}
+              maxFontSizeMultiplier={grupos.length > 8 ? 1.1 : 1.6}
               style={{
                 color: esElegido ? c.acento : c.textoSecundario,
-                fontSize: Letra.pequeno,
+                fontSize: grupos.length > 8 ? 11 : Letra.pequeno,
                 fontWeight: esElegido ? '700' : '500',
               }}>
               {grupo.etiqueta}
             </Text>
+          </>
+        );
+        if (!alElegir) {
+          return (
+            <View
+              key={grupo.clave}
+              accessible
+              accessibilityLabel={grupo.descripcion}
+              testID={`barras-${grupo.clave}`}
+              style={[estilos.grupo, estilos.grupoFijo]}>
+              {contenido}
+            </View>
+          );
+        }
+        return (
+          <Pressable
+            key={grupo.clave}
+            onPress={() => alElegir(grupo.clave)}
+            accessibilityRole="button"
+            accessibilityLabel={grupo.descripcion}
+            accessibilityState={{ selected: esElegido }}
+            testID={`barras-${grupo.clave}`}
+            style={[
+              estilos.grupo,
+              { backgroundColor: esElegido ? c.acentoSuave : c.transparente },
+            ]}>
+            {contenido}
           </Pressable>
         );
       })}
     </Animated.View>
+  );
+}
+
+// ------------------------------------------------------------------- línea
+
+export type SerieDeLinea = {
+  clave: string;
+  color: string;
+  valores: number[];
+  /** Trazo discontinuo, para distinguir dos líneas sin depender del color. */
+  discontinua?: boolean;
+  /** Rellena el área bajo la línea con el color muy tenue. */
+  relleno?: boolean;
+};
+
+/**
+ * Coordenadas de los puntos de una serie dentro de un rectángulo. Todas las
+ * series comparten escala. Si todos los valores son iguales la línea va por
+ * el centro. Con un solo punto, este queda centrado.
+ */
+export function puntosDeLinea(
+  valores: number[],
+  minimo: number,
+  maximo: number,
+  ancho: number,
+  alto: number,
+  margen = 6,
+): { x: number; y: number }[] {
+  const util = Math.max(1, alto - margen * 2);
+  const paso = valores.length > 1 ? (ancho - margen * 2) / (valores.length - 1) : 0;
+  return valores.map((valor, i) => ({
+    x: valores.length > 1 ? margen + i * paso : ancho / 2,
+    y: maximo === minimo ? alto / 2 : margen + util - ((valor - minimo) / (maximo - minimo)) * util,
+  }));
+}
+
+export function Linea({
+  series,
+  etiquetas,
+  descripcion,
+  textoMaximo,
+  textoMinimo,
+  alto = 140,
+}: {
+  series: SerieDeLinea[];
+  /** Texto bajo cada punto: «nov». */
+  etiquetas: string[];
+  descripcion: string;
+  /** Valor más alto y más bajo de la escala, ya formateados. */
+  textoMaximo: string;
+  textoMinimo: string;
+  alto?: number;
+}) {
+  const c = useColores();
+  const entrada = useEntrada(etiquetas.join());
+  const [ancho, setAncho] = useState(0);
+  const todos = series.flatMap((s) => s.valores);
+  const minimo = Math.min(...todos);
+  const maximo = Math.max(...todos);
+  // Con muchas etiquetas se muestra una de cada dos para que no se pisen.
+  const salto = etiquetas.length > 7 ? 2 : 1;
+  return (
+    <Animated.View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={descripcion}
+      testID="grafico-linea"
+      style={{ opacity: entrada }}>
+      <View style={estilos.escala}>
+        <Text style={[estilos.textoDeEscala, cifrasTabulares, { color: c.textoSecundario }]}>
+          {textoMaximo}
+        </Text>
+      </View>
+      <View onLayout={(e) => setAncho(e.nativeEvent.layout.width)} style={{ height: alto }}>
+        {ancho > 0 ? (
+          <Svg width={ancho} height={alto}>
+            <Rect x={0} y={alto - 1} width={ancho} height={1} fill={c.borde} />
+            <Rect x={0} y={0} width={ancho} height={1} fill={c.borde} />
+            {series.map((serie) => {
+              const puntos = puntosDeLinea(serie.valores, minimo, maximo, ancho, alto);
+              if (puntos.length === 0) return null;
+              const trazo = puntos.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' ');
+              const ultimo = puntos[puntos.length - 1];
+              return (
+                <G key={serie.clave}>
+                  {serie.relleno && puntos.length > 1 ? (
+                    <Path
+                      d={`${trazo} L${ultimo.x} ${alto} L${puntos[0].x} ${alto} Z`}
+                      fill={serie.color}
+                      opacity={0.12}
+                    />
+                  ) : null}
+                  {puntos.length > 1 ? (
+                    <Path
+                      d={trazo}
+                      stroke={serie.color}
+                      strokeWidth={3}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      strokeDasharray={serie.discontinua ? '2 7' : undefined}
+                      fill="none"
+                    />
+                  ) : null}
+                  <Circle
+                    cx={ultimo.x}
+                    cy={ultimo.y}
+                    r={5}
+                    fill={serie.color}
+                    stroke={c.superficie}
+                    strokeWidth={2}
+                  />
+                </G>
+              );
+            })}
+          </Svg>
+        ) : null}
+      </View>
+      <View style={estilos.escala}>
+        <Text style={[estilos.textoDeEscala, cifrasTabulares, { color: c.textoSecundario }]}>
+          {textoMinimo}
+        </Text>
+      </View>
+      <View style={estilos.etiquetasDeLinea}>
+        {etiquetas.map((etiqueta, i) => (
+          <Text
+            key={`${etiqueta}-${i}`}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
+            style={[estilos.etiquetaDeLinea, { color: c.textoSecundario }]}>
+            {(etiquetas.length - 1 - i) % salto === 0 ? etiqueta : ''}
+          </Text>
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+// -------------------------------------------------------------- calendario
+
+const DIAS_DE_LA_SEMANA = [1, 2, 3, 4, 5, 6, 0];
+
+/**
+ * Calendario de un mes con el gasto de cada día. La intensidad se ve en la
+ * barra inferior de cada casilla, pero nunca es el único dato: cada día
+ * lleva su cifra y su texto para el lector de pantalla.
+ */
+export function Calendario({
+  mes,
+  dias,
+  hoy,
+  elegido,
+  alElegir,
+  cifra,
+  descripcion,
+}: {
+  mes: string;
+  dias: DiaDelMes[];
+  hoy: string;
+  /** Día resaltado, "AAAA-MM-DD". */
+  elegido: string | null;
+  alElegir: (fecha: string) => void;
+  /** Texto corto del gasto de un día, sin símbolo: «124». */
+  cifra: (centimos: number) => string;
+  /** Texto completo de un día para el lector de pantalla. */
+  descripcion: (dia: DiaDelMes) => string;
+}) {
+  const c = useColores();
+  const mayor = Math.max(0, ...dias.map((d) => d.gasto));
+  return (
+    <View testID="calendario">
+      <View style={estilos.semana}>
+        {DIAS_DE_LA_SEMANA.map((dia) => (
+          <Text
+            key={dia}
+            maxFontSizeMultiplier={1.2}
+            style={[estilos.cabeceraDeDia, { color: c.textoSecundario }]}>
+            {t(`fechas.diaCorto${dia}` as ClaveTexto)}
+          </Text>
+        ))}
+      </View>
+      {semanasDelMes(mes).map((semana, i) => (
+        <View key={i} style={estilos.semana}>
+          {semana.map((numero, j) => {
+            const dia = numero === null ? null : dias[numero - 1];
+            if (!dia) return <View key={j} style={estilos.casilla} />;
+            const nivel = intensidad(dia.gasto, mayor);
+            const esHoy = dia.fecha === hoy;
+            const esElegido = dia.fecha === elegido;
+            return (
+              <Pressable
+                key={j}
+                onPress={() => alElegir(dia.fecha)}
+                accessibilityRole="button"
+                accessibilityLabel={descripcion(dia)}
+                accessibilityState={{ selected: esElegido }}
+                testID={`dia-${dia.fecha}`}
+                style={[
+                  estilos.casilla,
+                  estilos.casillaDeDia,
+                  {
+                    backgroundColor: esElegido
+                      ? c.acentoSuave
+                      : nivel > 0
+                        ? c.superficieSuave
+                        : c.transparente,
+                    borderColor: esElegido || esHoy ? c.acento : c.transparente,
+                  },
+                ]}>
+                <Text
+                  maxFontSizeMultiplier={1.2}
+                  style={{
+                    color: esHoy ? c.acento : c.texto,
+                    fontSize: Letra.pequeno,
+                    fontWeight: esHoy ? '800' : '600',
+                  }}>
+                  {dia.dia}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}
+                  maxFontSizeMultiplier={1.2}
+                  style={[estilos.cifraDeDia, cifrasTabulares, { color: c.textoSecundario }]}>
+                  {dia.gasto > 0 ? cifra(dia.gasto) : ' '}
+                </Text>
+                <View style={[estilos.pistaDeDia, { backgroundColor: c.transparente }]}>
+                  {nivel > 0 ? (
+                    <View
+                      style={{
+                        width: `${nivel * 25}%`,
+                        height: 4,
+                        borderRadius: 2,
+                        backgroundColor: c.acento,
+                      }}
+                    />
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -224,6 +492,24 @@ const estilos = StyleSheet.create({
     paddingBottom: Espacio.xs,
     borderRadius: Radio.s,
   },
+  grupoFijo: { minWidth: 0 },
+  escala: { flexDirection: 'row', justifyContent: 'flex-start' },
+  textoDeEscala: { fontSize: 11, paddingVertical: 2 },
+  etiquetasDeLinea: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 2 },
+  etiquetaDeLinea: { flex: 1, textAlign: 'center', fontSize: 11 },
+  semana: { flexDirection: 'row', gap: 3, marginBottom: 3 },
+  cabeceraDeDia: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600' },
+  casilla: { flex: 1, minHeight: TactilMinimo + 6 },
+  casillaDeDia: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radio.s,
+    borderWidth: 1.5,
+    paddingHorizontal: 1,
+    paddingTop: 3,
+  },
+  cifraDeDia: { fontSize: 10, alignSelf: 'stretch', textAlign: 'center' },
+  pistaDeDia: { alignSelf: 'stretch', height: 4, marginHorizontal: 5, marginBottom: 4 },
   leyenda: { flexDirection: 'row', flexWrap: 'wrap', gap: Espacio.m },
   elementoDeLeyenda: { flexDirection: 'row', alignItems: 'center', gap: Espacio.xs },
   muestra: { width: 10, height: 10, borderRadius: 3 },

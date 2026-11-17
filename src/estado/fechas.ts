@@ -48,3 +48,12 @@ export function fechaLarga(fecha: string): string {
     anio: d.getFullYear(),
   });
 }
+
+/** "10 de noviembre" a partir de "2026-11-10". */
+export function diaYMes(fecha: string): string {
+  const d = aFecha(fecha);
+  return t('fechas.diaYMesCorto', {
+    dia: d.getDate(),
+    mes: t(`fechas.mes${d.getMonth() + 1}` as ClaveTexto),
+  });
+}

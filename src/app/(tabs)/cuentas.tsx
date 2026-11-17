@@ -2,11 +2,12 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Boton, BotonFlotante, Cabecera, useMargenDeLista } from '@/componentes/basicos';
+import { Boton, BotonAnadir, Cabecera, useMargenDeLista } from '@/componentes/basicos';
 import { EstadoVacio, Tarjeta } from '@/componentes/Tarjeta';
 import type { CuentaConSaldo } from '@/datos/cuentas';
 import { dinero, formatearDinero } from '@/dominio/dinero';
-import { TIPOS_DE_CUENTA } from '@/dominio/modelo';
+import { valorEstimado } from '@/dominio/inversion';
+import { fechaLocal, TIPOS_DE_CUENTA } from '@/dominio/modelo';
 import { useConsulta } from '@/estado/Datos';
 import { formatoRegional } from '@/estado/formato';
 import { t } from '@/i18n';
@@ -32,10 +33,19 @@ export default function Cuentas() {
   const margenDeLista = useMargenDeLista();
   const [verArchivadas, setVerArchivadas] = useState(false);
   const todas = useConsulta((r) => r.cuentas.listarConSaldo({ incluirArchivadas: true }));
-  const activas = (todas ?? []).filter((x) => !x.archivada);
-  const archivadas = (todas ?? []).filter((x) => x.archivada);
-  // El patrimonio suma las cuentas activas. Hasta H6 la inversión cuenta por lo aportado.
-  const patrimonio = patrimonioPorDivisa(activas);
+  const movimientos = useConsulta((r) => r.movimientos.listar());
+  const valores = useConsulta((r) => r.valores.listar());
+  const hoy = fechaLocal();
+  // Una cuenta de inversión se muestra por lo que vale (su valor estimado), no por lo aportado.
+  const conValor = (todas ?? []).map((x) =>
+    x.tipo === 'inversion'
+      ? { ...x, saldo: valorEstimado(x, movimientos ?? [], valores ?? [], hoy) ?? x.saldo }
+      : x,
+  );
+  const activas = conValor.filter((x) => !x.archivada);
+  const archivadas = conValor.filter((x) => x.archivada);
+  // Misma regla que Inicio: una cuenta archivada cuenta si aún tiene saldo.
+  const patrimonio = patrimonioPorDivisa(conValor.filter((x) => !x.archivada || x.saldo !== 0));
 
   const fila = (cuenta: CuentaConSaldo, indice: number) => {
     const saldo = formatearDinero(dinero(cuenta.saldo, cuenta.divisa), formatoRegional());
@@ -68,28 +78,36 @@ export default function Cuentas() {
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
-      <Cabecera titulo={t('cuentas.titulo')} />
+      <Cabecera titulo={t('cuentas.titulo')}>
+        <BotonAnadir etiqueta={t('cuentas.nueva')} alPulsar={() => router.push('/cuenta')} />
+      </Cabecera>
       <ScrollView contentContainerStyle={[estilos.contenido, { paddingBottom: margenDeLista }]}>
-        <Tarjeta>
-          <Text style={{ color: c.textoSecundario, fontSize: Letra.secundario }}>
-            {t('cuentas.patrimonio')}
-          </Text>
-          {(patrimonio.length > 0 ? patrimonio : [{ divisa: 'EUR', total: 0 }]).map((p) => (
-            <Text
-              key={p.divisa}
-              style={[
-                estilos.cifra,
-                cifrasTabulares,
-                { color: p.total < 0 ? c.negativo : c.texto },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.5}
-              testID={`patrimonio-${p.divisa}`}>
-              {formatearDinero(dinero(p.total, p.divisa), formatoRegional())}
+        <Pressable
+          onPress={() => router.push('/patrimonio')}
+          accessibilityRole="button"
+          testID="abrir-patrimonio"
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+          <Tarjeta>
+            <Text style={{ color: c.textoSecundario, fontSize: Letra.secundario }}>
+              {`${t('cuentas.patrimonio')}  ›`}
             </Text>
-          ))}
-        </Tarjeta>
+            {(patrimonio.length > 0 ? patrimonio : [{ divisa: 'EUR', total: 0 }]).map((p) => (
+              <Text
+                key={p.divisa}
+                style={[
+                  estilos.cifra,
+                  cifrasTabulares,
+                  { color: p.total < 0 ? c.negativo : c.texto },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+                testID={`patrimonio-${p.divisa}`}>
+                {formatearDinero(dinero(p.total, p.divisa), formatoRegional())}
+              </Text>
+            ))}
+          </Tarjeta>
+        </Pressable>
 
         {todas !== undefined && todas.length === 0 ? (
           <EstadoVacio texto={t('cuentas.vacio')} />
@@ -138,7 +156,6 @@ export default function Cuentas() {
           </Link>
         ) : null}
       </ScrollView>
-      <BotonFlotante etiqueta={t('cuentas.nueva')} alPulsar={() => router.push('/cuenta')} />
     </View>
   );
 }

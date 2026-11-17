@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import {
-  BotonFlotante,
+  BotonAnadir,
   Cabecera,
   Selector,
   useMargenDeLista,
@@ -19,10 +19,11 @@ import {
 } from '@/componentes/basicos';
 import { FilaDeMovimiento } from '@/componentes/FilaDeMovimiento';
 import { agruparPorDia } from '@/datos/movimientos';
+import { esFechaValida } from '@/dominio/modelo';
 import { esMesValido } from '@/dominio/resumen';
 import { aspectoDeMovimiento } from '@/estado/aspecto';
 import { useConsulta } from '@/estado/Datos';
-import { describirFecha, describirMes } from '@/estado/fechas';
+import { describirFecha, describirMes, fechaLarga } from '@/estado/fechas';
 import { t } from '@/i18n';
 import { Espacio, Letra, Radio, TactilMinimo, useColores, usePaleta } from '@/theme';
 
@@ -39,6 +40,7 @@ export default function Movimientos() {
   const [cuentaId, setCuentaId] = useState<string | null>(null);
   const [categoriaId, setCategoriaId] = useState<string | null>(null);
   const [mes, setMes] = useState<string | null>(null);
+  const [dia, setDia] = useState<string | null>(null);
   const paleta = usePaleta();
   const margenDeLista = useMargenDeLista();
 
@@ -48,17 +50,21 @@ export default function Movimientos() {
     categoriaId?: string;
     cuentaId?: string;
     mes?: string;
+    dia?: string;
     peticion?: string;
   }>();
-  const firma = [pedido.peticion, pedido.categoriaId, pedido.cuentaId, pedido.mes].join('|');
-  const [aplicada, setAplicada] = useState('|||');
+  const firma = [pedido.peticion, pedido.categoriaId, pedido.cuentaId, pedido.mes, pedido.dia].join(
+    '|',
+  );
+  const [aplicada, setAplicada] = useState('||||');
   if (firma !== aplicada) {
     setAplicada(firma);
-    if (firma !== '|||') {
+    if (firma !== '||||') {
       setTexto('');
       setCategoriaId(pedido.categoriaId || null);
       setCuentaId(pedido.cuentaId || null);
       setMes(pedido.mes && esMesValido(pedido.mes) ? pedido.mes : null);
+      setDia(pedido.dia && esFechaValida(pedido.dia) ? pedido.dia : null);
     }
   }
 
@@ -69,8 +75,9 @@ export default function Movimientos() {
         cuentaId: cuentaId ?? undefined,
         categoriaId: categoriaId ?? undefined,
         mes: mes ?? undefined,
+        dia: dia ?? undefined,
       }),
-    [texto, cuentaId, categoriaId, mes],
+    [texto, cuentaId, categoriaId, mes, dia],
   );
   // Para los filtros se ofrecen también las archivadas: siguen teniendo movimientos.
   const cuentas = useConsulta((r) => r.cuentas.listar({ incluirArchivadas: true }));
@@ -104,7 +111,11 @@ export default function Movimientos() {
   ];
 
   const hayFiltros =
-    texto.trim() !== '' || cuentaId !== null || categoriaId !== null || mes !== null;
+    texto.trim() !== '' ||
+    cuentaId !== null ||
+    categoriaId !== null ||
+    mes !== null ||
+    dia !== null;
   const sinCuentas = cuentas !== undefined && cuentas.length === 0;
 
   let mensajeVacio = t('movimientos.vacio');
@@ -113,7 +124,12 @@ export default function Movimientos() {
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
-      <Cabecera titulo={t('movimientos.titulo')} />
+      <Cabecera titulo={t('movimientos.titulo')}>
+        <BotonAnadir
+          etiqueta={t('movimientos.nuevo')}
+          alPulsar={() => router.push('/movimiento')}
+        />
+      </Cabecera>
       <View style={estilos.busqueda}>
         <TextInput
           value={texto}
@@ -164,6 +180,21 @@ export default function Movimientos() {
             textoVacio={t('comun.todos')}
             testID="filtro-mes"
           />
+          {dia ? (
+            <Pressable
+              onPress={() => setDia(null)}
+              accessibilityRole="button"
+              accessibilityLabel={t('movimientos.quitarDia', { fecha: fechaLarga(dia) })}
+              testID="filtro-dia"
+              style={[
+                estilos.pildoraDeDia,
+                { borderColor: c.acento, backgroundColor: c.acentoSuave },
+              ]}>
+              <Text style={{ color: c.acento, fontSize: Letra.secundario, fontWeight: '700' }}>
+                {`${fechaLarga(dia)}  ✕`}
+              </Text>
+            </Pressable>
+          ) : null}
           {hayFiltros ? (
             <Pressable
               onPress={() => {
@@ -171,6 +202,7 @@ export default function Movimientos() {
                 setCuentaId(null);
                 setCategoriaId(null);
                 setMes(null);
+                setDia(null);
               }}
               accessibilityRole="button"
               testID="quitar-filtros"
@@ -209,10 +241,6 @@ export default function Movimientos() {
           )
         }
       />
-      <BotonFlotante
-        etiqueta={t('movimientos.nuevo')}
-        alPulsar={() => router.push('/movimiento')}
-      />
     </View>
   );
 }
@@ -228,6 +256,13 @@ const estilos = StyleSheet.create({
     fontSize: Letra.cuerpo,
   },
   filtros: { paddingHorizontal: Espacio.m, paddingVertical: Espacio.s, gap: Espacio.s },
+  pildoraDeDia: {
+    minHeight: TactilMinimo,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: Radio.circulo,
+    paddingHorizontal: Espacio.m,
+  },
   quitar: { minHeight: TactilMinimo, justifyContent: 'center', paddingHorizontal: Espacio.s },
   dia: {
     fontSize: Letra.pequeno,
