@@ -33,6 +33,18 @@ export default function RootLayout() {
           <Stack.Screen name="cuenta" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="detalle-de-cuenta" options={{ headerShown: false }} />
           <Stack.Screen name="patrimonio" options={{ headerShown: false }} />
+          <Stack.Screen name="objetivo" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="presupuesto"
+            options={{ presentation: 'modal', headerShown: false }}
+          />
+          <Stack.Screen name="regla" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="cobro" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen
+            name="objetivo-editar"
+            options={{ presentation: 'modal', headerShown: false }}
+          />
+          <Stack.Screen name="aportacion" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="inversiones" options={{ headerShown: false }} />
           <Stack.Screen
             name="valor-de-inversion"

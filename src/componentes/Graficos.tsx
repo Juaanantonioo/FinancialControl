@@ -227,6 +227,8 @@ export type SerieDeLinea = {
   clave: string;
   color: string;
   valores: number[];
+  /** Posición horizontal de cada valor, si la serie no ocupa todo el eje. */
+  posiciones?: number[];
   /** Trazo discontinuo, para distinguir dos líneas sin depender del color. */
   discontinua?: boolean;
   /** Rellena el área bajo la línea con el color muy tenue. */
@@ -245,11 +247,15 @@ export function puntosDeLinea(
   ancho: number,
   alto: number,
   margen = 6,
+  /** Posición de cada valor en el eje horizontal, de 0 a `total - 1`. Por defecto, su índice. */
+  posiciones?: number[],
+  /** Número de posiciones del eje horizontal. Por defecto, el número de valores. */
+  total: number = valores.length,
 ): { x: number; y: number }[] {
   const util = Math.max(1, alto - margen * 2);
-  const paso = valores.length > 1 ? (ancho - margen * 2) / (valores.length - 1) : 0;
+  const paso = total > 1 ? (ancho - margen * 2) / (total - 1) : 0;
   return valores.map((valor, i) => ({
-    x: valores.length > 1 ? margen + i * paso : ancho / 2,
+    x: total > 1 ? margen + (posiciones?.[i] ?? i) * paso : ancho / 2,
     y: maximo === minimo ? alto / 2 : margen + util - ((valor - minimo) / (maximo - minimo)) * util,
   }));
 }
@@ -261,6 +267,8 @@ export function Linea({
   textoMaximo,
   textoMinimo,
   alto = 140,
+  total,
+  etiquetasEnExtremos = false,
 }: {
   series: SerieDeLinea[];
   /** Texto bajo cada punto: «nov». */
@@ -270,6 +278,10 @@ export function Linea({
   textoMaximo: string;
   textoMinimo: string;
   alto?: number;
+  /** Posiciones del eje horizontal, si las series traen `posiciones`. */
+  total?: number;
+  /** Reparte las etiquetas de extremo a extremo en lugar de una por punto. */
+  etiquetasEnExtremos?: boolean;
 }) {
   const c = useColores();
   const entrada = useEntrada(etiquetas.join());
@@ -300,7 +312,16 @@ export function Linea({
             <Rect x={0} y={alto - 1} width={ancho} height={1} fill={c.borde} />
             <Rect x={0} y={0} width={ancho} height={1} fill={c.borde} />
             {series.map((serie) => {
-              const puntos = puntosDeLinea(serie.valores, minimo, maximo, ancho, alto);
+              const puntos = puntosDeLinea(
+                serie.valores,
+                minimo,
+                maximo,
+                ancho,
+                alto,
+                6,
+                serie.posiciones,
+                total,
+              );
               if (puntos.length === 0) return null;
               const trazo = puntos.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' ');
               const ultimo = puntos[puntos.length - 1];
@@ -349,8 +370,12 @@ export function Linea({
             key={`${etiqueta}-${i}`}
             numberOfLines={1}
             maxFontSizeMultiplier={1.2}
-            style={[estilos.etiquetaDeLinea, { color: c.textoSecundario }]}>
-            {(etiquetas.length - 1 - i) % salto === 0 ? etiqueta : ''}
+            style={[
+              estilos.etiquetaDeLinea,
+              etiquetasEnExtremos && estilos.etiquetaDeExtremo,
+              { color: c.textoSecundario },
+            ]}>
+            {etiquetasEnExtremos || (etiquetas.length - 1 - i) % salto === 0 ? etiqueta : ''}
           </Text>
         ))}
       </View>
@@ -500,6 +525,7 @@ const estilos = StyleSheet.create({
   textoDeEscala: { fontSize: 11, paddingVertical: 2 },
   etiquetasDeLinea: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 2 },
   etiquetaDeLinea: { flex: 1, textAlign: 'center', fontSize: 11 },
+  etiquetaDeExtremo: { flex: 0 },
   semana: { flexDirection: 'row', gap: 3, marginBottom: 3 },
   cabeceraDeDia: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600' },
   casilla: { flex: 1, minHeight: TactilMinimo + 6 },
