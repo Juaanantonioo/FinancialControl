@@ -31,6 +31,10 @@ export type DatosDeMovimiento = {
   comercio?: string | null;
   nota?: string | null;
   origen?: OrigenDeMovimiento;
+  /** Regla recurrente que confirma este movimiento (H5). */
+  reglaRecurrenteId?: string | null;
+  /** Objetivo al que aporta este movimiento (H5). */
+  objetivoId?: string | null;
 };
 
 /** Movimiento con los nombres que la lista necesita mostrar. */
@@ -168,8 +172,9 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
     await bd.ejecutar(
       `INSERT INTO movimiento (id, tipo, fecha, importe, divisa, cuenta_id, cuenta_destino_id,
                                categoria_id, nombre, comercio, nota, origen,
+                               regla_recurrente_id, objetivo_id,
                                creado_en, modificado_en, borrado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
       [
         id,
         v.tipo,
@@ -183,6 +188,8 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
         v.comercio,
         v.nota,
         v.origen,
+        datos.reglaRecurrenteId ?? null,
+        datos.objetivoId ?? null,
         ahora,
         ahora,
       ],
@@ -224,11 +231,22 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
     if (!mov) throw new ErrorDeDominio('no_encontrado');
     if (mov.borradoEn !== null) return;
     const ahora = entorno.ahora().toISOString();
-    await bd.ejecutar('UPDATE movimiento SET borrado_en = ?, modificado_en = ? WHERE id = ?', [
-      ahora,
-      ahora,
-      id,
-    ]);
+    await bd.transaccion(async () => {
+      await bd.ejecutar('UPDATE movimiento SET borrado_en = ?, modificado_en = ? WHERE id = ?', [
+        ahora,
+        ahora,
+        id,
+      ]);
+      // Si el movimiento aportaba a un objetivo, su aportación se borra con él
+      // y con la misma marca de tiempo, para poder recuperarlas juntas.
+      if (mov.objetivoId !== null) {
+        await bd.ejecutar(
+          `UPDATE aportacion_a_objetivo SET borrado_en = ?, modificado_en = ?
+           WHERE movimiento_id = ? AND borrado_en IS NULL`,
+          [ahora, ahora, id],
+        );
+      }
+    });
   }
 
   /**
@@ -239,10 +257,21 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
     const mov = await obtener(id);
     if (!mov) throw new ErrorDeDominio('no_encontrado');
     if (mov.borradoEn === null) return mov;
-    await bd.ejecutar('UPDATE movimiento SET borrado_en = NULL, modificado_en = ? WHERE id = ?', [
-      entorno.ahora().toISOString(),
-      id,
-    ]);
+    const ahora = entorno.ahora().toISOString();
+    await bd.transaccion(async () => {
+      await bd.ejecutar('UPDATE movimiento SET borrado_en = NULL, modificado_en = ? WHERE id = ?', [
+        ahora,
+        id,
+      ]);
+      // Recupera la aportación que se borró junto con el movimiento.
+      if (mov.objetivoId !== null) {
+        await bd.ejecutar(
+          `UPDATE aportacion_a_objetivo SET borrado_en = NULL, modificado_en = ?
+           WHERE movimiento_id = ? AND borrado_en = ?`,
+          [ahora, id, mov.borradoEn],
+        );
+      }
+    });
     return (await obtener(id))!;
   }
 

@@ -9,14 +9,23 @@ import { crearRepositorioDeCategorias } from './categorias';
 import { crearRepositorioDeCuentas } from './cuentas';
 import { migrar } from './migraciones';
 import { crearRepositorioDeMovimientos } from './movimientos';
+import { crearRepositorioDeObjetivos } from './objetivos';
+import { crearRepositorioDePresupuestos } from './presupuestos';
+import { crearRepositorioDeReglas } from './reglas';
 import { crearRepositorioDeValores } from './valores';
 
 export function crearRepositorios(bd: BaseDeDatos, entorno: Entorno) {
+  const movimientos = crearRepositorioDeMovimientos(bd, entorno);
+  const objetivos = crearRepositorioDeObjetivos(bd, entorno);
   return {
     cuentas: crearRepositorioDeCuentas(bd, entorno),
     categorias: crearRepositorioDeCategorias(bd, entorno),
-    movimientos: crearRepositorioDeMovimientos(bd, entorno),
+    movimientos,
     valores: crearRepositorioDeValores(bd, entorno),
+    objetivos,
+    presupuestos: crearRepositorioDePresupuestos(bd, entorno),
+    // Confirmar un cobro crea un movimiento y, si procede, una aportación.
+    reglas: crearRepositorioDeReglas(bd, entorno, movimientos, objetivos),
   };
 }
 

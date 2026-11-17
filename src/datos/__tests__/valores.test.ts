@@ -83,7 +83,11 @@ describe('migración 2: valores de inversión', () => {
     expect(antes.cuentas).toHaveLength(2);
     expect(antes.movimientos).toHaveLength(3);
 
-    const resultado = await migrar(bd);
+    // Solo hasta la versión 2, que es la que comprueba esta prueba. El paso a la 3 tiene la suya.
+    const resultado = await migrar(
+      bd,
+      MIGRACIONES.filter((m) => m.version <= 2),
+    );
     expect(resultado).toEqual({ desde: 1, hasta: 2 });
     expect(await volcar()).toEqual(antes);
     expect(await repos.cuentas.saldo(banco.id)).toBe(215000 - 2340 - 20000);
@@ -100,7 +104,7 @@ describe('migración 2: valores de inversión', () => {
       expect(sentencia).toMatch(/valor_de_inversion/);
       expect(sentencia).not.toMatch(/ALTER|DROP|UPDATE|DELETE/i);
     }
-    expect(MIGRACIONES.map((m) => m.version)).toEqual([1, 2]);
+    expect(MIGRACIONES.map((m) => m.version).slice(0, 2)).toEqual([1, 2]);
   });
 
   it('la base de datos rechaza un valor negativo y dos valores activos el mismo día', async () => {

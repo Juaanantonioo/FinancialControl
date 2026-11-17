@@ -96,6 +96,90 @@ export const MIGRACIONES: Migracion[] = [
          ON valor_de_inversion (cuenta_id, fecha) WHERE borrado_en IS NULL`,
     ],
   },
+  {
+    // H5: planificación (T-060, T-064 y T-070). Solo añade tablas; no toca
+    // ninguna de las existentes. `movimiento` ya tenía desde la versión 1 las
+    // columnas `regla_recurrente_id` y `objetivo_id` que las enlazan.
+    version: 3,
+    sentencias: [
+      `CREATE TABLE objetivo (
+        id TEXT PRIMARY KEY NOT NULL,
+        nombre TEXT NOT NULL,
+        tipo TEXT NOT NULL CHECK (tipo IN ('ahorro', 'inversion')),
+        meta INTEGER NOT NULL CHECK (meta > 0),
+        divisa TEXT NOT NULL,
+        fecha_limite TEXT,
+        cuenta_id TEXT REFERENCES cuenta (id),
+        archivado INTEGER NOT NULL DEFAULT 0,
+        ${COMUNES}
+      )`,
+      `CREATE TABLE aportacion_a_objetivo (
+        id TEXT PRIMARY KEY NOT NULL,
+        objetivo_id TEXT NOT NULL REFERENCES objetivo (id),
+        fecha TEXT NOT NULL,
+        importe INTEGER NOT NULL CHECK (importe > 0),
+        movimiento_id TEXT REFERENCES movimiento (id),
+        nota TEXT,
+        ${COMUNES}
+      )`,
+      `CREATE INDEX aportacion_por_objetivo ON aportacion_a_objetivo (objetivo_id)`,
+      `CREATE INDEX aportacion_por_movimiento ON aportacion_a_objetivo (movimiento_id)`,
+      // Las restricciones repiten las reglas del dominio como segunda barrera:
+      // cada clase con su tipo de movimiento, destino solo en aportaciones y
+      // categoría solo en gastos e ingresos.
+      `CREATE TABLE regla_recurrente (
+        id TEXT PRIMARY KEY NOT NULL,
+        nombre TEXT NOT NULL,
+        clase TEXT NOT NULL CHECK (clase IN ('fijo', 'suscripcion', 'ingreso', 'aportacion')),
+        tipo_movimiento TEXT NOT NULL
+          CHECK (tipo_movimiento IN ('gasto', 'ingreso', 'transferencia')),
+        importe INTEGER NOT NULL CHECK (importe > 0),
+        divisa TEXT NOT NULL,
+        cuenta_id TEXT NOT NULL REFERENCES cuenta (id),
+        cuenta_destino_id TEXT REFERENCES cuenta (id),
+        categoria_id TEXT REFERENCES categoria (id),
+        periodicidad TEXT NOT NULL CHECK (periodicidad IN ('mensual', 'anual')),
+        dia_del_mes INTEGER NOT NULL CHECK (dia_del_mes BETWEEN 1 AND 31),
+        fecha_inicio TEXT NOT NULL,
+        fecha_fin TEXT,
+        activa INTEGER NOT NULL DEFAULT 1,
+        aviso_dias_antes INTEGER NOT NULL DEFAULT 0 CHECK (aviso_dias_antes >= 0),
+        objetivo_id TEXT REFERENCES objetivo (id),
+        ${COMUNES},
+        CHECK (
+          (clase IN ('fijo', 'suscripcion') AND tipo_movimiento = 'gasto')
+          OR (clase = 'ingreso' AND tipo_movimiento = 'ingreso')
+          OR (clase = 'aportacion' AND tipo_movimiento = 'transferencia')
+        ),
+        CHECK (
+          (tipo_movimiento = 'transferencia' AND cuenta_destino_id IS NOT NULL
+             AND cuenta_destino_id <> cuenta_id AND categoria_id IS NULL)
+          OR (tipo_movimiento <> 'transferencia' AND cuenta_destino_id IS NULL)
+        ),
+        CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio)
+      )`,
+      `CREATE TABLE presupuesto (
+        id TEXT PRIMARY KEY NOT NULL,
+        periodo TEXT NOT NULL,
+        nota TEXT,
+        ${COMUNES}
+      )`,
+      // Un presupuesto por mes entre los no borrados.
+      `CREATE UNIQUE INDEX presupuesto_por_periodo
+         ON presupuesto (periodo) WHERE borrado_en IS NULL`,
+      `CREATE TABLE linea_de_presupuesto (
+        id TEXT PRIMARY KEY NOT NULL,
+        presupuesto_id TEXT NOT NULL REFERENCES presupuesto (id),
+        categoria_id TEXT NOT NULL REFERENCES categoria (id),
+        importe INTEGER NOT NULL CHECK (importe >= 0),
+        ${COMUNES}
+      )`,
+      // Una línea por categoría y presupuesto.
+      `CREATE UNIQUE INDEX linea_por_categoria
+         ON linea_de_presupuesto (presupuesto_id, categoria_id) WHERE borrado_en IS NULL`,
+      `CREATE INDEX movimiento_por_regla ON movimiento (regla_recurrente_id)`,
+    ],
+  },
 ];
 
 export async function versionDelEsquema(bd: BaseDeDatos): Promise<number> {

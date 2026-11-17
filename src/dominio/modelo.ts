@@ -106,7 +106,21 @@ export type CodigoDeError =
   | 'fecha_futura'
   | 'fecha_anterior_a_la_cuenta'
   | 'valor_no_encontrado'
-  | 'color_no_valido';
+  | 'color_no_valido'
+  | 'clase_no_valida'
+  | 'periodicidad_no_valida'
+  | 'dia_no_valido'
+  | 'fecha_fin_anterior'
+  | 'regla_no_encontrada'
+  | 'sin_ocurrencia'
+  | 'movimiento_no_enlazable'
+  | 'periodo_no_valido'
+  | 'categoria_no_presupuestable'
+  | 'presupuesto_no_encontrado'
+  | 'meta_no_valida'
+  | 'objetivo_no_encontrado'
+  | 'objetivo_archivado'
+  | 'aportacion_no_encontrada';
 
 /**
  * Error de una regla de negocio. Lleva un código, no un texto: la pantalla
