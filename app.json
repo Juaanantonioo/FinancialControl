@@ -39,11 +39,15 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-app-intents"
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "inlineModules": {
+        "watchedDirectories": ["app-intents"]
+      }
     },
     "locales": {
       "es": "./src/i18n/nativo-es.json"

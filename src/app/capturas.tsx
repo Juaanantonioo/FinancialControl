@@ -23,18 +23,21 @@ const MAXIMO_VISIBLE = 100;
  * en el alta o se descarta. Las duplicadas y las descartadas quedan en un
  * apartado plegado, de donde se pueden recuperar.
  *
- * Parámetro opcional de la ruta: `id`, la captura que se abre desde un aviso.
+ * Parámetros opcionales de la ruta: `id` de la captura que se abre desde un
+ * aviso, o `cola`, el identificador de su entrada en la cola de Atajos.
  */
 export default function Bandeja() {
   const c = useColores();
   const margen = useSafeAreaInsets();
-  const { id: destacada } = useLocalSearchParams<{ id?: string }>();
+  const { id, cola } = useLocalSearchParams<{ id?: string; cola?: string }>();
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const [verOtras, setVerOtras] = useState(false);
   const capturas = useConsulta((r) => r.capturas.listar(['pendiente', 'duplicada', 'descartada']));
 
   const pendientes = (capturas ?? []).filter((x) => x.estado === 'pendiente');
+  // El aviso de la acción de Atajos solo conoce el identificador de la entrada en la cola.
+  const destacada = id ?? (cola ? pendientes.find((x) => x.idDeCola === cola)?.id : undefined);
   const otras = (capturas ?? []).filter((x) => x.estado !== 'pendiente');
   // La que se abre desde un aviso va la primera.
   const ordenadas = [

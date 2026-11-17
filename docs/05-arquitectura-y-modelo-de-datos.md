@@ -266,6 +266,68 @@ efectivo no cambia el total; una que entra desde inversión, suma.
 Sin fecha límite no hay ritmo. Con lo aportado igual o mayor que la meta el objetivo está
 conseguido. Con la fecha límite pasada sin llegar, el plazo está vencido.
 
+### 4.7 Capturas de pagos y avisos (17/11/2026)
+
+Implementado en `src/dominio/captura.ts` y `src/dominio/avisos.ts`. La migración 4 añade
+cuatro tablas, todas con los campos comunes, sin tocar las existentes:
+
+| Tabla | Guarda |
+|---|---|
+| `captura` | `recibida_en`, `origen` (`transaccion`, `notificacion`, `manual`, `prueba`), los tres textos tal como llegaron (`importe_texto`, `comercio_texto`, `tarjeta_texto`), lo extraído (`importe`, `divisa`), la cuenta y la categoría propuestas, `estado` (`pendiente`, `guardada`, `descartada`, `duplicada`), `movimiento_id` e `id_de_cola` (único entre las no borradas) |
+| `alias_de_tarjeta` | Texto de la tarjeta normalizado (único) y su cuenta |
+| `regla_de_comercio` | Comercio normalizado (único) y su categoría |
+| `aviso_emitido` | Clave (única) y fecha de un aviso que ya se dio, para no repetirlo |
+
+**Extracción de importe y divisa.** Reconoce los símbolos €, $ y £ y un código de tres
+letras. Con punto y coma, el último es el decimal. Con un solo separador seguido de una o
+dos cifras, es el decimal. Con un solo separador repetido, separa miles. Devuelve «sin
+importe» si el texto está vacío, no tiene números, tiene más de un número, es negativo, es
+cero o admite dos lecturas: «1.234» puede ser mil doscientos treinta y cuatro o uno con
+doscientos treinta y cuatro, así que no se interpreta. Nunca inventa un importe.
+
+**Tarjeta a cuenta.** La regla de `04`, apartado A.4, tal cual: coincidencia exacta del
+texto normalizado con un alias; sin coincidencia y con una sola cuenta de banco, esa, como
+sugerida; con varias, sin cuenta. Un alias cuya cuenta está archivada o borrada no cuenta.
+Al guardar una captura con nombre de tarjeta y sin alias, se crea el alias con la cuenta
+elegida.
+
+**Comercio a categoría.** Al guardar una captura con categoría se recuerda para ese
+comercio (normalizado). La siguiente del mismo comercio la propone. El último guardado
+manda. Una categoría archivada o borrada deja de proponerse.
+
+**Duplicados.** Una captura con el mismo importe y la misma cuenta que otra pendiente o
+guardada, a menos de 10 minutos, queda como `duplicada`: visible en la bandeja y
+recuperable. Una captura y un movimiento manual del mismo pago no se fusionan.
+
+**Guardar.** Con importe, cuenta y categoría se guarda con un toque: crea un gasto con
+origen `apple_pay` (o `notificacion`), con `captura_id`, y la captura pasa a `guardada`. Si
+falta algo, se abre el alta con lo que haya. Descartar cambia el estado, no borra. Borrar
+el movimiento de una captura guardada la devuelve a `pendiente`; deshacer ese borrado la
+vuelve a dejar `guardada`.
+
+**Cola de Atajos.** Las acciones «Registrar pago» y «Añadir gasto» se ejecutan con la app
+cerrada y dejan su trabajo en una cola del dispositivo. La app la vuelca en `captura` al
+abrirse y al volver a primer plano. `id_de_cola` impide importar dos veces la misma
+entrada. «Añadir gasto» crea el movimiento al volcarse, si trae importe, categoría y una
+cuenta que se pueda determinar; si no, deja una captura pendiente.
+
+**Avisos.** `calcularAvisos(datos, preferencias, ahora)` es una función pura que devuelve
+los avisos que hay que dejar programados y los que hay que mostrar ya:
+
+| Aviso | Cuándo |
+|---|---|
+| Cobro próximo | A las 9:00 del día del cobro menos `aviso_dias_antes`, si la ocurrencia sigue pendiente y ese momento no ha pasado. Se miran el mes en curso y los dos siguientes |
+| Presupuesto | Al pasar una línea del 80 % o excederse. Una vez por categoría, mes y nivel, anotada en `aviso_emitido`. Si se excede de golpe, solo el de excedida |
+| Pagos sin revisar | Cuando la captura pendiente más antigua cumple 24 horas |
+| Valor de inversión | A las 9:00 del día en que el último valor de una cuenta de inversión cumple 30 días |
+
+Los programados se recalculan enteros al abrir la app y cuando cambian los datos: se
+cancelan los propios (identificador con prefijo `fc:`) y se vuelven a programar. Nunca
+más de 40 a la vez; tienen prioridad los más cercanos. «Las 9:00» se calcula con el
+calendario local, así que no cambia con la hora de verano. Las preferencias (qué avisos
+están activados) se guardan en el almacén de clave y valor de expo-sqlite, no en estas
+tablas.
+
 ## 5. Correspondencia con el Notion del primer usuario
 
 Solo sirve para comprobar que el modelo cubre el uso actual. La app no importa ni

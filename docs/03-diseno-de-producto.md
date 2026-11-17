@@ -80,6 +80,25 @@ Barra inferior real: **Inicio · Movimientos · Análisis · Plan · Cuentas**.
   `…/regla`, `…/objetivo?id=…`.
 - El botón central «+» y **Ajustes** siguen pendientes.
 
+### 3.4 Estado tras el bloque de entrada rápida (rama `b3-entrada-rapida`, 17/11/2026)
+
+- **Bandeja de capturas** (P08): se abre desde el botón «Bandeja» de Movimientos, que
+  lleva el número de pagos por revisar, y desde una tarjeta de Inicio que solo aparece si
+  hay alguno. Cada captura tiene Guardar (o Completar, si le falta algo), Editar y
+  Descartar. Duplicadas y descartadas van en un apartado plegado.
+- **Guía de Apple Pay** (P04): pasos de la automatización con los dos nombres del
+  disparador, captura de prueba, última captura recibida y tarjetas recordadas.
+- **Avisos**: un interruptor por tipo de aviso.
+- Al pie de **Cuentas** hay un bloque «Ajustes» con Categorías, Apple Pay y Avisos. Hace
+  de pantalla de Ajustes (P18) mientras no exista.
+- Lo que hay en banco y efectivo se llama «En cuentas». «Disponible» queda solo para
+  «Disponible este mes».
+- Enlaces: `financialcontrol://capturas`, `…/apple-pay`, `…/avisos`.
+
+Diferencias con este documento: el aviso de una captura no lleva botones (T-035 parcial):
+tocarlo abre la bandeja. P04 no ramifica por versión de iOS detectada: muestra los dos
+nombres del disparador.
+
 ## 4. Lista de pantallas de V1
 
 | Id | Pantalla | Contenido principal | Flujos |
