@@ -13,7 +13,7 @@
 import type { Categoria, Cuenta, Movimiento } from './modelo';
 import { calcularSaldo, efectoEnCuenta } from './saldo';
 
-type MovimientoParaResumen = Pick<
+export type MovimientoParaResumen = Pick<
   Movimiento,
   | 'tipo'
   | 'fecha'
@@ -24,11 +24,11 @@ type MovimientoParaResumen = Pick<
   | 'categoriaId'
   | 'borradoEn'
 >;
-type CuentaParaResumen = Pick<
+export type CuentaParaResumen = Pick<
   Cuenta,
   'id' | 'nombre' | 'tipo' | 'divisa' | 'saldoInicial' | 'fechaSaldoInicial' | 'archivada'
 >;
-type CategoriaParaResumen = Pick<Categoria, 'id' | 'padreId'>;
+export type CategoriaParaResumen = Pick<Categoria, 'id' | 'padreId'>;
 
 // ---------------------------------------------------------------- meses
 
@@ -218,19 +218,12 @@ export type ParteDelGasto = {
 export type GastoPorCategoria = { total: number; partes: ParteDelGasto[] };
 
 /**
- * Reparte el gasto de un mes por categoría principal, de mayor a menor.
- * Una subcategoría suma en su categoría principal. Se muestran como mucho
- * `maximo` categorías y el resto se agrupa en «Otras».
+ * Devuelve la función que lleva de una categoría a su categoría principal,
+ * subiendo por la cadena de padres.
  */
-export function gastoPorCategoria(
-  movimientos: MovimientoParaResumen[],
-  categorias: CategoriaParaResumen[],
-  mes: string,
-  maximo = 5,
-): GastoPorCategoria {
+export function buscadorDePrincipal(categorias: CategoriaParaResumen[]): (id: string) => string {
   const padres = new Map(categorias.map((c) => [c.id, c.padreId]));
-  /** Sube por la cadena de padres hasta la categoría principal. */
-  const principal = (id: string): string => {
+  return (id: string): string => {
     let actual = id;
     // El límite evita un bucle si los datos tuvieran un ciclo de padres.
     for (let i = 0; i < 10; i++) {
@@ -240,15 +233,48 @@ export function gastoPorCategoria(
     }
     return actual;
   };
+}
 
+/** Una categoría y todas las que cuelgan de ella, a cualquier nivel. */
+export function conSubcategorias(categorias: CategoriaParaResumen[], id: string): string[] {
+  const hijas = categorias.filter((c) => c.id !== id && esDescendiente(categorias, c.id, id));
+  return [id, ...hijas.map((c) => c.id)];
+}
+
+function esDescendiente(categorias: CategoriaParaResumen[], id: string, ancestro: string): boolean {
+  const padres = new Map(categorias.map((c) => [c.id, c.padreId]));
+  let actual: string | null | undefined = padres.get(id);
+  for (let i = 0; i < 10 && actual; i++) {
+    if (actual === ancestro) return true;
+    actual = padres.get(actual);
+  }
+  return false;
+}
+
+/**
+ * Gasto por categoría principal de los movimientos cuya fecha cumple
+ * `enPeriodo`. Una subcategoría suma en su categoría principal y los gastos
+ * sin categoría van a `SIN_CATEGORIA`.
+ */
+export function sumarGastoPorClave(
+  movimientos: MovimientoParaResumen[],
+  categorias: CategoriaParaResumen[],
+  enPeriodo: (fecha: string) => boolean,
+): Map<string, number> {
+  const principal = buscadorDePrincipal(categorias);
   const sumas = new Map<string, number>();
-  let total = 0;
   for (const mov of movimientos) {
-    if (!esDelMes(mov, mes) || mov.tipo !== 'gasto') continue;
+    if (mov.borradoEn !== null || mov.tipo !== 'gasto' || !enPeriodo(mov.fecha)) continue;
     const clave = mov.categoriaId ? principal(mov.categoriaId) : SIN_CATEGORIA;
     sumas.set(clave, (sumas.get(clave) ?? 0) + mov.importe);
-    total += mov.importe;
   }
+  return sumas;
+}
+
+/** Ordena las sumas de mayor a menor, deja `maximo` y agrupa el resto en «Otras». */
+export function repartirGasto(sumas: Map<string, number>, maximo = 5): GastoPorCategoria {
+  let total = 0;
+  for (const importe of sumas.values()) total += importe;
   if (total === 0) return { total: 0, partes: [] };
 
   // A igual importe decide la clave, para que el orden no cambie entre pintados.
@@ -264,6 +290,21 @@ export function gastoPorCategoria(
     total,
   );
   return { total, partes: visibles.map((p, i) => ({ ...p, porcentaje: porcentajes[i] })) };
+}
+
+/**
+ * Reparte el gasto de un mes por categoría principal, de mayor a menor.
+ * Una subcategoría suma en su categoría principal. Se muestran como mucho
+ * `maximo` categorías y el resto se agrupa en «Otras».
+ */
+export function gastoPorCategoria(
+  movimientos: MovimientoParaResumen[],
+  categorias: CategoriaParaResumen[],
+  mes: string,
+  maximo = 5,
+): GastoPorCategoria {
+  const sumas = sumarGastoPorClave(movimientos, categorias, (f) => f.slice(0, 7) === mes);
+  return repartirGasto(sumas, maximo);
 }
 
 /**

@@ -100,7 +100,13 @@ export type CodigoDeError =
   | 'categoria_archivada'
   | 'categoria_de_otro_tipo'
   | 'categoria_obligatoria'
-  | 'no_encontrado';
+  | 'no_encontrado'
+  | 'cuenta_no_es_de_inversion'
+  | 'valor_no_valido'
+  | 'fecha_futura'
+  | 'fecha_anterior_a_la_cuenta'
+  | 'valor_no_encontrado'
+  | 'color_no_valido';
 
 /**
  * Error de una regla de negocio. Lleva un código, no un texto: la pantalla
