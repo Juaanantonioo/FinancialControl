@@ -186,3 +186,42 @@ Solo en el botón flotante, que añade un movimiento.
 | `/objetivo` | Plan › Objetivos › fila |
 | `/objetivo-editar` | Plan › Objetivos › «Nuevo objetivo» |
 | `/aportacion` | Objetivo › «Aportar» |
+
+## 3. Tabla de toques
+
+Cómo se midió: el simulador no deja tocar la pantalla desde la línea de
+órdenes, así que cada recorrido se hizo en las pruebas de pantalla
+(`src/pruebas/__tests__/navegacion.test.tsx`, bloque «toques desde Inicio
+hasta cada tarea frecuente»), pulsando los controles reales de cada pantalla
+y contando las pulsaciones. Cambiar de pestaña cuenta como un toque. La
+columna «antes» se contó igual sobre el código de `b3-entrada-rapida`. Que
+cada control está donde el dedo llega se comprobó en las capturas. Nadie lo
+ha hecho con el dedo en un iPhone: eso queda como NO DEMOSTRADO.
+
+| Tarea | Antes | Después | Objetivo |
+|---|---|---|---|
+| Anotar un gasto desde Inicio o Movimientos | 1 | 1 | 1 |
+| Anotar un gasto desde Análisis, Plan o Cuentas | 2 (cambiar a una pestaña con «+») | 1 | 1 |
+| Abrir la bandeja con pagos por revisar | 1 | 1 (fila de «Pendiente») | 2 o menos |
+| Abrir la bandeja sin pagos por revisar | 2 | 2 (Movimientos › Bandeja) | 2 o menos |
+| Confirmar un cobro pendiente | 1 | 1 (botón «Confirmar» en «Pendiente») | 2 o menos |
+| Abrir Ajustes › Avisos | 2 y desplazar hasta el pie de Cuentas | 2 (engranaje › Avisos) | 2 o menos |
+| Actualizar el valor de una inversión | 2 y desplazar (fila de la cuenta en Inicio › Actualizar valor) | 3 (Cuentas › cuenta › Actualizar valor) | 3 o menos |
+| Ver el presupuesto del mes | 1 | 1 (pestaña Plan) | 1 |
+| Ver la evolución del patrimonio | 1 | 1 desde Inicio, 2 desde Cuentas | 2 o menos |
+
+Todos los objetivos se cumplen. Actualizar una inversión cuesta un toque
+más que antes, a cambio de no depender de desplazar Inicio hasta su lista de
+cuentas; sigue dentro del objetivo.
+
+## 4. Lo que el mapa propuesto no decía y se hizo
+
+- Las pestañas pasan a ser la base de la pila. Al probar
+  `financialcontrol://movimiento` con la app cerrada, el alta se abría como
+  única pantalla, sin pestañas debajo y con «Cancelar» y «Guardar» bajo la
+  hora del sistema. Ya pasaba en B3 (es lo que abre el widget). Con
+  `unstable_settings.anchor` se abre como hoja sobre Inicio.
+- «Bandeja» sigue siendo el nombre del acceso en Movimientos y «Pagos por
+  revisar» el de la pantalla y el de la fila de Inicio. No se unificaron
+  porque tres pruebas de B3 comprueban el texto «Bandeja» y no son pruebas
+  de ubicación.

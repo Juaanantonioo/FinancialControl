@@ -853,3 +853,157 @@ Los pasos 8 y siguientes son, además, la medición pendiente del spike A.
 - Esquema de la base de datos: versión 4. Este bloque no lo toca.
 - Pestañas: Inicio, Movimientos, Análisis, Plan y Cuentas.
 - Coincide con el apartado 1 del encargo.
+
+### 11.2 Hecho por fase
+
+| Fase | Commit | Qué |
+|---|---|---|
+| 0 | `58f247f` | Baseline y encargo |
+| 1 | `a0bd3a1` | Mapa actual y mapa propuesto (`docs/notas/navegacion-b3b.md`) |
+| 2 y 3 | `b6ee1dc` | Botón flotante de añadir en las cinco pestañas, «+» reservado, pantalla Ajustes y engranaje |
+| 4 | `671affe` | Cuentas con el total, «Nueva cuenta» y la sección de inversiones |
+| 5 y 6 | `25cba88` | Inicio en siete bloques, reubicación, «Pendiente», «Primeros pasos» y pruebas |
+| 7 | `2f6552a` | Coherencia en el resto de pantallas |
+| 8 | `a592a29` | Casos límite, capturas y enlace con la app cerrada |
+| 9 | (este commit) | Documentación |
+
+Las fases 2 y 3, y 5 y 6, comparten commit porque tocan los mismos ficheros
+(Inicio y Cuentas) y no se podían separar sin dejar un estado intermedio roto.
+
+Vía del botón de añadir: flotante. `NativeTabs` no documenta ningún botón de
+acción dentro de la barra (ver `docs/notas/navegacion-b3b.md`, 2.1).
+
+### 11.3 Pruebas
+
+- Había 672 en 28 suites. Hay **720 en 29**. `npm run check` pasa entero.
+- Nuevas: `src/pruebas/__tests__/navegacion.test.tsx` (48).
+- Pruebas de dominio y de datos: sin tocar.
+- Antiguas de pantalla que cambiaron, todas porque comprobaban un bloque o
+  un acceso en el sitio del que este bloque lo movió. Ninguna se borró:
+
+| Fichero | Prueba | Motivo |
+|---|---|---|
+| `b3.test.tsx` | Accesos a Categorías y Apple Pay | Pasan del pie de Cuentas a Ajustes |
+| `inicio.test.tsx` | Sin cuentas | «Crear cuenta» es ahora el primer paso de «Primeros pasos»; los estados vacíos del gasto y la evolución se miran en Análisis › Mes |
+| `inicio.test.tsx` | Saldo y cambio del mes de cada cuenta | Saldo en Cuentas; cambio del mes en el detalle. Mismas cifras |
+| `inicio.test.tsx` | Gasto por categoría (3 pruebas), mes anterior, mes futuro, barras | El reparto, el balance de otro mes y la evolución están en Análisis › Mes. Mismas cifras |
+| `inicio.test.tsx` | Tocar una cuenta abre su detalle | La fila está en Cuentas y ya no pasa el mes: el detalle empieza en el mes en curso, que es el que Inicio enseña |
+| `inicio.test.tsx` | Cuenta archivada | La lista está en Cuentas, donde las archivadas van tras «Mostrar las cuentas archivadas» |
+| `h3.test.tsx` | Selector de mes y patrimonio; Inicio en el mes pedido | El selector de mes está en Análisis › Mes |
+| `h3.test.tsx` | Bloque Hoy | «Gastado hoy» es una línea de «Este mes»; la media diaria se mira en Análisis › Día |
+| `h3.test.tsx` | Bloque de inversiones | Está en Cuentas, con las mismas cifras |
+| `h3.test.tsx` | Fila de un mes en la vista Año | Abre Análisis › Mes en ese mes, no Inicio |
+| `h5.test.tsx` | Estados vacíos y fin de mes previsto (2 pruebas) | El fin de mes previsto está en Plan › Presupuesto |
+| `h5.test.tsx` | «Ver» del aviso y «Ver todos» de objetivos | El salto lleva ahora una marca de petición; en Inicio caben dos objetivos, no tres (D-f) |
+| `h5.test.tsx` | Conserva todo lo que Inicio mostraba | Se comprueba cada bloque en Inicio o en su pestaña nueva |
+
+### 11.4 Decisiones tomadas sin consultar
+
+- **Inicio sin selector de mes.** Habla de hoy y del mes en curso. El balance
+  con selector de mes se llevó entero a Análisis › Mes para no perder el
+  balance de meses pasados, que no existía como cifra en ningún otro sitio.
+- **La tabla del año** de Análisis abría Inicio en un mes; ahora abre
+  Análisis › Mes en ese mes.
+- **Fin de mes previsto** se muestra en Plan › Presupuesto solo cuando se
+  mira el mes en curso, porque habla de hoy.
+- **«Primeros pasos»: el tercer paso es «tener algún presupuesto»**, no «el
+  del mes en curso». Si no, la tarjeta volvería cada día 1. Para saberlo se
+  añadió una consulta de lectura, `presupuestos.hayAlguno()`. No toca el
+  esquema.
+- **«Primeros pasos» va el último**, como fija D-f. Observación: en una app
+  recién instalada queda por debajo de tres bloques vacíos y hay que
+  desplazar para verla. Subirla mientras falte la cuenta sería mejor; no se
+  hizo por respetar el orden acordado.
+- **Límites de «Pendiente»**: tres cobros y tres avisos de presupuesto, con
+  «Ver todos (N más)»; los pagos por revisar son siempre una fila con el
+  total.
+- **«Ver todos» aparece siempre** que el bloque tiene elementos, no solo
+  cuando sobran, para que el camino a la sección sea fijo.
+- **Diagnóstico se ve siempre en Ajustes**, también en Release (D-e lo
+  incluye). Antes solo se enlazaba en desarrollo.
+- **Marca de petición** en los saltos a Plan y Análisis, para corregir que
+  pedir dos veces la misma sección no hiciera nada la segunda vez.
+- **Pestañas como base de la pila** (`unstable_settings.anchor`), para el
+  enlace con la app cerrada.
+- **«Patrimonio neto» pasa a llamarse «Lo que tienes»** en Cuentas, como en
+  Inicio y en su pantalla. «Añadir cuenta» y «Añadir gasto fijo» pasan a
+  «Nueva cuenta» y «Nuevo gasto fijo».
+
+### 11.5 Casos límite
+
+| Caso | Cómo se comprobó |
+|---|---|
+| App sin datos | Prueba y captura: «Primeros pasos» con 0 de 3 y cada bloque vacío con su texto |
+| Con cuenta sin movimientos; con movimientos sin presupuesto; los tres hechos | Pruebas, sobre la misma base que va creciendo |
+| Nada pendiente | Prueba: el bloque no existe |
+| Mucho pendiente (más de 5 cobros, 12 pagos, 4 avisos) | Prueba: 3 cobros, 1 fila de pagos, 3 avisos y los «Ver todos» con su número |
+| Sin objetivos ni gastos fijos | Prueba y captura: estado vacío con su acción |
+| Última fila visible bajo el botón de añadir | Capturas del final de Movimientos, Plan y Cuentas. Con 500 filas: NO DEMOSTRADO (la base de ejemplo tiene unas decenas; el margen final es el mismo sea cual sea el largo) |
+| Calendario de Análisis y formularios con teclado | El botón no está en las hojas modales. Calendario: NO DEMOSTRADO en captura |
+| Hoja modal abierta | Captura: el botón queda debajo de la hoja |
+| `financialcontrol://movimiento` con la app cerrada | Captura. Destapó un defecto, corregido (11.4) |
+| El mismo enlace con la app en una pestaña | Captura sobre Cuentas. Las otras cuatro pestañas: NO DEMOSTRADO una a una; el alta es la misma pantalla de la pila raíz |
+| Avisos de cobro, presupuesto, pagos y valor de inversión | Prueba: cada destino es una ruta que existe, con sus parámetros. Tocar el aviso real: NO DEMOSTRADO |
+| «Ver todos» y volver | Prueba del salto. Volver es tocar la pestaña de origen, que conserva su posición: NO DEMOSTRADO con el dedo |
+| Texto al máximo | Capturas de la barra, Ajustes e Inicio. Selector de segmentos al máximo: ya comprobado en H3 y H5, no se repitió |
+| Modo oscuro | Capturas de las cinco pestañas, Ajustes e Inicio sin datos |
+| Rutas antiguas | Prueba: todas existen. `capturas` se abrió en frío en el simulador |
+
+### 11.6 Regresión
+
+- Ningún cálculo cambió: `git diff --stat b3-entrada-rapida` no incluye
+  `src/dominio/`, `app.json`, `plugins/`, `app-intents/`, `src/widgets/`,
+  `src/datos/migraciones.ts` ni `package.json`.
+- Cada dato que salió de Inicio tiene prueba en su destino con la cifra que
+  da `src/dominio`: balance, reparto del gasto, fin de mes previsto e
+  inversiones.
+- Las cifras de las capturas coinciden entre pantallas: 14.811,00 € en
+  Inicio y en Cuentas; +400,00 € en «Este mes» y en Análisis › Mes.
+
+### 11.7 Capturas
+
+26 en `docs/capturas/b3b/`, todas miradas y hechas después del último cambio
+visual, con datos de ejemplo:
+
+- Claro y oscuro: Inicio (arriba y abajo), Inicio sin datos, Movimientos al
+  final de la lista, Análisis › Mes, Plan › Presupuesto, Cuentas con
+  inversiones y Ajustes.
+- Solo en claro: Plan al final (fin de mes previsto), Plan › Fijos con
+  «Nuevo gasto fijo», Cuentas arriba, el alta sobre una pestaña, el alta y
+  la bandeja abiertas con la app cerrada.
+- Texto al máximo: barra de pestañas, Ajustes e Inicio.
+
+Las capturas desplazadas se hicieron con un código temporal de
+desplazamiento que no está en la rama.
+
+### 11.8 Limitaciones
+
+- El botón flotante tapa lo que haya en su esquina mientras no se desplaza
+  la lista, por ejemplo la flecha de una fila. Es inherente a un botón
+  flotante; el margen final deja ver y tocar la última fila.
+- «Bandeja» y «Pagos por revisar» siguen siendo dos nombres para lo mismo
+  (ver `docs/notas/navegacion-b3b.md`, 4).
+- Inicio no tiene título «Inicio»: su cabecera es «Lo que tienes», como fija
+  D-f.
+- Con el texto al máximo, la frase del balance y la cabecera de Inicio
+  crecen mucho. Nada se corta. Ya era así antes.
+
+### 11.9 NO DEMOSTRADO
+
+- Nada de esto se ha visto en el iPhone. La app instalada en Release sigue
+  siendo la de B3 hasta que se reinstale.
+- Los toques se contaron en pruebas, no con el dedo.
+- VoiceOver leyendo el botón de añadir, el engranaje y los accesos nuevos:
+  las etiquetas están y tienen prueba, pero no se han oído.
+- Que el botón flotante quede a la altura correcta sobre la barra en el
+  iPhone del dueño. En el simulador (iPhone 17) queda bien.
+- Los casos marcados arriba.
+
+### 11.10 Acciones del usuario
+
+1. Reinstalar en el iPhone: `npx expo run:ios --device --configuration Release`.
+   Los datos se conservan al instalar encima; no borrar la app antes. Este
+   bloque es solo JavaScript: no cambia nada nativo.
+2. Comprobar con el dedo: el «+» en las cinco pestañas, el engranaje, la
+   fila de «Pendiente», el widget con la app cerrada y que la última fila de
+   Movimientos se puede tocar.

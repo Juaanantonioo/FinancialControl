@@ -44,6 +44,7 @@ Los hitos y las tareas conservan su identificador. Cambia el orden en que se abo
 | 1 · Visión completa | Patrimonio, inversión manual, vistas por día, mes y año | T-070 (solo ValorDeInversion), T-075, T-076, T-082, resto de T-081 | Encargo en `docs/prompt-claude-code-h3-vision-completa.md` |
 | 2 · Planificación | Presupuesto, disponible del mes, gastos fijos y objetivos | H5 completo, y T-070 a T-072 de H6 | Hecho en la rama `h5-planificacion`, sin notificaciones (T-066 y T-067 parciales). Ver apartado 2.3 |
 | 3 · Entrada rápida | Captura con Apple Pay integrada, widget y recordatorios | H3, y cierre de H1 con la medición del spike A | Hecho en la rama `b3-entrada-rapida`, sin medir en un iPhone. T-035 parcial. Ver apartado 2.4 |
+| 3b · Navegación | Inicio en siete bloques, botón de añadir en las cinco pestañas, Ajustes y Cuentas con inversiones | Sin tareas nuevas: reorganiza lo construido | Hecho en la rama `b3b-navegacion`. Solo JavaScript. Ver `docs/notas/navegacion-b3b.md` |
 | 4 · Cuentas y sincronización | Registro, inicio de sesión y sincronización con Supabase | H4 | Pendiente |
 | 5 · Versión web | Exportación a web contra Supabase, alojamiento y pruebas en navegador | Sin tareas todavía: se definen al cerrar el bloque 4 | Pendiente (D8) |
 | 6 · Publicación y suscripción | Calidad, beta, envío a revisión y suscripción | H8, H9 y T-120 a T-127 | Pendiente (D9) |

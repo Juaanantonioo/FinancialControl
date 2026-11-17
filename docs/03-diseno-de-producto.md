@@ -15,89 +15,87 @@ esquemas son **datos de ejemplo**.
 
 ## 2. Arquitectura de información
 
+Estado real tras el bloque B3b (rama `b3b-navegacion`, 17/11/2026). Cada
+pestaña responde a una pregunta.
+
 ```
 FinancialControl
-├── Inicio            Mes en curso: disponible, gasto, próximos cobros, objetivos
-│   └── Análisis      Categorías, tendencia, comparativa
-├── Movimientos       Lista, búsqueda, filtros
-│   └── Bandeja       Capturas pendientes de confirmar
-├── [ + ]             Alta de gasto, ingreso o transferencia
-├── Plan
-│   ├── Presupuesto   Por categoría, previsto frente a real
-│   ├── Gastos fijos  Lista y calendario
-│   └── Objetivos     Meta, aportado, ritmo
-├── Cuentas           Saldos, patrimonio, inversión
-└── Ajustes (icono)   Categorías, reglas de tarjeta, Apple Pay, datos, seguridad
+├── Inicio            ¿Cómo voy y qué tengo que hacer hoy?
+│   ├── Lo que tienes          Total, variación, en cuentas e invertido → Patrimonio
+│   ├── Disponible este mes
+│   ├── Pendiente              Cobros por confirmar, pagos por revisar, avisos de presupuesto
+│   ├── Próximos cobros        Tres como mucho → Plan › Fijos
+│   ├── Este mes               Balance, ingresos, gastos, gastado hoy → Análisis › Mes
+│   ├── Objetivos              Dos como mucho → Plan › Objetivos
+│   ├── Primeros pasos         Solo mientras falte alguno
+│   └── ⚙ Ajustes              Categorías, Apple Pay y tarjetas, Avisos, Diagnóstico
+├── Movimientos       ¿En qué se ha ido el dinero?
+│   ├── Lista, búsqueda y filtros
+│   └── Bandeja                Pagos de Apple Pay por revisar
+├── Análisis          ¿Cómo gasto a lo largo del tiempo?
+│   ├── Día                    Gasto de hoy, media diaria, calendario
+│   ├── Mes                    Balance, reparto por categoría, comparativa, seis meses
+│   └── Año                    Totales, patrimonio, tabla de doce meses
+├── Plan              ¿Qué puedo gastar y qué viene?
+│   ├── Presupuesto            Previsto frente a real y fin de mes previsto
+│   ├── Fijos                  Total, por confirmar, próximos, calendario, reglas
+│   └── Objetivos              Meta, aportado, ritmo
+├── Cuentas           ¿Cuánto tengo y dónde está?
+│   ├── Lo que tienes          Total → Patrimonio (evolución)
+│   ├── Banco y efectivo       → Detalle de cuenta
+│   └── Tus inversiones        Aportado, valor y ganancia → Inversiones y detalle
+└── [ + ]             Añadir movimiento, flotante en las cinco pestañas
 ```
+
+Lo que salió de Inicio en B3b y dónde está: el reparto del gasto por
+categoría, la evolución de seis meses y el balance de cualquier mes, en
+Análisis › Mes; el fin de mes previsto, en Plan › Presupuesto; la lista de
+cuentas y las inversiones, en Cuentas. Inicio habla siempre de hoy y del mes
+en curso y no tiene selector de mes.
 
 ## 3. Navegación principal
 
-Barra inferior con cinco posiciones: **Inicio · Movimientos · [+] · Plan · Cuentas**.
+Barra inferior nativa (`NativeTabs`) con cinco pestañas: **Inicio ·
+Movimientos · Análisis · Plan · Cuentas**. La app abre en Inicio.
 
-- El botón central **[+]** abre el alta como hoja modal desde cualquier pestaña.
-- **Ajustes** se abre con el icono de engranaje de la cabecera de Inicio.
-- **Plan** agrupa sus tres secciones con un selector segmentado en la cabecera.
-- Los avisos del sistema y el widget abren la pantalla exacta (enlace profundo): un aviso
-  de captura abre la captura, un aviso de cobro abre el gasto fijo.
+- **Añadir un movimiento** es un botón redondo «+» fijo abajo a la derecha,
+  justo encima de la barra, igual en las cinco pestañas. Abre el alta como
+  hoja modal con un toque. Las listas dejan margen al final para que la
+  última fila se vea y se toque.
+- El **«+» a solas** solo significa «añadir movimiento». Las demás altas usan
+  un botón con texto dentro de su sección: «Nueva cuenta», «Nuevo gasto
+  fijo», «Nuevo objetivo», «Nueva categoría».
+- **Ajustes** se abre con el engranaje de la cabecera de Inicio.
+- **Análisis** y **Plan** agrupan sus secciones con el mismo selector de
+  segmentos, en la misma posición, debajo del título.
+- **Ver un detalle** empuja una pantalla con flecha de volver. **Crear o
+  editar** abre una hoja modal con Cancelar y Guardar.
+- Los bloques de Inicio muestran un número fijo de elementos y un «Ver
+  todos» que lleva a su pestaña y sección exactas. Cada salto lleva una marca
+  de petición, así que repetirlo funciona aunque la pestaña ya estuviera
+  abierta en otra sección.
+- Las pestañas son la base de la pila (`unstable_settings.anchor`): un
+  enlace que abre la app en otra pantalla la pinta sobre ellas.
+- **Enlaces de entrada**, sin cambios: `financialcontrol://`,
+  `financialcontrol://movimiento`, `…/plan?seccion=…&mes=…`,
+  `…/analisis?vista=…`, `…/capturas`, `…/apple-pay`, `…/avisos`,
+  `…/categorias`, `…/inversiones`, `…/patrimonio`, y nuevo `…/ajustes`. Los
+  avisos del sistema abren Plan › Fijos, Plan › Presupuesto, la bandeja o el
+  detalle de la cuenta de inversión.
 
-### 3.1 Estado tras el rediseño del 16/11/2026 (rama `h2b-rediseno-inicio`)
+### 3.1 Qué se descartó del diseño original y por qué
 
-Barra inferior real: **Inicio · Movimientos · Cuentas**. La app abre en Inicio.
+| Diseño original | Lo construido | Motivo |
+|---|---|---|
+| Botón central «[+]» dentro de la barra, entre Movimientos y Plan | Botón flotante sobre la barra | `NativeTabs` (Expo Router para SDK 58) no admite un botón de acción en la barra: cada posición es una pestaña. Una barra hecha a mano perdería el aspecto y el comportamiento nativos |
+| Cuatro pestañas más el botón | Cinco pestañas | Análisis creció hasta merecer pestaña propia en H3; dejó de ser una pantalla hija de Inicio |
+| Inicio con todos los paneles del mes | Inicio con siete bloques como mucho | Con trece bloques nadie llegaba al final. Lo que no es «cómo voy y qué hago hoy» vive en su pestaña |
+| Ajustes con reglas de tarjeta, datos y seguridad | Ajustes con Categorías, Apple Pay y tarjetas, Avisos y Diagnóstico | Datos y seguridad llegan con la cuenta de usuario (bloque 4). Las tarjetas recordadas están dentro de «Apple Pay y tarjetas» |
+| Un aviso de cobro abre el gasto fijo | Abre Plan › Fijos en el mes del cobro | Desde ahí se confirma con un toque o se abre el cobro |
 
-- **Plan** y el botón central **[+]** siguen pendientes: no se añaden pestañas de funciones
-  que aún no existen (presupuesto, gastos fijos, objetivos). Mientras tanto, el alta se abre
-  con un botón flotante «+» en Inicio y en Movimientos, en la misma posición.
-- **Ajustes** (engranaje de Inicio) sigue pendiente por el mismo motivo.
-- Tocar una cuenta, en Inicio o en Cuentas, abre su detalle (P10). La edición se abre
-  desde ahí.
-- Tocar una categoría en Inicio abre Movimientos filtrado por esa categoría y ese mes.
-
-### 3.2 Estado tras el bloque del 17/11/2026 (rama `h3-vision-completa`)
-
-Barra inferior real: **Inicio · Movimientos · Análisis · Cuentas**.
-
-- **Análisis** (P17) pasa a ser una pestaña, no una pantalla dentro de Inicio, con tres
-  vistas: Día, Mes y Año.
-- El botón **«+»** deja de flotar sobre el contenido y va en la cabecera, arriba a la
-  derecha, en Inicio, Movimientos y Cuentas. El botón central de la barra sigue pendiente.
-- **Plan** y **Ajustes** siguen pendientes.
-- Pantallas nuevas fuera de la barra: **Patrimonio** (desde la cifra de Inicio o de
-  Cuentas), **Inversiones** (desde el bloque de Inicio) y **Valor de inversión** (P21,
-  desde el detalle de una cuenta de inversión).
-- Enlaces: `financialcontrol://analisis?vista=anio&anio=2026`, `…/analisis?dia=2026-11-14`,
-  `…/movimientos?dia=2026-11-14` y `…/?mes=2026-10`.
-
-### 3.3 Estado tras el bloque de planificación (rama `h5-planificacion`, 17/11/2026)
-
-Barra inferior real: **Inicio · Movimientos · Análisis · Plan · Cuentas**.
-
-- **Plan** tiene tres secciones con un selector: Presupuesto (P11), Fijos (P13) y
-  Objetivos (P15). El botón «+» de su cabecera crea un fijo o un objetivo según la sección.
-- Pantallas que se abren desde Plan o desde Inicio: edición de presupuesto (P12), alta y
-  edición de fijo (P14), confirmación de un cobro, detalle de objetivo (P16), edición de
-  objetivo y «Aportar».
-- Enlaces: `financialcontrol://plan?seccion=fijos&mes=2026-11`, `…/presupuesto?mes=2026-11`,
-  `…/regla`, `…/objetivo?id=…`.
-- El botón central «+» y **Ajustes** siguen pendientes.
-
-### 3.4 Estado tras el bloque de entrada rápida (rama `b3-entrada-rapida`, 17/11/2026)
-
-- **Bandeja de capturas** (P08): se abre desde el botón «Bandeja» de Movimientos, que
-  lleva el número de pagos por revisar, y desde una tarjeta de Inicio que solo aparece si
-  hay alguno. Cada captura tiene Guardar (o Completar, si le falta algo), Editar y
-  Descartar. Duplicadas y descartadas van en un apartado plegado.
-- **Guía de Apple Pay** (P04): pasos de la automatización con los dos nombres del
-  disparador, captura de prueba, última captura recibida y tarjetas recordadas.
-- **Avisos**: un interruptor por tipo de aviso.
-- Al pie de **Cuentas** hay un bloque «Ajustes» con Categorías, Apple Pay y Avisos. Hace
-  de pantalla de Ajustes (P18) mientras no exista.
-- Lo que hay en banco y efectivo se llama «En cuentas». «Disponible» queda solo para
-  «Disponible este mes».
-- Enlaces: `financialcontrol://capturas`, `…/apple-pay`, `…/avisos`.
-
-Diferencias con este documento: el aviso de una captura no lleva botones (T-035 parcial):
-tocarlo abre la bandeja. P04 no ramifica por versión de iOS detectada: muestra los dos
-nombres del disparador.
+El estado de la navegación al cerrar cada bloque anterior (H2b, H3, H5 y B3)
+está en `docs/estado.md`, apartados 7 a 10. El mapa de antes y después de
+B3b, pantalla a pantalla, está en `docs/notas/navegacion-b3b.md`.
 
 ## 4. Lista de pantallas de V1
 
