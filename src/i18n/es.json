@@ -559,7 +559,14 @@
     "objetivo": "Suma al objetivo {{nombre}}",
     "borrada": "Fijo borrado",
     "noEncontrada": "Este fijo ya no existe.",
-    "sinCuentas": "Para crear un fijo hace falta al menos una cuenta."
+    "sinCuentas": "Para crear un fijo hace falta al menos una cuenta.",
+    "aviso": "Aviso",
+    "avisoElDia": "El mismo día",
+    "avisoAntes": "{{dias}} días antes",
+    "avisoUnDia": "1 día antes",
+    "avisoMenos": "Avisar más cerca del cobro",
+    "avisoMas": "Avisar con más antelación",
+    "avisoAyuda": "Solo llega si tienes activados los avisos de cobros."
   },
   "cobro": {
     "titulo": "Confirmar cobro",
@@ -706,5 +713,36 @@
     "anadirAlias": "Añadir tarjeta",
     "cuentaDesconocida": "Cuenta que ya no existe",
     "anadirGasto": "También hay una acción «Añadir gasto» para tus propios atajos: con importe, categoría y cuenta crea el gasto la próxima vez que abras la app."
+  },
+  "avisos": {
+    "titulo": "Avisos",
+    "abrir": "Avisos",
+    "intro": "Elige de qué quieres que te avise la app. Son avisos de este iPhone: no salen de él.",
+    "tipo_cobros": "Cobros próximos",
+    "ayuda_cobros": "A las 9:00 del día de cada cobro, o unos días antes si lo pones en el fijo. Solo si sigue sin confirmar.",
+    "tipo_presupuesto": "Presupuesto",
+    "ayuda_presupuesto": "Cuando una categoría pasa del 80 % o se excede. Una vez por categoría y mes.",
+    "tipo_capturas": "Pagos sin revisar",
+    "ayuda_capturas": "Cuando un pago lleva 24 horas en la bandeja.",
+    "tipo_inversion": "Valor de inversiones",
+    "ayuda_inversion": "Cuando el último valor de una inversión cumple 30 días.",
+    "denegado": "Los avisos están desactivados para FinancialControl en los Ajustes del iPhone. Actívalos allí para recibirlos.",
+    "abrirAjustes": "Abrir Ajustes",
+    "sinDecidir": "Al activar el primero, el iPhone te pedirá permiso para mostrar avisos.",
+    "programados": "Avisos programados ahora: {{total}}",
+    "permisoRechazado": "No has dado permiso para mostrar avisos.",
+    "cobroTitulo": "{{nombre}}",
+    "cobroHoy": "Hoy se cobra: {{importe}}",
+    "cobroEl": "Se cobra el {{fecha}}: {{importe}}",
+    "ingresoHoy": "Hoy llega: {{importe}}",
+    "ingresoEl": "Llega el {{fecha}}: {{importe}}",
+    "presupuestoTitulo": "Presupuesto de {{categoria}}",
+    "presupuestoCerca": "Llevas el {{porcentaje}} % de lo previsto este mes.",
+    "presupuestoExcedido": "Te has pasado {{importe}} este mes.",
+    "capturasTitulo": "Pagos por revisar",
+    "capturasCuerpo": "Tienes pagos esperando en la bandeja desde ayer.",
+    "inversionTitulo": "{{nombre}}",
+    "inversionCuerpo": "Hace {{dias}} días que no anotas cuánto vale. Actualízalo cuando puedas.",
+    "categoriaSinNombre": "una categoría"
   }
 }

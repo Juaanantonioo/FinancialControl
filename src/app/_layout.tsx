@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 
 import { ProveedorDeAvisos } from '@/estado/Aviso';
 import { seguirReducirMovimiento } from '@/estado/animacion';
+import { useAvisosAutomaticos } from '@/estado/avisos';
 import { ProveedorDeDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
 import { useColores } from '@/theme';
@@ -12,6 +13,15 @@ import { useColores } from '@/theme';
  * una pantalla; este fichero define el contenedor que las envuelve y da
  * acceso a los datos a todas ellas.
  */
+/**
+ * Mantiene al día los avisos locales. No pinta nada: existe como componente
+ * para poder leer los datos, que solo están disponibles dentro del proveedor.
+ */
+function AvisosDelSistema() {
+  useAvisosAutomaticos();
+  return null;
+}
+
 export default function RootLayout() {
   const c = useColores();
   // Los gráficos necesitan saber si está activado «Reducir movimiento».
@@ -19,6 +29,7 @@ export default function RootLayout() {
   return (
     <ProveedorDeDatos>
       <ProveedorDeAvisos>
+        <AvisosDelSistema />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: c.fondo },
@@ -34,6 +45,7 @@ export default function RootLayout() {
           <Stack.Screen name="detalle-de-cuenta" options={{ headerShown: false }} />
           <Stack.Screen name="patrimonio" options={{ headerShown: false }} />
           <Stack.Screen name="capturas" options={{ headerShown: false }} />
+          <Stack.Screen name="avisos" options={{ headerShown: false }} />
           <Stack.Screen name="apple-pay" options={{ headerShown: false }} />
           <Stack.Screen name="objetivo" options={{ headerShown: false }} />
           <Stack.Screen

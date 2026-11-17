@@ -69,6 +69,7 @@ export default function PantallaDeRegla() {
   const [categoriaId, setCategoriaId] = useState<string | null>(null);
   const [mesDeFin, setMesDeFin] = useState<string | null>(null);
   const [activa, setActiva] = useState(true);
+  const [avisoDias, setAvisoDias] = useState(0);
   const [objetivoId, setObjetivoId] = useState<string | null>(pedido.objetivoId ?? null);
 
   const tipo = tipoDeLaClase(clase);
@@ -100,6 +101,7 @@ export default function PantallaDeRegla() {
       setCategoriaId(regla.categoriaId);
       setMesDeFin(regla.fechaFin ? regla.fechaFin.slice(0, 7) : null);
       setActiva(regla.activa);
+      setAvisoDias(regla.avisoDiasAntes);
       setObjetivoId(regla.objetivoId);
     });
     return () => {
@@ -153,6 +155,7 @@ export default function PantallaDeRegla() {
         periodicidad === 'anual' ? `${mesAnual}-01` : (original?.fechaInicio ?? undefined),
       fechaFin: mesDeFin ? finDeMes(mesDeFin) : null,
       activa,
+      avisoDiasAntes: avisoDias,
       objetivoId: clase === 'aportacion' ? objetivoId : null,
     };
     ejecutar(() =>
@@ -355,6 +358,26 @@ export default function PantallaDeRegla() {
               </>
             )}
           </Campo>
+
+          <Fila etiqueta={t('regla.aviso')}>
+            <PasoDeNumero
+              valor={avisoDias}
+              minimo={0}
+              maximo={7}
+              alCambiar={setAvisoDias}
+              texto={
+                avisoDias === 0
+                  ? t('regla.avisoElDia')
+                  : avisoDias === 1
+                    ? t('regla.avisoUnDia')
+                    : t('regla.avisoAntes', { dias: avisoDias })
+              }
+              etiquetaMenos={t('regla.avisoMenos')}
+              etiquetaMas={t('regla.avisoMas')}
+              testID="aviso-dias"
+            />
+          </Fila>
+          <Text style={[estilos.ayuda, { color: c.textoSecundario }]}>{t('regla.avisoAyuda')}</Text>
 
           <View style={[estilos.linea, estilos.activa]}>
             <View style={estilos.textos}>

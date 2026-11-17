@@ -159,6 +159,7 @@ export default function Cuentas() {
               [
                 ['/categorias', t('cuentas.categorias'), 'ajuste-categorias'],
                 ['/apple-pay', t('guia.abrir'), 'ajuste-apple-pay'],
+                ['/avisos', t('avisos.abrir'), 'ajuste-avisos'],
               ] as const
             ).map(([ruta, texto, testID], i) => (
               <Pressable

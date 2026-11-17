@@ -392,6 +392,6 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  valorDePaso: { fontSize: Letra.cuerpo, minWidth: 64, textAlign: 'center' },
+  valorDePaso: { fontSize: Letra.cuerpo, minWidth: 64, textAlign: 'center', flexShrink: 1 },
   campo: { gap: Espacio.xs, paddingTop: Espacio.m },
 });
