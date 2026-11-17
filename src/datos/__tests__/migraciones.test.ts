@@ -12,7 +12,12 @@ describe('migraciones', () => {
     const tablas = await bd.consultar<{ name: string }>(
       "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
     );
-    expect(tablas.map((t) => t.name)).toEqual(['categoria', 'cuenta', 'movimiento']);
+    expect(tablas.map((t) => t.name)).toEqual([
+      'categoria',
+      'cuenta',
+      'movimiento',
+      'valor_de_inversion',
+    ]);
   });
 
   it('migrar dos veces no repite nada', async () => {

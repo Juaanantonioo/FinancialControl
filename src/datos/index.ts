@@ -1,6 +1,6 @@
 /**
  * Punto de entrada de la capa de datos: prepara la base de datos y entrega
- * los tres repositorios.
+ * los repositorios.
  */
 import type { TipoDeCategoria } from '@/dominio/modelo';
 
@@ -9,12 +9,14 @@ import { crearRepositorioDeCategorias } from './categorias';
 import { crearRepositorioDeCuentas } from './cuentas';
 import { migrar } from './migraciones';
 import { crearRepositorioDeMovimientos } from './movimientos';
+import { crearRepositorioDeValores } from './valores';
 
 export function crearRepositorios(bd: BaseDeDatos, entorno: Entorno) {
   return {
     cuentas: crearRepositorioDeCuentas(bd, entorno),
     categorias: crearRepositorioDeCategorias(bd, entorno),
     movimientos: crearRepositorioDeMovimientos(bd, entorno),
+    valores: crearRepositorioDeValores(bd, entorno),
   };
 }
 

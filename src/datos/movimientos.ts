@@ -47,6 +47,8 @@ export type FiltroDeMovimientos = {
   categoriaId?: string;
   /** "AAAA-MM". */
   mes?: string;
+  /** "AAAA-MM-DD". */
+  dia?: string;
 };
 
 export type GrupoPorDia = { fecha: string; movimientos: MovimientoListado[] };
@@ -259,8 +261,23 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
       parametros.push(filtro.cuentaId, filtro.cuentaId);
     }
     if (filtro.categoriaId) {
-      condiciones.push('m.categoria_id = ?');
+      // Una categoría principal incluye los movimientos de sus subcategorías,
+      // a cualquier nivel (consulta recursiva sobre `padre_id`).
+      condiciones.push(
+        `m.categoria_id IN (
+           WITH RECURSIVE rama (id) AS (
+             SELECT ?
+             UNION
+             SELECT c.id FROM categoria c JOIN rama ON c.padre_id = rama.id
+           )
+           SELECT id FROM rama
+         )`,
+      );
       parametros.push(filtro.categoriaId);
+    }
+    if (filtro.dia) {
+      condiciones.push('m.fecha = ?');
+      parametros.push(filtro.dia);
     }
     if (filtro.mes) {
       condiciones.push('substr(m.fecha, 1, 7) = ?');

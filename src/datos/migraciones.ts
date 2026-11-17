@@ -79,6 +79,23 @@ export const MIGRACIONES: Migracion[] = [
       `CREATE INDEX movimiento_por_categoria ON movimiento (categoria_id)`,
     ],
   },
+  {
+    // H3: valor manual de las cuentas de inversión (T-070). Solo añade una
+    // tabla; no toca cuentas, categorías ni movimientos.
+    version: 2,
+    sentencias: [
+      `CREATE TABLE valor_de_inversion (
+        id TEXT PRIMARY KEY NOT NULL,
+        cuenta_id TEXT NOT NULL REFERENCES cuenta (id),
+        fecha TEXT NOT NULL,
+        valor INTEGER NOT NULL CHECK (valor >= 0),
+        ${COMUNES}
+      )`,
+      // Un valor por cuenta y día entre los no borrados.
+      `CREATE UNIQUE INDEX valor_de_inversion_por_dia
+         ON valor_de_inversion (cuenta_id, fecha) WHERE borrado_en IS NULL`,
+    ],
+  },
 ];
 
 export async function versionDelEsquema(bd: BaseDeDatos): Promise<number> {

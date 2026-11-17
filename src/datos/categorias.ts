@@ -156,6 +156,28 @@ export function crearRepositorioDeCategorias(bd: BaseDeDatos, entorno: Entorno) 
     return (await obtener(id))!;
   }
 
+  /**
+   * Guarda el icono y el color elegidos para una categoría. `null` vuelve al
+   * valor que la app deriva sola. El color es un "#RRGGBB" de la paleta.
+   */
+  async function cambiarAspecto(
+    id: string,
+    aspecto: { icono: string | null; color: string | null },
+  ): Promise<Categoria> {
+    await exigir(id);
+    if (aspecto.color !== null && !/^#[0-9a-f]{6}$/i.test(aspecto.color)) {
+      throw new ErrorDeDominio('color_no_valido');
+    }
+    const icono = aspecto.icono?.trim() || null;
+    await bd.ejecutar('UPDATE categoria SET icono = ?, color = ?, modificado_en = ? WHERE id = ?', [
+      icono,
+      aspecto.color?.toUpperCase() ?? null,
+      entorno.ahora().toISOString(),
+      id,
+    ]);
+    return (await obtener(id))!;
+  }
+
   /** Borrado lógico. Los movimientos que la usaban la conservan como referencia. */
   async function borrar(id: string): Promise<void> {
     await exigir(id);
@@ -203,6 +225,7 @@ export function crearRepositorioDeCategorias(bd: BaseDeDatos, entorno: Entorno) 
     renombrar,
     ordenar,
     archivar,
+    cambiarAspecto,
     borrar,
     restaurar,
     frecuentes,
