@@ -842,3 +842,14 @@ Los pasos 8 y siguientes son, además, la medición pendiente del spike A.
 2. Con la cuenta gratuita, repetir esa orden cada 7 días. Los datos se conservan al
    instalar encima; no borrar la app antes.
 3. Hacer la medición del spike A con uso real y anotar los textos que entrega Atajos.
+
+## 11. B3b · Navegación
+
+### 11.1 Baseline (17/11/2026)
+
+- Rama de partida: `b3-entrada-rapida` @ `4012009`. Rama nueva: `b3b-navegacion`.
+- `git status`: limpio, salvo `docs/prompt-claude-code-b3b-navegacion.md` sin seguimiento (el encargo, que entra en el primer commit).
+- `npm run check`: pasa. 672 pruebas en 28 suites.
+- Esquema de la base de datos: versión 4. Este bloque no lo toca.
+- Pestañas: Inicio, Movimientos, Análisis, Plan y Cuentas.
+- Coincide con el apartado 1 del encargo.
