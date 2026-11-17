@@ -203,6 +203,69 @@ Limitaciones:
 - La regla 4.4 decía «más el último valor de cada cuenta de inversión». Se usa el valor
   estimado, que añade las aportaciones y retiradas posteriores a ese valor.
 
+### 4.6 Planificación: fijos, presupuesto, previsión y objetivos (17/11/2026)
+
+Implementado en `src/dominio/recurrentes.ts`, `presupuesto.ts`, `prevision.ts` y
+`objetivos.ts`. La migración 3 añade `regla_recurrente`, `presupuesto`,
+`linea_de_presupuesto`, `objetivo` y `aportacion_a_objetivo`. Guardan solo lo que la
+persona define; ocurrencias, disponible, previsión y avance se calculan. «Hoy» entra
+siempre como parámetro.
+
+**Ocurrencias de una regla**
+
+- Mensual: una vez al mes, el `dia_del_mes`. Si el mes es más corto, el último día.
+- Anual: una vez al año, en el mes de su `fecha_inicio`.
+- No hay ocurrencia antes de `fecha_inicio`, después de `fecha_fin`, ni con la regla
+  inactiva o borrada.
+- Confirmada: existe un movimiento no borrado con ese `regla_recurrente_id` y fecha en
+  el mismo mes. Si no, pendiente: «por confirmar» si su día es hoy o anterior y
+  «próximo» si es posterior.
+- «Por confirmar» reúne los vencidos del mes en curso y del mes anterior. Más atrás no
+  se mira.
+- Confirmar crea un movimiento de origen `recurrente` con los datos de la regla, o con el
+  importe y el día que la persona cambie, siempre dentro de ese mes. Confirmar dos veces
+  devuelve el mismo movimiento. «Ya lo anoté» enlaza uno existente del mismo mes, tipo y
+  cuenta que no tenga regla.
+- Una aportación con objetivo crea, al confirmarse, la transferencia y una aportación
+  enlazada a ella. Borrar ese movimiento borra la aportación; deshacer recupera las dos.
+
+**Presupuesto**
+
+| Cifra | Cálculo |
+|---|---|
+| Gasto real de una línea | Gasto del mes en la categoría y en sus subcategorías |
+| Sin presupuestar | Gasto del mes en categorías sin línea y sin categoría. Cuenta en el gastado |
+| Estado de una línea | Excedida si el gasto supera lo previsto; cerca desde el 80 %; dentro en otro caso |
+| Raya del día | Día de hoy ÷ días del mes. Solo en el mes en curso |
+| Propuesta al crear | Media de gasto de cada categoría en los tres meses naturales anteriores, repartida entre los meses de esos tres que tienen algún gasto. Sin histórico, vacío |
+| Disponible del mes (D1) | Presupuesto total − gastado − fijos pendientes. Un fijo confirmado ya está en el gastado y no se resta dos veces |
+| Por día | Disponible ÷ días que quedan contando hoy, hacia abajo al céntimo. Cero si el disponible es negativo |
+
+El presupuesto no lleva divisa: se entiende en la divisa principal (la de la primera
+cuenta). Las reglas y los objetivos sí llevan la de su cuenta y no se mezclan.
+
+**Previsión de fin de mes (D4)**
+
+previsto = saldo de banco y efectivo − gastos recurrentes pendientes + ingresos
+recurrentes pendientes − transferencias pendientes que salen de banco y efectivo (netas)
+− gasto variable diario × días que quedan sin contar hoy.
+
+El gasto variable diario es el gasto del mes de movimientos sin regla entre los días
+transcurridos contando hoy. Una transferencia pendiente entre dos cuentas de banco o
+efectivo no cambia el total; una que entra desde inversión, suma.
+
+**Objetivos (D8)**
+
+| Cifra | Cálculo |
+|---|---|
+| Aportado | Suma de las aportaciones no borradas |
+| Avance | Aportado ÷ meta, hacia abajo y con tope del 100 % |
+| Meses restantes | (año límite − año actual) × 12 + (mes límite − mes actual), con mínimo 1 |
+| Necesario al mes | (meta − aportado) ÷ meses restantes, hacia arriba al céntimo |
+
+Sin fecha límite no hay ritmo. Con lo aportado igual o mayor que la meta el objetivo está
+conseguido. Con la fecha límite pasada sin llegar, el plazo está vencido.
+
 ## 5. Correspondencia con el Notion del primer usuario
 
 Solo sirve para comprobar que el modelo cubre el uso actual. La app no importa ni

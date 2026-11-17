@@ -42,7 +42,7 @@ Los hitos y las tareas conservan su identificador. Cambia el orden en que se abo
 |---|---|---|---|
 | Hecho | Preparación, spike de Apple Pay sin medir, núcleo de movimientos, rediseño e Inicio | H0, H1 (parcial), H2, y parte de T-080, T-081, T-083 y T-084 | Ramas `h0` a `h2b` |
 | 1 · Visión completa | Patrimonio, inversión manual, vistas por día, mes y año | T-070 (solo ValorDeInversion), T-075, T-076, T-082, resto de T-081 | Encargo en `docs/prompt-claude-code-h3-vision-completa.md` |
-| 2 · Planificación | Presupuesto, disponible del mes, gastos fijos y objetivos | H5 completo, y T-070 a T-072 de H6 | Pendiente |
+| 2 · Planificación | Presupuesto, disponible del mes, gastos fijos y objetivos | H5 completo, y T-070 a T-072 de H6 | Hecho en la rama `h5-planificacion`, sin notificaciones (T-066 y T-067 parciales). Ver apartado 2.3 |
 | 3 · Entrada rápida | Captura con Apple Pay integrada, widget y recordatorios | H3, y cierre de H1 con la medición del spike A | Pendiente. Depende de la medición |
 | 4 · Cuentas y sincronización | Registro, inicio de sesión y sincronización con Supabase | H4 | Pendiente |
 | 5 · Versión web | Exportación a web contra Supabase, alojamiento y pruebas en navegador | Sin tareas todavía: se definen al cerrar el bloque 4 | Pendiente (D8) |
@@ -67,6 +67,24 @@ T-125 y T-127 hablan de una prueba gratuita de 6 meses. Por D9 pasa a ser de 1 m
 | T-084 | Inicio con patrimonio, balance, Hoy, cuentas, inversiones y D2 | D1, D8, D9 y D4, que dependen de presupuesto, gastos fijos y objetivos |
 
 Añadido fuera del backlog: vista por día con calendario (parte de G7).
+
+### 2.3 Estado del bloque 2 a 17/11/2026 (rama `h5-planificacion`)
+
+| Tarea | Hecho | Sigue pendiente |
+|---|---|---|
+| T-060 | HECHA. Presupuesto, LineaDePresupuesto y ReglaRecurrente: migración 3 y repositorios con pruebas | — |
+| T-061 | HECHA. P12 propone la media de los tres meses anteriores y copia el mes anterior | — |
+| T-062 | HECHA. P11 con previsto frente a real, estados con icono y texto y raya del día | — |
+| T-063 | HECHA. Disponible del mes e importe por día (D1). El caso de comprobación da 368,00 € y 26,28 € | — |
+| T-064 | HECHA. P13 y P14: lista por clase, total mensual, anuales aparte, alta y edición | «Saltar un cobro este mes» no existe: se desactiva la regla o se le pone fecha de fin |
+| T-065 | HECHA. Calendario del mes y próximos 14 días (D9) | — |
+| T-066 | **PARCIAL.** Confirmación en un toque, con cambio de importe y día, y «Ya lo anoté». El aviso es una tarjeta «Por confirmar» en Inicio y en Fijos | El aviso previo como notificación del sistema (bloque de entrada rápida). `aviso_dias_antes` se guarda pero no se usa |
+| T-067 | **PARCIAL.** Tarjeta en Inicio que nombra las líneas que pasan del 80 % | La notificación del sistema |
+| T-069 | HECHA. Previsión de fin de mes (D4) con línea de saldo real y previsto. El caso de comprobación da 2.890,00 € | — |
+| T-070 | HECHA entera con este bloque: Objetivo y AportacionAObjetivo se suman a ValorDeInversion | — |
+| T-071 | HECHA. P15 y P16 con avance y ritmo necesario. El caso de comprobación da 125,00 € al mes | — |
+| T-072 | HECHA. La aportación mensual es una regla recurrente; confirmarla crea la transferencia y suma al objetivo | — |
+| T-084 | Inicio muestra ya D1, D2, D4, D8 y D9, además del patrimonio | — |
 
 ## 3. Backlog
 

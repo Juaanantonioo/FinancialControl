@@ -447,3 +447,140 @@ Encargo: `docs/prompt-claude-code-h5-planificacion.md`. Es el bloque 2 de la dec
 | `npm run check` | pasa: 388 pruebas en 18 suites; formato, lint y tipos limpios |
 | Esquema de la base de datos | versión 2 (migración 1: cuentas, categorías y movimientos; migración 2: valores de inversión) |
 | `git status` | limpio, salvo el fichero del encargo en `docs/`, sin seguimiento |
+
+### 9.2 Hecho
+
+| Fase | Commit | Estado | Evidencia |
+|---|---|---|---|
+| 0 y 1 · Baseline y dominio | `d1f00df` | HECHA | `src/dominio/__tests__/plan.test.ts` (45 pruebas), con los tres casos de comprobación |
+| 2 · Migración 3 y repositorios | `5c1d15c` | HECHA | `src/datos/__tests__/plan.test.ts` (33 pruebas). Una base en versión 2 con datos pasa a la 3 con cuentas, categorías, movimientos y valores idénticos. Comprobado además en el simulador: la base de ejemplo pasó de la versión 2 a la 3 con sus 47 movimientos y 6 valores |
+| 3, 4 y 5 · Pestaña Plan | `fdc8f53` | HECHA | Pruebas de pantalla en `h5.test.tsx`. Las tres secciones van en un commit porque la pestaña las reúne |
+| 6 · Inicio | `f156e7f` | HECHA | Pruebas de pantalla en `h5.test.tsx` |
+| 7 y 8 · Casos límite, capturas y documentación | commit final | Ver 9.4 y 9.5 | — |
+
+Casos de comprobación del encargo, con prueba que exige la cifra exacta:
+
+| Caso | Resultado |
+|---|---|
+| Disponible: presupuesto 1.100,00 €, gastado 687,00 €, fijo pendiente de 45,00 €, hoy 17/11/2026 | 368,00 € y 26,28 € al día. Con el fijo confirmado, gastado 732,00 € y disponible 368,00 € |
+| Previsión: saldo 2.000,00 €, fijos de 300,00 € y 50,00 €, ingreso de 1.500,00 €, variable de 340,00 € | 2.890,00 € |
+| Objetivo: meta 1.500,00 €, aportado 500,00 €, límite 31/07/2027 | 8 meses y 125,00 € al mes |
+
+Estado de las tareas: T-060 a T-065, T-069 a T-072 y la parte de T-084 pendiente, hechas.
+**T-066 y T-067 quedan parciales** por la decisión D-c del encargo: el aviso de cobro y el
+de presupuesto son tarjetas en pantalla, no notificaciones del sistema.
+
+`npm run check` al cierre: **502 pruebas en 21 suites, todas pasan** (388 al empezar, 114
+nuevas). `package.json`, `package-lock.json`, `app.json` e `ios/` no cambian.
+
+Pruebas anteriores tocadas, tres, todas por el mismo motivo: daban por hecho que la
+versión 2 era la última del esquema.
+
+- `migraciones.test.ts`: la lista de tablas de una base recién creada incluye las cinco
+  nuevas.
+- `valores.test.ts`: la prueba del paso de la versión 1 a la 2 migra ahora solo hasta la
+  2, que es lo que comprueba; y la lista de versiones se compara por sus dos primeras.
+
+Ninguna prueba se ha borrado ni desactivado, y ninguna de pantalla anterior se ha tocado.
+
+### 9.3 Decisiones tomadas sin consultar
+
+| Decisión | Motivo |
+|---|---|
+| Propuesta con menos de tres meses de datos: la media se reparte entre los meses, de los tres anteriores, que tienen algún gasto | F4 solo dice «si no hay histórico, los campos van vacíos». Dividir siempre entre tres daría un tercio de lo real a quien lleva un mes |
+| «Por confirmar» incluye los cobros vencidos del mes en curso y del mes anterior | Un fijo del día 30 no debe desaparecer el día 1. Más atrás no se mira para no acumular |
+| El presupuesto se entiende en la divisa principal | La tabla no lleva divisa. Reglas y objetivos sí llevan la de su cuenta y no se mezclan |
+| La fecha de fin de un fijo y la fecha límite de un objetivo se eligen por meses | No hay selector de fecha futura sin dependencias nuevas. Valen hasta el último día del mes. El cálculo admite cualquier día |
+| En una regla anual, el mes se elige en el formulario y fija su fecha de inicio | El encargo define el mes de una regla anual como el de su fecha de inicio |
+| «Aportar» anota un apunte sin movimiento | El caso «aportación sin movimiento enlazado» lo pide. La aportación con movimiento es la mensual |
+| Un fijo o un ingreso periódico exige categoría | Sin ella el gasto no entraría en ninguna línea del presupuesto |
+| El cobro confirmado debe quedar dentro de su mes | Fuera de él no confirmaría esa ocurrencia |
+| En P12 se muestran además los ingresos periódicos previstos del mes | F4 pide la diferencia con los ingresos previstos |
+| Una aportación que viene de un movimiento no se borra sola: se borra el movimiento | Así no quedan transferencias sin su aportación |
+
+### 9.4 Casos límite
+
+| Caso | Resultado | Cómo |
+|---|---|---|
+| Regla del día 31 en febrero, abril y febrero bisiesto | Cae el 28, el 30 y el 29 | Prueba |
+| Regla anual fuera y dentro de su mes | Solo ocurre en su mes | Prueba de dominio y de pantalla |
+| Fecha de fin a mitad de mes, antes y después de su día | Ocurre si su día es anterior o igual | Prueba |
+| Regla inactiva o borrada | No ocurre ni se puede confirmar | Prueba |
+| Regla cuya cuenta o categoría se archiva | Sigue ocurriendo; confirmarla lo explica y no crea nada | Prueba |
+| Confirmar dos veces seguidas | Un solo movimiento | Prueba de repositorio y de pantalla |
+| Movimiento confirmado que se borra y se recupera | Pendiente y de nuevo confirmada | Prueba |
+| Movimiento confirmado movido a otro mes | La ocurrencia vuelve a pendiente | Prueba |
+| Presupuesto sin líneas, con una línea a 0 y con gasto solo sin línea | Correcto; una línea a 0 con gasto está excedida | Prueba |
+| Gasto en subcategoría con línea en la categoría principal | Suma en la principal | Prueba |
+| Disponible negativo | «Te has pasado X» y 0 al día | Prueba de dominio y de pantalla |
+| Último día del mes | Queda 1 día | Prueba |
+| Primer día del mes en la previsión | Divide entre 1 | Prueba |
+| Mes pasado y mes futuro en P11 | Sin raya del día | Prueba de dominio y de pantalla |
+| Objetivo sin fecha, con fecha este mes, vencido, pasado de meta y de más de un millón | Correcto | Prueba de dominio y de pantalla |
+| Aportación sin movimiento enlazado | Suma al objetivo y se borra con deshacer | Prueba |
+| Nombres duplicados que solo cambian en mayúsculas o acentos | Rechazados en fijos y en objetivos | Prueba |
+| 0,01 € y más de 1.000.000 € | El cálculo y las tarjetas tienen prueba. **NO DEMOSTRADO** a la vista en barras y anillos |
+| Texto grande del sistema | El calendario de fijos pasa a lista (prueba). Ver capturas en 9.5 |
+| Base de datos vacía | Inicio y Plan muestran sus estados vacíos | Prueba |
+
+### 9.5 Capturas
+
+34 capturas en `docs/capturas/h5/`, tomadas en el simulador iPhone 17 con datos de ejemplo
+y revisadas una a una. Son posteriores al último cambio visual.
+
+- En claro y en oscuro: Inicio (arriba, medio y abajo), presupuesto vacío, presupuesto,
+  presupuesto con una línea excedida, edición de presupuesto, fijos, fijos con calendario,
+  lista de fijos, alta de regla, regla de aportación, confirmar cobro, objetivos y detalle
+  de objetivo.
+- Solo en claro, con el texto del sistema al máximo: presupuesto, fijos, objetivos e Inicio.
+
+Defectos vistos en las capturas y corregidos antes de repetirlas: el porcentaje del anillo
+de objetivos se partía en dos líneas, y con el texto al máximo el selector de tres
+secciones se cortaba («Pr… Fijos Ob…»).
+
+Para capturar las partes bajas se usó un código temporal de desplazamiento que **no está
+en la rama**. No se compiló nada nativo: la app de desarrollo ya instalada en el simulador
+cargó el código nuevo desde el servidor de desarrollo.
+
+Faltan: la edición de objetivo, «Aportar» y los formularios en oscuro con el texto al
+máximo. Tienen prueba de pantalla, no captura.
+
+### 9.6 Limitaciones
+
+- Sin notificaciones del sistema (decisión D-c). El aviso de cobro y el de presupuesto solo
+  se ven al abrir la app. `aviso_dias_antes` se guarda en cada regla y aún no se usa.
+- No hay «saltar un cobro este mes» (decisión D-h). Quien no quiera un cobro desactiva la
+  regla o le pone fecha de fin. Un cobro vencido que no se confirma sigue en «Por
+  confirmar» durante ese mes y el siguiente.
+- Solo periodicidad mensual y anual (decisión D-g).
+- La fecha de fin de un fijo y la fecha límite de un objetivo se eligen por meses.
+- Un cobro pendiente resta del disponible aunque su categoría no tenga línea en el
+  presupuesto: así lo define la fórmula de D1.
+- El presupuesto se entiende en la divisa principal. Hoy la app solo crea cuentas en euros,
+  así que el caso de dos divisas está **NO DEMOSTRADO** en pantalla.
+- La previsión de fin de mes supone que se seguirá gastando al ritmo de lo que va de mes.
+  Los primeros días del mes un solo gasto grande la mueve mucho. Va rotulada como «Previsto».
+- «Ya lo anoté» ofrece todos los movimientos del mes de la misma cuenta y tipo sin regla;
+  en una cuenta con muchos gastos la lista es larga.
+- El calendario de fijos marca los días de cobro, pero tocar un día no hace nada: la lista
+  del mes está debajo.
+- Borrar un objetivo no borra las reglas de aportación mensual que apuntaban a él.
+- Importes de 0,01 € y de más de 1.000.000 € en barras y anillos: con prueba, **NO
+  DEMOSTRADO** a la vista.
+- Solo se ha visto en el simulador. VoiceOver y «Reducir movimiento» siguen sin probarse en
+  un dispositivo.
+- Durante las capturas el Mac iba muy cargado por el antivirus y el simulador tardó varios
+  minutos en arrancar la app. No es un defecto de la app.
+
+### 9.7 Acciones del usuario
+
+1. Para ver este bloque en el iPhone hay que volver a instalar la app. La que está
+   instalada en modo Release lleva el código dentro y no cambia sola. Con el iPhone
+   conectado, desde la carpeta del proyecto:
+   `npx expo run:ios --device --configuration Release`
+   No hay bibliotecas nativas nuevas ni cambios en `ios/`.
+2. La primera vez que se abra, la base de datos pasa sola de la versión 2 a la 3. Los datos
+   se conservan.
+3. Probar con datos reales: crear el presupuesto del mes, dar de alta los fijos, confirmar
+   un cobro, crear un objetivo con su aportación mensual y mirar Inicio.
+4. Decidir si se sube la rama `h5-planificacion` a GitHub. Está solo en local.

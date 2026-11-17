@@ -215,7 +215,10 @@ export function AnilloDeObjetivo({
       descripcion={t('objetivos.avanceLeido', { porcentaje: estado.avance })}>
       <Text
         allowFontScaling={false}
-        style={[cifrasTabulares, { color: c.texto, fontSize: lado / 4.2, fontWeight: '800' }]}>
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+        style={[cifrasTabulares, { color: c.texto, fontSize: lado / 4.6, fontWeight: '800' }]}>
         {`${estado.avance} %`}
       </Text>
     </Anillo>

@@ -899,10 +899,15 @@ describe('Inicio con planificación', () => {
     await pintar(<Inicio />);
     const bloque = await screen.findByTestId('bloque-objetivos');
     expect(screen.getByTestId('objetivo-Viaje')).toHaveTextContent(/Necesitas/);
-    expect(bloque).toHaveTextContent(/Colchón/);
-    expect(bloque).toHaveTextContent(/Bici/);
-    // El cuarto objetivo no cabe y el archivado no aparece.
-    expect(screen.queryByTestId('objetivo-Portátil')).toBeNull();
+    // Hay cuatro objetivos activos: caben tres y el resto queda tras «Ver todos».
+    // Los tres de la prueba anterior se crearon en el mismo instante, así que
+    // no se comprueba cuáles de ellos salen, solo cuántos.
+    const visibles = ['Viaje', 'Colchón', 'Bici', 'Portátil'].filter(
+      (nombre) => screen.queryByTestId(`objetivo-${nombre}`) !== null,
+    );
+    expect(visibles).toHaveLength(3);
+    expect(bloque).toHaveTextContent(/Ver todos/);
+    // El archivado no aparece nunca.
     expect(screen.queryByTestId('objetivo-Antiguo')).toBeNull();
     await fireEvent.press(screen.getByTestId('ver-objetivos'));
     expect(router.navigate).toHaveBeenCalledWith({

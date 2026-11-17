@@ -80,7 +80,7 @@
     "variacionDelMes": "{{diferencia}} desde el {{fecha}}",
     "variacionConPorcentaje": "{{diferencia}} ({{porcentaje}}) desde el {{fecha}}",
     "sinVariacion": "Todavía no hay un mes anterior con el que comparar.",
-    "disponible": "Disponible este mes",
+    "disponible": "Disponible",
     "invertido": "Invertido",
     "hoy": "Hoy",
     "gastoDeHoy": "Gastado hoy",
@@ -110,7 +110,8 @@
     "saldoReal": "Saldo real",
     "saldoPrevisto": "Previsto",
     "finDeMesSinDatos": "Cuando tengas una cuenta de banco o efectivo, aquí verás con cuánto llegarás a fin de mes.",
-    "lineaLeida": "Saldo en banco y efectivo: {{inicio}} el día 1, {{hoy}} hoy y {{fin}} previstos a fin de mes."
+    "lineaLeida": "Saldo en banco y efectivo: {{inicio}} el día 1, {{hoy}} hoy y {{fin}} previstos a fin de mes.",
+    "disponibleDelMes": "Disponible este mes"
   },
   "tipoDeMovimiento": {
     "gasto": "Gasto",

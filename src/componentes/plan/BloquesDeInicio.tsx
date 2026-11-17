@@ -82,7 +82,7 @@ export function BloquesDeInicio({ panel }: { panel: ReturnType<typeof usePanel> 
     <>
       {/* D1 · Disponible este mes. */}
       {enDivisaPrincipal && presupuesto !== undefined ? (
-        <Tarjeta titulo={t('inicio.disponible')} testID="bloque-disponible">
+        <Tarjeta titulo={t('inicio.disponibleDelMes')} testID="bloque-disponible">
           {d1 && estado ? (
             <>
               <View

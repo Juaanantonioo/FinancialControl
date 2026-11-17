@@ -36,6 +36,9 @@ Estado de D7 a 17/11/2026: el bloque 1 está hecho en la rama `h3-vision-complet
 detalle y lo que queda pendiente de cada tarea están en `07`, apartado 2.2, y en
 `estado.md`, apartado 8.
 
+El bloque 2 (planificación) está hecho en la rama `h5-planificacion`, sin notificaciones
+del sistema: ver `07`, apartado 2.3, y `estado.md`, apartado 9.
+
 Consecuencias de D9 que hay que resolver antes del bloque 6:
 
 - La exportación de datos figura en Premium, pero el RGPD da derecho a la portabilidad. Una

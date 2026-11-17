@@ -221,7 +221,10 @@ export function Segmentos<T extends string>({
                 fontWeight: elegido ? '700' : '500',
                 fontSize: Letra.secundario,
               }}
-              numberOfLines={1}>
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.3}>
               {o.texto}
             </Text>
           </Pressable>

@@ -67,6 +67,19 @@ Barra inferior real: **Inicio · Movimientos · Análisis · Cuentas**.
 - Enlaces: `financialcontrol://analisis?vista=anio&anio=2026`, `…/analisis?dia=2026-11-14`,
   `…/movimientos?dia=2026-11-14` y `…/?mes=2026-10`.
 
+### 3.3 Estado tras el bloque de planificación (rama `h5-planificacion`, 17/11/2026)
+
+Barra inferior real: **Inicio · Movimientos · Análisis · Plan · Cuentas**.
+
+- **Plan** tiene tres secciones con un selector: Presupuesto (P11), Fijos (P13) y
+  Objetivos (P15). El botón «+» de su cabecera crea un fijo o un objetivo según la sección.
+- Pantallas que se abren desde Plan o desde Inicio: edición de presupuesto (P12), alta y
+  edición de fijo (P14), confirmación de un cobro, detalle de objetivo (P16), edición de
+  objetivo y «Aportar».
+- Enlaces: `financialcontrol://plan?seccion=fijos&mes=2026-11`, `…/presupuesto?mes=2026-11`,
+  `…/regla`, `…/objetivo?id=…`.
+- El botón central «+» y **Ajustes** siguen pendientes.
+
 ## 4. Lista de pantallas de V1
 
 | Id | Pantalla | Contenido principal | Flujos |
@@ -289,8 +302,9 @@ Inicio muestra un mes de calendario, con flechas para ir al anterior y al siguie
 
 Diferencias con el esquema de arriba, anotadas a propósito:
 
-- No aparecen «Disponible este mes» (D1), próximos cobros (D9), objetivos (D8) ni fin de
-  mes previsto (D4): dependen de presupuesto, gastos fijos y objetivos.
+- El 16/11/2026 no aparecían «Disponible este mes» (D1), próximos cobros (D9), objetivos
+  (D8) ni fin de mes previsto (D4). **Aparecen desde el bloque de planificación del
+  17/11/2026** (ver «Inicio con planificación», más abajo).
 - D2 pedía barras horizontales y desaconsejaba el gráfico circular con más de cinco
   categorías. Se usa un anillo, por decisión del usuario de tener un panel más vistoso,
   limitado a cinco categorías más «Otras» y acompañado siempre de la lista con cifras.
@@ -308,6 +322,25 @@ es siempre el de hoy: el selector de mes solo cambia los bloques de debajo, que 
 4. Tus inversiones, solo si hay alguna: lo que se ha puesto, lo que vale y si se gana o se
    pierde. Abre el resumen de inversiones.
 5. Gasto por categoría y evolución de seis meses, como el 16/11/2026.
+
+#### Inicio con planificación (17/11/2026, rama `h5-planificacion`)
+
+Debajo del patrimonio y antes de los bloques del mes, Inicio muestra, siempre del mes en
+curso:
+
+1. **Disponible este mes** (D1): cifra, importe por día y barra de avance. Si se ha
+   pasado, «Te has pasado X». Sin presupuesto, la invitación a crearlo.
+2. **Ojo con el presupuesto** (T-067, en pantalla): solo si alguna línea pasa del 80 %.
+3. **Por confirmar**: cobros con el día vencido, con «Confirmar» en un toque. Solo si hay.
+4. **Próximos cobros** (D9): los de los próximos 14 días.
+5. **Fin de mes previsto** (D4): la cifra y una línea con el saldo real hasta hoy y el
+   previsto en trazo discontinuo. Va rotulado como «Previsto».
+6. **Objetivos** (D8): hasta tres, con anillo y ritmo necesario.
+
+Diferencias de presentación con los esquemas de este documento: en P12 la fecha de fin
+de un fijo y la fecha límite de un objetivo se eligen por meses y valen hasta el último
+día del mes; en P16 «Aportar» anota un apunte sin movimiento; el aviso de cobro y el de
+presupuesto son tarjetas en pantalla, no notificaciones.
 
 #### Patrimonio, inversiones y Análisis (17/11/2026)
 

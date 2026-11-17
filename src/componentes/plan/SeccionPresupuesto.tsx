@@ -141,7 +141,7 @@ export function SeccionPresupuesto({
           <Text
             style={[estilos.nota, { color: c.textoSecundario }]}
             testID="presupuesto-disponible">
-            {`${t('inicio.disponible')}: ${importe(d1.disponible, divisa)}. ${t(
+            {`${t('inicio.disponibleDelMes')}: ${importe(d1.disponible, divisa)}. ${t(
               'inicio.comprometido',
               {
                 porcentaje: d1.avance,
