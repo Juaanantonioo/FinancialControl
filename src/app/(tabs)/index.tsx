@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BotonAnadir, Segmentos, useMargenDeLista } from '@/componentes/basicos';
 import { Anillo, Barras, Leyenda } from '@/componentes/Graficos';
+import { BloquesDeInicio } from '@/componentes/plan/BloquesDeInicio';
 import {
   Dato,
   DistintivoDeCategoria,
@@ -212,6 +213,9 @@ export default function Inicio() {
               alCambiar={panel.elegirDivisa}
             />
           ) : null}
+
+          {/* Planificación: lo que queda por gastar y lo que viene. Siempre del mes en curso. */}
+          <BloquesDeInicio panel={panel} />
 
           <SelectorDeMes mes={mes} alCambiar={(salto) => setMes(moverMes(mes, salto))} />
 
