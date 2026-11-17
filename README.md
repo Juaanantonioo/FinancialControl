@@ -59,12 +59,41 @@ La primera compilación tarda unos 20 minutos y ocupa varios GB. Las siguientes,
 Para instalarla en tu iPhone, antes inicia sesión con tu Apple Account en
 Xcode › Settings › Accounts.
 
-La carpeta `ios/` se genera sola a partir de `app.json`. No se edita a mano ni se sube a
-git. Si cambias de rama y la compilación falla, regenérala:
+### Regenerar y compilar desde cero
+
+La carpeta `ios/` se genera sola a partir de `app.json` y de los plugins de la carpeta
+`plugins/`. No se edita a mano ni se sube a git. Todo lo que antes había que retocar en
+Xcode está ya escrito en el repositorio:
+
+| Ajuste | Dónde queda fijado |
+|---|---|
+| Equipo de firma (`8Z856TA59Z`) | `app.json`, campo `ios.appleTeamId` |
+| `ENABLE_USER_SCRIPT_SANDBOXING = NO` en todos los targets | `plugins/sin-sandbox-de-scripts.js` |
+| Sin permiso de push (`aps-environment`) | `plugins/sin-push.js` |
+
+Si cambias de rama, si la compilación falla sin motivo claro o si quieres partir de cero:
 
 ```sh
-npx expo prebuild -p ios --clean
+npx expo prebuild --clean --platform ios   # borra ios/ y la vuelve a generar, con sus pods
+npm run ios                                # compila y abre la app en el simulador
 ```
+
+No hace falta abrir Xcode ni tocar nada después del `prebuild`.
+
+### Instalar en el iPhone
+
+Con el iPhone conectado por cable y desbloqueado:
+
+```sh
+npx expo run:ios --device --configuration Release
+```
+
+En modo Release la app lleva su código dentro y funciona sin el Mac. Cada vez que cambie
+el código hay que repetir la orden para verlo en el iPhone.
+
+Con una cuenta de Apple gratuita, **la app instalada caduca a los 7 días** y deja de
+abrirse. Se arregla repitiendo la misma orden. Al instalar encima, **los datos se
+conservan**: no borres la app del iPhone antes, porque al borrarla sí se pierden.
 
 ## Probar
 

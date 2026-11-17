@@ -15,7 +15,8 @@
         "CFBundleDevelopmentRegion": "es",
         "CFBundleAllowMixedLocalizations": true
       },
-      "deploymentTarget": "17.0"
+      "deploymentTarget": "17.0",
+      "appleTeamId": "8Z856TA59Z"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,6 +29,8 @@
       "package": "es.juanantonio.financialcontrol"
     },
     "plugins": [
+      "./plugins/sin-push.js",
+      "./plugins/sin-sandbox-de-scripts.js",
       "expo-router",
       [
         "expo-splash-screen",
