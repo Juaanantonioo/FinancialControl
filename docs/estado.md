@@ -434,3 +434,16 @@ cambia: no hay dependencias nuevas.
 2. La primera vez, la base de datos pasa sola de la versión 1 a la 2. Los datos se conservan.
 3. Probar con datos reales: anotar el valor de una inversión, mirar Inicio y las tres vistas
    de Análisis, y revisar VoiceOver y «Reducir movimiento».
+
+## 9. H5 · Planificación — rama `h5-planificacion` (17/11/2026)
+
+Encargo: `docs/prompt-claude-code-h5-planificacion.md`. Es el bloque 2 de la decisión D7.
+
+### 9.1 Baseline (antes de modificar nada)
+
+| Dato | Valor |
+|---|---|
+| Rama y commit de partida | `h3-vision-completa` @ `b055bf5` |
+| `npm run check` | pasa: 388 pruebas en 18 suites; formato, lint y tipos limpios |
+| Esquema de la base de datos | versión 2 (migración 1: cuentas, categorías y movimientos; migración 2: valores de inversión) |
+| `git status` | limpio, salvo el fichero del encargo en `docs/`, sin seguimiento |
