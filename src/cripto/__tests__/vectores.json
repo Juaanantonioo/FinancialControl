@@ -1,0 +1,26 @@
+{
+  "libsodium": "1.0.22",
+  "entrada": {
+    "correo_escrito": "  Ana.Ejemplo@Example.COM ",
+    "correo_normalizado": "ana.ejemplo@example.com",
+    "contrasena": "correcta batería caballo grapa",
+    "argon2id_pasadas": 4,
+    "argon2id_memoria_bytes": 134217728,
+    "clave_de_datos_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "nonce_contrasena_hex": "404142434445464748494a4b4c4d4e4f5051525354555657",
+    "nonce_recuperacion_hex": "606162636465666768696a6b6c6d6e6f7071727374757677",
+    "secreto_de_recuperacion_hex": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf"
+  },
+  "salida": {
+    "sal_hex": "6f3440d8b9ac4d5c9b2c46c5fd3751a1",
+    "clave_maestra_hex": "feccd08eec4ad0a32ca41347f31c0eb5e0c45de325ae6ca4ab80d4fa4baaeed3",
+    "subclave_de_autenticacion_hex": "9c92b3a5320c666da8fdb7c54b0e544a0ebb61093e0a50c3df11b38ce7693671",
+    "subclave_de_autenticacion_base64url": "nJKzpTIMZm2o_bfFSw5USg67YQk-ClDD3xGzjOdpNnE",
+    "subclave_de_envoltura_hex": "91b9f23bd35a23d3efd170430adb6c190933f4f3f3258bb20ff4591b965512f2",
+    "sobre_por_contrasena": "AUBBQkNERUZHSElKS0xNTk9QUVJTVFVWV0Bf0legVCfnNk8rOvY8kavhUNaRke7gVY-1hOLldgmQbzr48BlnPUJRLTcZR11QpQ",
+    "control_del_codigo_hex": "f1fd03",
+    "codigo_de_recuperacion": "M2GT-58X4-MPKA-FA59-NANT-SBDE-NYRB-3CNK-PJTV-DDXR-Q6XB-QF5X-QTZZ-3Z83",
+    "clave_de_recuperacion_hex": "d56b16ed216ba4a3b2ec1369b74e9af9405e425c6b44acaf967ac2fdf1de97d8",
+    "sobre_por_recuperacion": "AWBhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d6ONvORfCg6j2VdIUH200O_uZDGXJRsVyjcDc3joH8q79qpJ4Z5DFFeULsGYUMAtKA"
+  }
+}

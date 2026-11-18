@@ -61,7 +61,9 @@
             }
           ]
         }
-      ]
+      ],
+      "react-native-libsodium",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

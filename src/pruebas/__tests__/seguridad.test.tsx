@@ -869,7 +869,8 @@ describe('configuración nativa', () => {
     expect(nombres).toContain('./plugins/sin-push.js');
   });
 
-  it('la única dependencia nueva del bloque es expo-local-authentication', () => {
+  // B4b-1 añade react-native-libsodium y expo-secure-store, las dos permitidas por su encargo.
+  it('las dependencias de la app son las autorizadas, y ninguna más', () => {
     expect(Object.keys(paquete.dependencies).sort()).toEqual(
       [
         '@expo/ui',
@@ -883,6 +884,7 @@ describe('configuración nativa', () => {
         'expo-localization',
         'expo-notifications',
         'expo-router',
+        'expo-secure-store',
         'expo-splash-screen',
         'expo-sqlite',
         'expo-status-bar',
@@ -891,6 +893,7 @@ describe('configuración nativa', () => {
         'react',
         'react-dom',
         'react-native',
+        'react-native-libsodium',
         'react-native-safe-area-context',
         'react-native-screens',
         'react-native-svg',
