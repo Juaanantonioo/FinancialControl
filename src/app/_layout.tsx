@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
+import { useColorScheme } from 'react-native';
 
+import { iniciarApariencia } from '@/estado/apariencia';
 import { ProveedorDeAvisos } from '@/estado/Aviso';
 import { seguirReducirMovimiento } from '@/estado/animacion';
 import { useAvisosAutomaticos } from '@/estado/avisos';
@@ -8,7 +10,11 @@ import { useColaDeAtajos } from '@/estado/colaNativa';
 import { useWidgetAlDia } from '@/estado/widget';
 import { ProveedorDeDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
+import { almacenDeApariencia } from '@/lib/almacenDeApariencia';
 import { useColores } from '@/theme';
+
+// La apariencia elegida en Ajustes se aplica al cargar este fichero, antes del primer pintado.
+iniciarApariencia(almacenDeApariencia);
 
 /**
  * Las pestañas son siempre la base de la pila. Así, un enlace que abre la
@@ -37,6 +43,9 @@ function AvisosDelSistema() {
 
 export default function RootLayout() {
   const c = useColores();
+  // Hora y batería con el color que se lee sobre el tema que se ve, también cuando la
+  // persona elige en Ajustes el contrario al del iPhone.
+  const barraDeEstado = useColorScheme() === 'dark' ? 'light' : 'dark';
   // Los gráficos necesitan saber si está activado «Reducir movimiento».
   useEffect(seguirReducirMovimiento, []);
   return (
@@ -51,6 +60,7 @@ export default function RootLayout() {
             headerTitleStyle: { color: c.texto },
             contentStyle: { backgroundColor: c.fondo },
             headerBackButtonDisplayMode: 'minimal',
+            statusBarStyle: barraDeEstado,
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="movimiento" options={{ presentation: 'modal', headerShown: false }} />

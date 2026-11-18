@@ -336,6 +336,13 @@
   "ajustes": {
     "titulo": "Ajustes",
     "abrir": "Ajustes",
+    "apariencia": "Apariencia",
+    "apariencia_automatico": "Automático",
+    "apariencia_claro": "Claro",
+    "apariencia_oscuro": "Oscuro",
+    "aparienciaAyuda_automatico": "Sigue al modo claro u oscuro del iPhone.",
+    "aparienciaAyuda_claro": "Siempre en modo claro, aunque el iPhone esté en oscuro.",
+    "aparienciaAyuda_oscuro": "Siempre en modo oscuro, aunque el iPhone esté en claro.",
     "categoriasAyuda": "Crea, ordena y archiva las categorías de gasto e ingreso.",
     "applePayAyuda": "Cómo capturar los pagos con Atajos y qué cuenta va con cada tarjeta.",
     "avisosAyuda": "Qué avisos quieres recibir y cuándo.",

@@ -2,7 +2,8 @@
  * Sistema visual: colores, radios, sombras, tamaños de texto y medidas.
  *
  * Las pantallas nunca usan un color fijo: piden "fondo", "texto" o "negativo"
- * y reciben el valor del modo claro u oscuro según el ajuste del sistema
+ * y reciben el valor del modo claro u oscuro según el sistema o, si la persona
+ * eligió uno en Ajustes, según esa elección (`src/estado/apariencia.ts`)
  * (docs/03, apartados 9 y 11). Todo valor hexadecimal de la app vive en este
  * fichero; `src/theme/__tests__/contraste.test.ts` calcula el contraste de
  * cada pareja que se usa.

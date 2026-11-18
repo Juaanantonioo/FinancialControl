@@ -1007,3 +1007,108 @@ desplazamiento que no está en la rama.
 2. Comprobar con el dedo: el «+» en las cinco pestañas, el engranaje, la
    fila de «Pendiente», el widget con la app cerrada y que la última fila de
    Movimientos se puede tocar.
+
+## 12. B3c · Apariencia
+
+### 12.1 Baseline (18/11/2026)
+
+- Rama de partida: `b3b-navegacion` @ `5a5b515`, árbol limpio. Rama nueva: `b3c-apariencia`.
+- `npm run check`: pasa. 720 pruebas en 29 suites.
+- Coincide con el encargo.
+
+### 12.2 Hecho
+
+- Apartado «Apariencia» en Ajustes, el primero, con el selector de segmentos
+  de siempre: Automático, Claro y Oscuro. Debajo, una frase que dice qué
+  hace la opción elegida.
+- La elección se aplica con `Appearance.setColorScheme` de React Native:
+  `'light'`, `'dark'` y, para volver a seguir al iPhone, `'auto'`, que es el
+  valor que documenta React Native 0.88 («Passing 'auto' removes any
+  override, restoring the system preference»). `useColorScheme()` y
+  `useColores()` reciben el cambio; ninguna pantalla se ha tocado para leer
+  el tema.
+- Se guarda en el almacén de clave y valor de expo-sqlite, el mismo de las
+  preferencias de avisos, con su propia clave (`apariencia`). No va en la
+  base de datos financiera.
+- Se lee de forma síncrona al cargar `src/app/_layout.tsx`, antes del primer
+  pintado.
+
+Archivos: `src/lib/apariencia.ts` (opciones y lectura de lo guardado),
+`src/lib/almacenDeApariencia.ts` (dispositivo), `src/estado/apariencia.ts`
+(aplicar, guardar y hook), `src/app/ajustes.tsx`, `src/app/_layout.tsx`,
+`src/i18n/es.json` y un comentario en `src/theme/index.ts`.
+
+### 12.3 Decisiones tomadas sin consultar
+
+- **Fichero propio en lugar de ampliar `src/lib/preferencias.ts`.** Varias
+  pruebas antiguas sustituyen ese módulo entero; ampliarlo obligaba a
+  tocarlas. Usa el mismo almacén.
+- **Barra de estado.** En el simulador se vio que, en las pantallas apiladas
+  (Ajustes, la bandeja…), la hora y la batería seguían al sistema y no a la
+  elección: con «Oscuro» y el iPhone en claro quedaban oscuras sobre fondo
+  oscuro. Se fija `statusBarStyle` en la pila raíz según el tema que se ve.
+- **Con «Automático» guardado no se llama a la API al arrancar**: es lo que
+  iOS hace por defecto.
+- **Si guardar falla**, la elección se aplica igual y dura hasta cerrar la app.
+
+### 12.4 Pruebas
+
+- Había 720 en 29 suites; hay **748 en 31**. Ninguna de las 720 se ha tocado.
+- `src/lib/__tests__/apariencia.test.ts`: lectura y escritura, y once
+  valores no válidos (vacío, desconocido, corrupto, otro tipo) que se leen
+  como «Automático»; fallo del almacén al leer.
+- `src/pruebas/__tests__/apariencia.test.tsx`: el apartado es el primero,
+  las tres opciones, cuál está elegida para el lector de pantalla, cada
+  opción llama a la API con su valor y se guarda, «Automático» se recupera
+  con `'auto'`, y lo guardado se aplica al arrancar.
+
+### 12.5 Casos probados
+
+| Caso | Cómo |
+|---|---|
+| Cada opción cambia la app al instante | Simulador: capturas de Ajustes en las tres, sin reiniciar. Prueba |
+| Sobrevive a cerrar y abrir | Simulador: «Oscuro» con el sistema en claro y «Claro» con el sistema en oscuro, cerrando la app; al abrir, la primera pantalla de la app ya sale con el tema elegido. Prueba |
+| «Automático» sigue al sistema; «Claro» y «Oscuro» no | Simulador, cambiando el modo del sistema en cada caso |
+| Volver a «Automático» | Simulador: con el sistema en oscuro pasa de claro a oscuro, y al poner el sistema en claro vuelve a claro |
+| Preferencia vacía, corrupta o desconocida | Prueba |
+| Hoja modal abierta | Simulador: el alta de movimiento y su teclado numérico (que es de la app) cambian. Se cambió el tema con la hoja abierta y la hoja y la pantalla de debajo cambiaron |
+| Gráficos | Simulador: anillo y barras de presupuesto con los colores del tema elegido. Línea y calendario: NO DEMOSTRADO en captura; usan `useColores()` igual que el anillo |
+| Barra de pestañas y barra de estado | Simulador |
+| Texto al máximo | Captura: las tres opciones caben en una línea |
+| VoiceOver | Prueba: cada opción es una pestaña con su estado «seleccionada». No se ha oído |
+
+### 12.6 Capturas
+
+Diez en `docs/capturas/b3c/`, todas miradas y hechas con el código final:
+Ajustes en «Automático» (sistema claro y oscuro), en «Oscuro» con el sistema
+en claro, en «Claro» con el sistema en oscuro, la vuelta a «Automático» y el
+texto al máximo; Inicio, Análisis y el alta en «Oscuro» con el sistema en
+claro; Plan en «Claro» con el sistema en oscuro.
+
+Como el simulador no deja tocar, la opción se eligió con un parámetro
+temporal de la ruta que llamaba a la misma función que el selector. Ese
+código no está en la rama.
+
+### 12.7 Limitaciones
+
+- **El widget y los avisos** los pinta iOS fuera de la app: siguen el modo
+  del sistema, no la elección de Ajustes.
+- **La pantalla de carga** que iOS muestra antes de que arranque la app
+  también sigue al sistema. Con «Oscuro» y el iPhone en claro se ve un
+  instante en blanco antes de la primera pantalla. Cambiarlo exige tocar
+  `app.json`, vetado en este bloque.
+- **El teclado del sistema** (el de buscar o el de escribir un nombre): NO
+  DEMOSTRADO. El simulador no lo saca sin tocar un campo. La API lo cubre
+  según la documentación.
+
+### 12.8 NO DEMOSTRADO
+
+- Nada se ha visto en el iPhone.
+- Tocar el selector con el dedo: en el simulador se eligió por otra vía.
+- VoiceOver leyendo la opción elegida.
+- El teclado del sistema, y la línea y el calendario, con el tema elegido.
+
+### 12.9 Acciones del usuario
+
+Reinstalar con `npx expo run:ios --device --configuration Release`. Es solo
+JavaScript; los datos se conservan al instalar encima.

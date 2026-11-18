@@ -2,9 +2,11 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CabeceraConVuelta } from '@/componentes/basicos';
+import { CabeceraConVuelta, Segmentos } from '@/componentes/basicos';
 import { Tarjeta } from '@/componentes/Tarjeta';
+import { elegirApariencia, useApariencia } from '@/estado/apariencia';
 import { t } from '@/i18n';
+import { APARIENCIAS } from '@/lib/apariencia';
 import { Espacio, Letra, TactilMinimo, useColores } from '@/theme';
 
 /** Los accesos de Ajustes, en el orden en que se muestran. */
@@ -37,17 +39,35 @@ export const ACCESOS_DE_AJUSTES = [
 
 /**
  * Ajustes: lo que se configura una vez y se toca poco. Se abre con el
- * engranaje de la cabecera de Inicio y reúne Categorías, Apple Pay y
- * tarjetas, Avisos y Diagnóstico.
+ * engranaje de la cabecera de Inicio. Primero, la apariencia de la app
+ * (automática, clara u oscura); debajo, Categorías, Apple Pay y tarjetas,
+ * Avisos y Diagnóstico.
  */
 export default function Ajustes() {
   const c = useColores();
   const margen = useSafeAreaInsets();
+  const apariencia = useApariencia();
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
       <CabeceraConVuelta titulo={t('ajustes.titulo')} />
       <ScrollView
         contentContainerStyle={[estilos.contenido, { paddingBottom: margen.bottom + Espacio.xl }]}>
+        <Tarjeta titulo={t('ajustes.apariencia')} testID="ajuste-apariencia">
+          <Segmentos
+            opciones={APARIENCIAS.map((valor) => ({
+              valor,
+              texto: t(`ajustes.apariencia_${valor}`),
+            }))}
+            valor={apariencia}
+            alCambiar={elegirApariencia}
+          />
+          <Text
+            maxFontSizeMultiplier={1.6}
+            style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}
+            testID="ayuda-de-apariencia">
+            {t(`ajustes.aparienciaAyuda_${apariencia}`)}
+          </Text>
+        </Tarjeta>
         <Tarjeta estilo={estilos.tarjeta}>
           {ACCESOS_DE_AJUSTES.map((acceso, i) => (
             <Pressable
