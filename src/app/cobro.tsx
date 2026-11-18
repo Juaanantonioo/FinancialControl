@@ -17,8 +17,8 @@ import {
   simboloDeDivisa,
   tecladoDesdeCentimos,
 } from '@/dominio/dinero';
+import { leerParametros } from '@/dominio/entradas';
 import { fechaDeOcurrencia } from '@/dominio/recurrentes';
-import { esMesValido } from '@/dominio/resumen';
 import { diasDelMes } from '@/dominio/tiempo';
 import { useConsulta, useDatos } from '@/estado/Datos';
 import { describirMes, diaYMes, fechaLarga } from '@/estado/fechas';
@@ -35,10 +35,12 @@ export default function PantallaDeCobro() {
   const c = useColores();
   const margen = useSafeAreaInsets();
   const formato = formatoRegional();
-  const { reglaId, mes } = useLocalSearchParams<{ reglaId?: string; mes?: string }>();
+  const { reglaId, mes: mesValido } = leerParametros(useLocalSearchParams(), {
+    reglaId: 'id',
+    mes: 'mes',
+  });
   const { repos } = useDatos();
   const { error, setError, ocupado, ejecutar } = useOperacion();
-  const mesValido = mes && esMesValido(mes) ? mes : null;
 
   const regla = useConsulta(
     (r) => (reglaId ? r.reglas.obtener(reglaId) : Promise.resolve(null)),

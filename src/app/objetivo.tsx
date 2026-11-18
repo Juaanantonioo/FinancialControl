@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton, CabeceraConVuelta } from '@/componentes/basicos';
 import { AnilloDeObjetivo, ritmoDeObjetivo } from '@/componentes/plan/Piezas';
 import { Dato, EstadoVacio, Tarjeta } from '@/componentes/Tarjeta';
+import { leerParametros } from '@/dominio/entradas';
 import { formatearNumero } from '@/dominio/dinero';
 import { fechaLocal } from '@/dominio/modelo';
 import { estadoDeObjetivo } from '@/dominio/objetivos';
@@ -23,7 +24,7 @@ import { cifrasTabulares, Espacio, Letra, TactilMinimo, useColores } from '@/the
 export default function PantallaDeObjetivo() {
   const c = useColores();
   const margen = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id } = leerParametros(useLocalSearchParams(), { id: 'id' });
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const hoy = fechaLocal();

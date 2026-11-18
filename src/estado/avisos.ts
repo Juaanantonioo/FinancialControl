@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 
 import type { Repositorios } from '@/datos';
 import { calcularAvisos, diaLocal, type Aviso, type Preferencias } from '@/dominio/avisos';
+import { esRutaDeAviso } from '@/dominio/entradas';
 import { estadoDelPresupuesto } from '@/dominio/presupuesto';
 import { useDatos } from '@/estado/Datos';
 import { diaYMes } from '@/estado/fechas';
@@ -141,9 +142,10 @@ export function destinoDelAviso(
 ): { pathname: string; params: Record<string, string> } | null {
   // El aviso que lanza la acción de Atajos solo trae el identificador de su entrada en la cola.
   if (typeof datos.capturaId === 'string' && typeof datos.ruta !== 'string') {
-    return { pathname: '/capturas', params: { cola: datos.capturaId } };
+    return { pathname: '/capturas', params: { cola: datos.capturaId.slice(0, 80) } };
   }
-  if (typeof datos.ruta !== 'string' || !datos.ruta.startsWith('/')) return null;
+  // Solo las pantallas a las que llevan los avisos de la app; cualquier otra ruta se ignora.
+  if (!esRutaDeAviso(datos.ruta)) return null;
   let params: Record<string, string> = {};
   try {
     const leidos: unknown = JSON.parse(
@@ -151,7 +153,9 @@ export function destinoDelAviso(
     );
     if (typeof leidos === 'object' && leidos !== null) {
       params = Object.fromEntries(
-        Object.entries(leidos).filter((par): par is [string, string] => typeof par[1] === 'string'),
+        Object.entries(leidos)
+          .filter((par): par is [string, string] => typeof par[1] === 'string')
+          .slice(0, 8),
       );
     }
   } catch {

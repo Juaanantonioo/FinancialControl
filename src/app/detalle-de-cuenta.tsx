@@ -14,10 +14,10 @@ import {
   valorDesactualizado,
   type ValorDeInversion,
 } from '@/dominio/inversion';
+import { leerParametros } from '@/dominio/entradas';
 import { fechaLocal, type Cuenta } from '@/dominio/modelo';
 import { finDeMes } from '@/dominio/patrimonio';
 import {
-  esMesValido,
   mesDe,
   moverMes,
   resumenDeCuenta,
@@ -52,8 +52,8 @@ export default function DetalleDeCuenta() {
   const c = useColores();
   const paleta = usePaleta();
   const margen = useSafeAreaInsets();
-  const { id, mes: mesPedido } = useLocalSearchParams<{ id?: string; mes?: string }>();
-  const [mes, setMes] = useState(mesPedido && esMesValido(mesPedido) ? mesPedido : mesDe());
+  const { id, mes: mesPedido } = leerParametros(useLocalSearchParams(), { id: 'id', mes: 'mes' });
+  const [mes, setMes] = useState(mesPedido ?? mesDe());
 
   const cuenta = useConsulta((r) => (id ? r.cuentas.obtener(id) : Promise.resolve(null)), [id]);
   // Todos los movimientos de la cuenta: el saldo actual depende de todos, no solo del mes.

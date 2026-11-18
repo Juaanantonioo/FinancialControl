@@ -20,8 +20,7 @@ import {
 } from '@/componentes/basicos';
 import { FilaDeMovimiento } from '@/componentes/FilaDeMovimiento';
 import { agruparPorDia } from '@/datos/movimientos';
-import { esFechaValida } from '@/dominio/modelo';
-import { esMesValido } from '@/dominio/resumen';
+import { leerParametros } from '@/dominio/entradas';
 import { aspectoDeMovimiento } from '@/estado/aspecto';
 import { useConsulta } from '@/estado/Datos';
 import { describirFecha, describirMes, fechaLarga } from '@/estado/fechas';
@@ -47,13 +46,13 @@ export default function Movimientos() {
 
   // Filtros pedidos desde otra pantalla. Se aplican una vez por petición:
   // después la persona puede cambiarlos o quitarlos con libertad.
-  const pedido = useLocalSearchParams<{
-    categoriaId?: string;
-    cuentaId?: string;
-    mes?: string;
-    dia?: string;
-    peticion?: string;
-  }>();
+  const pedido = leerParametros(useLocalSearchParams(), {
+    categoriaId: 'idOpcional',
+    cuentaId: 'idOpcional',
+    mes: 'mes',
+    dia: 'dia',
+    peticion: 'marca',
+  });
   const firma = [pedido.peticion, pedido.categoriaId, pedido.cuentaId, pedido.mes, pedido.dia].join(
     '|',
   );
@@ -62,10 +61,10 @@ export default function Movimientos() {
     setAplicada(firma);
     if (firma !== '||||') {
       setTexto('');
-      setCategoriaId(pedido.categoriaId || null);
-      setCuentaId(pedido.cuentaId || null);
-      setMes(pedido.mes && esMesValido(pedido.mes) ? pedido.mes : null);
-      setDia(pedido.dia && esFechaValida(pedido.dia) ? pedido.dia : null);
+      setCategoriaId(pedido.categoriaId);
+      setCuentaId(pedido.cuentaId);
+      setMes(pedido.mes);
+      setDia(pedido.dia);
     }
   }
 

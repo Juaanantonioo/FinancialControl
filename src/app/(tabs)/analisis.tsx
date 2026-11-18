@@ -13,9 +13,9 @@ import {
   SelectorDeMes,
   Tarjeta,
 } from '@/componentes/Tarjeta';
+import { leerParametros } from '@/dominio/entradas';
 import { variacionDelAnio } from '@/dominio/patrimonio';
-import { esFechaValida } from '@/dominio/modelo';
-import { esMesValido, evolucion, mesDe, moverMes, OTRAS, SIN_CATEGORIA } from '@/dominio/resumen';
+import { evolucion, mesDe, moverMes, OTRAS, SIN_CATEGORIA } from '@/dominio/resumen';
 import {
   comparativaConMesAnterior,
   resumenDelAnio,
@@ -31,7 +31,8 @@ import { usePanel } from '@/estado/panel';
 import { t } from '@/i18n';
 import { cifrasTabulares, Espacio, Letra, TactilMinimo, useColores, usePaleta } from '@/theme';
 
-type Vista = 'dia' | 'mes' | 'anio';
+const VISTAS = ['dia', 'mes', 'anio'] as const;
+type Vista = (typeof VISTAS)[number];
 type Panel = ReturnType<typeof usePanel>;
 
 /** A partir de este tamaño de letra el calendario no cabe y se muestra una lista de días. */
@@ -47,13 +48,13 @@ export default function Analisis() {
   const panel = usePanel();
   // Un enlace puede abrir la pestaña en una vista, un mes, un año o un día concretos:
   // financialcontrol://analisis?vista=anio&anio=2026
-  const pedido = useLocalSearchParams<{
-    vista?: string;
-    mes?: string;
-    anio?: string;
-    dia?: string;
-    peticion?: string;
-  }>();
+  const pedido = leerParametros(useLocalSearchParams(), {
+    vista: { lista: VISTAS },
+    mes: 'mes',
+    anio: 'anio',
+    dia: 'dia',
+    peticion: 'marca',
+  });
   const [vista, setVista] = useState<Vista>('dia');
   const [mes, setMes] = useState(mesDe());
   const [anio, setAnio] = useState(Number(panel.hoy.slice(0, 4)));
@@ -64,15 +65,13 @@ export default function Analisis() {
   const [aplicada, setAplicada] = useState('||||');
   if (firma !== aplicada) {
     setAplicada(firma);
-    if (pedido.vista === 'dia' || pedido.vista === 'mes' || pedido.vista === 'anio') {
-      setVista(pedido.vista);
-    }
-    if (pedido.anio && /^\d{4}$/.test(pedido.anio)) setAnio(Number(pedido.anio));
-    if (pedido.dia && esFechaValida(pedido.dia)) {
+    if (pedido.vista) setVista(pedido.vista);
+    if (pedido.anio !== null) setAnio(pedido.anio);
+    if (pedido.dia) {
       setVista('dia');
       setMes(pedido.dia.slice(0, 7));
       setDiaPedido(pedido.dia);
-    } else if (pedido.mes && esMesValido(pedido.mes)) {
+    } else if (pedido.mes) {
       setMes(pedido.mes);
     }
   }

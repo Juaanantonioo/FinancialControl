@@ -14,6 +14,7 @@ import {
 import { CabeceraDeFormulario, useOperacion } from '@/componentes/Formulario';
 import { Campo, PasoDeNumero } from '@/componentes/plan/Piezas';
 import { EstadoVacio, SelectorDeMes } from '@/componentes/Tarjeta';
+import { leerParametros } from '@/dominio/entradas';
 import { analizarImporte, formatearNumero, simboloDeDivisa } from '@/dominio/dinero';
 import { fechaLocal } from '@/dominio/modelo';
 import { finDeMes } from '@/dominio/patrimonio';
@@ -41,14 +42,15 @@ export default function PantallaDeRegla() {
   const c = useColores();
   const margen = useSafeAreaInsets();
   const formato = formatoRegional();
-  const pedido = useLocalSearchParams<{
-    id?: string;
-    clase?: string;
-    objetivoId?: string;
-    importe?: string;
-    cuentaDestinoId?: string;
-    nombre?: string;
-  }>();
+  // Un enlace puede traer el formulario empezado. Nada se guarda sin pulsar «Guardar».
+  const pedido = leerParametros(useLocalSearchParams(), {
+    id: 'id',
+    clase: { lista: CLASES },
+    objetivoId: 'idOpcional',
+    importe: 'numero',
+    cuentaDestinoId: 'idOpcional',
+    nombre: { texto: 80 },
+  });
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const { error, setError, ocupado, ejecutar } = useOperacion();
@@ -58,9 +60,7 @@ export default function PantallaDeRegla() {
   const [noExiste, setNoExiste] = useState(false);
   const [nombre, setNombre] = useState(pedido.nombre ?? '');
   const [importe, setImporte] = useState(pedido.importe ?? '');
-  const [clase, setClase] = useState<ClaseDeRegla>(
-    CLASES.includes(pedido.clase as ClaseDeRegla) ? (pedido.clase as ClaseDeRegla) : 'fijo',
-  );
+  const [clase, setClase] = useState<ClaseDeRegla>(pedido.clase ?? 'fijo');
   const [periodicidad, setPeriodicidad] = useState<Periodicidad>('mensual');
   const [dia, setDia] = useState(Number(hoy.slice(8, 10)));
   const [mesAnual, setMesAnual] = useState(mesDe());

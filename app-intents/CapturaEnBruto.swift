@@ -13,11 +13,29 @@ enum CapturaEnBruto {
   /// atajo mal montado envía, por ejemplo, el contenido entero de una página.
   static let longitudMaxima = 200
 
-  /// Quita espacios y saltos de línea de los extremos y recorta el texto.
-  /// Un valor ausente se trata como texto vacío.
+  /// Deja un texto llegado de un atajo listo para guardarse y mostrarse: sin
+  /// caracteres de control (saltos de línea, tabuladores, nulos y marcas
+  /// invisibles de formato, que pasan a ser un espacio), sin espacios
+  /// repetidos ni en los extremos, y recortado. Un valor ausente se trata
+  /// como texto vacío. Hace lo mismo que `limpiarTextoExterno` en
+  /// `src/dominio/entradas.ts`.
   static func limpiar(_ texto: String?) -> String {
-    let limpio = (texto ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    // Se acota antes de limpiar para no recorrer un texto desmesurado.
+    let acotado = String((texto ?? "").prefix(longitudMaxima * 8))
+    let prohibidos = CharacterSet.controlCharacters
+      .union(.newlines)
+      .union(.illegalCharacters)
+    let sinControl = String(
+      String.UnicodeScalarView(
+        acotado.unicodeScalars.map { prohibidos.contains($0) ? " " : $0 }
+      )
+    )
+    let limpio = sinControl
+      .split(separator: " ", omittingEmptySubsequences: true)
+      .joined(separator: " ")
+      .trimmingCharacters(in: .whitespacesAndNewlines)
     return String(limpio.prefix(longitudMaxima))
+      .trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
 

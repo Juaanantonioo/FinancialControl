@@ -15,6 +15,7 @@ import {
   pulsarTecla,
   simboloDeDivisa,
 } from '@/dominio/dinero';
+import { leerParametros } from '@/dominio/entradas';
 import { fechaLocal } from '@/dominio/modelo';
 import { useConsulta, useDatos } from '@/estado/Datos';
 import { formatoRegional } from '@/estado/formato';
@@ -35,7 +36,7 @@ export default function PantallaDeAportacion() {
   const c = useColores();
   const margen = useSafeAreaInsets();
   const formato = formatoRegional();
-  const { objetivoId } = useLocalSearchParams<{ objetivoId?: string }>();
+  const { objetivoId } = leerParametros(useLocalSearchParams(), { objetivoId: 'id' });
   const { repos } = useDatos();
   const { error, setError, ocupado, ejecutar } = useOperacion();
   const [texto, setTexto] = useState('');

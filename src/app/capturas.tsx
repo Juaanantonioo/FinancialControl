@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton, CabeceraConVuelta } from '@/componentes/basicos';
 import { EstadoVacio } from '@/componentes/Tarjeta';
 import type { CapturaListada } from '@/datos/capturas';
+import { leerParametros } from '@/dominio/entradas';
 import { loQueFalta, seGuardaConUnToque } from '@/dominio/captura';
 import { useAviso } from '@/estado/Aviso';
 import { textoDeError, useConsulta, useDatos } from '@/estado/Datos';
@@ -29,7 +30,7 @@ const MAXIMO_VISIBLE = 100;
 export default function Bandeja() {
   const c = useColores();
   const margen = useSafeAreaInsets();
-  const { id, cola } = useLocalSearchParams<{ id?: string; cola?: string }>();
+  const { id, cola } = leerParametros(useLocalSearchParams(), { id: 'idOpcional', cola: 'cola' });
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const [verOtras, setVerOtras] = useState(false);

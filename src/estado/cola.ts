@@ -7,12 +7,30 @@
  * prueba de la guía entra por este mismo camino.
  */
 import type { Repositorios } from '@/datos';
+import { limpiarTextoExterno } from '@/dominio/entradas';
 import {
   ACCION_REGISTRAR_PAGO,
+  LONGITUD_MAXIMA_DE_TEXTO,
   gastoDeLaInvocacion,
   pagoDeLaInvocacion,
   type Invocacion,
 } from '@/dominio/captura';
+
+/**
+ * Copia de la entrada con sus textos limpios: sin caracteres de control y con
+ * la longitud acotada. Lo que escribe un atajo es texto de fuera de la app.
+ */
+function sanear(invocacion: Invocacion): Invocacion {
+  const params: Record<string, unknown> = {};
+  const crudos: unknown = invocacion.params;
+  if (typeof crudos === 'object' && crudos !== null) {
+    for (const [clave, valor] of Object.entries(crudos).slice(0, 12)) {
+      params[clave] =
+        typeof valor === 'string' ? limpiarTextoExterno(valor, LONGITUD_MAXIMA_DE_TEXTO) : valor;
+    }
+  }
+  return { ...invocacion, params: params as Invocacion['params'] };
+}
 
 /**
  * Importa las entradas de la cola. Cada una se identifica por su `id`, así
@@ -28,8 +46,9 @@ export async function importarInvocaciones(
   const antes = await repos.capturas.contarPendientes();
   // De la más antigua a la más reciente: así la regla de duplicados marca la segunda.
   const enOrden = [...invocaciones].sort((x, y) => (x.createdAt ?? 0) - (y.createdAt ?? 0));
-  for (const invocacion of enOrden) {
+  for (const original of enOrden) {
     try {
+      const invocacion = sanear(original);
       const pago = pagoDeLaInvocacion(invocacion, ahora);
       if (pago) {
         await repos.capturas.registrar(pago);

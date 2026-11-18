@@ -6,12 +6,14 @@ import { BotonAnadir, Cabecera, Segmentos, useMargenDeLista } from '@/componente
 import { SeccionFijos } from '@/componentes/plan/SeccionFijos';
 import { SeccionObjetivos } from '@/componentes/plan/SeccionObjetivos';
 import { SeccionPresupuesto } from '@/componentes/plan/SeccionPresupuesto';
-import { esMesValido, mesDe } from '@/dominio/resumen';
+import { leerParametros } from '@/dominio/entradas';
+import { mesDe } from '@/dominio/resumen';
 import { usePanel } from '@/estado/panel';
 import { t } from '@/i18n';
 import { Espacio, useColores } from '@/theme';
 
-type Seccion = 'presupuesto' | 'fijos' | 'objetivos';
+const SECCIONES = ['presupuesto', 'fijos', 'objetivos'] as const;
+type Seccion = (typeof SECCIONES)[number];
 
 /**
  * Plan: lo que se puede gastar y lo que viene. Tres secciones con un
@@ -28,20 +30,18 @@ export default function Plan() {
   const [mes, setMes] = useState(mesDe());
 
   // La pestaña sigue montada entre visitas: lo pedido se aplica una vez por petición.
-  const pedido = useLocalSearchParams<{ seccion?: string; mes?: string; peticion?: string }>();
+  const pedido = leerParametros(useLocalSearchParams(), {
+    seccion: { lista: SECCIONES },
+    mes: 'mes',
+    peticion: 'marca',
+  });
   // La marca de petición permite pedir dos veces seguidas la misma sección.
   const firma = `${pedido.seccion ?? ''}|${pedido.mes ?? ''}|${pedido.peticion ?? ''}`;
   const [aplicada, setAplicada] = useState('||');
   if (firma !== aplicada) {
     setAplicada(firma);
-    if (
-      pedido.seccion === 'presupuesto' ||
-      pedido.seccion === 'fijos' ||
-      pedido.seccion === 'objetivos'
-    ) {
-      setSeccion(pedido.seccion);
-    }
-    if (pedido.mes && esMesValido(pedido.mes)) setMes(pedido.mes);
+    if (pedido.seccion) setSeccion(pedido.seccion);
+    if (pedido.mes) setMes(pedido.mes);
   }
 
   return (

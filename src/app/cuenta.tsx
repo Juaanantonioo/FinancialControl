@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Boton, Fila, PasoDeFecha, Segmentos, TextoDeError } from '@/componentes/basicos';
+import { leerParametros } from '@/dominio/entradas';
 import { analizarImporte, formatearNumero, simboloDeDivisa } from '@/dominio/dinero';
 import { fechaLocal, type Cuenta, type TipoDeCuenta } from '@/dominio/modelo';
 import { useAviso } from '@/estado/Aviso';
@@ -17,7 +18,7 @@ import { Espacio, Letra, TactilMinimo, useColores } from '@/theme';
  */
 export default function PantallaDeCuenta() {
   const c = useColores();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id } = leerParametros(useLocalSearchParams(), { id: 'id' });
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const formato = formatoRegional();

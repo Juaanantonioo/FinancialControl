@@ -22,6 +22,7 @@ import {
   simboloDeDivisa,
   tecladoDesdeCentimos,
 } from '@/dominio/dinero';
+import { leerParametros } from '@/dominio/entradas';
 import type { Captura } from '@/dominio/captura';
 import { fechaLocal, type Movimiento } from '@/dominio/modelo';
 import { aspectoDeCategoria } from '@/estado/aspecto';
@@ -57,7 +58,10 @@ export default function PantallaDeMovimiento() {
   const margen = useSafeAreaInsets();
   // `id` edita un movimiento. `capturaId` abre el alta con los datos de una
   // captura de la bandeja y, al guardar, la da por resuelta.
-  const { id, capturaId } = useLocalSearchParams<{ id?: string; capturaId?: string }>();
+  const { id, capturaId } = leerParametros(useLocalSearchParams(), {
+    id: 'id',
+    capturaId: 'idOpcional',
+  });
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const formato = formatoRegional();

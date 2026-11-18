@@ -7,6 +7,7 @@ import { Boton, Fila, Segmentos, Selector, TextoDeError } from '@/componentes/ba
 import { CabeceraDeFormulario, useOperacion } from '@/componentes/Formulario';
 import { Campo } from '@/componentes/plan/Piezas';
 import { EstadoVacio, SelectorDeMes } from '@/componentes/Tarjeta';
+import { leerParametros } from '@/dominio/entradas';
 import { analizarImporte, formatearNumero, simboloDeDivisa } from '@/dominio/dinero';
 import type { Objetivo, TipoDeObjetivo } from '@/dominio/objetivos';
 import { finDeMes } from '@/dominio/patrimonio';
@@ -27,7 +28,7 @@ export default function PantallaDeObjetivoEditar() {
   const c = useColores();
   const margen = useSafeAreaInsets();
   const formato = formatoRegional();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id } = leerParametros(useLocalSearchParams(), { id: 'id' });
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const { error, setError, ocupado, ejecutar } = useOperacion();

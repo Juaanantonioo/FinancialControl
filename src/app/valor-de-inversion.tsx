@@ -14,6 +14,7 @@ import {
   simboloDeDivisa,
   tecladoDesdeCentimos,
 } from '@/dominio/dinero';
+import { leerParametros } from '@/dominio/entradas';
 import type { ValorDeInversion } from '@/dominio/inversion';
 import { fechaLocal } from '@/dominio/modelo';
 import { useAviso } from '@/estado/Aviso';
@@ -30,7 +31,10 @@ import { cifrasTabulares, Espacio, Letra, useColores } from '@/theme';
 export default function PantallaDeValor() {
   const c = useColores();
   const margen = useSafeAreaInsets();
-  const { id, cuentaId: cuentaPedida } = useLocalSearchParams<{ id?: string; cuentaId?: string }>();
+  const { id, cuentaId: cuentaPedida } = leerParametros(useLocalSearchParams(), {
+    id: 'id',
+    cuentaId: 'id',
+  });
   const { repos, notificarCambio } = useDatos();
   const mostrarAviso = useAviso();
   const formato = formatoRegional();
