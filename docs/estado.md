@@ -1363,3 +1363,24 @@ sobre los 51 commits de todas las ramas y sobre el árbol:
 - Ninguna clave, token ni dirección de proyecto. El único fichero de entorno con
   seguimiento es `.env.example`, con valores de relleno.
 - Control positivo: el recorrido encuentra las líneas que nombran `EXPO_PUBLIC_SUPABASE`.
+
+---
+
+## 14. B4b-1 · Cuenta y claves — rama `b4b1-cuenta-y-claves`
+
+### 14.1 Baseline (18/11/2026)
+
+- Rama de partida: `b4a-seguridad-local`, commit `3785b0a`. Coincide con el encargo.
+- `npm run check`: pasa entero. **954 pruebas en 35 suites.**
+- Esquema local: versión 4.
+- `git status`: limpio salvo `docs/prompt-claude-code-b4b1-cuenta-y-claves.md` sin seguimiento
+  (el encargo de este bloque).
+- Docker: disponible (29.4.0, servidor en marcha). CLI de Supabase: no estaba instalada; se
+  añade como dependencia de desarrollo del proyecto.
+- No existe `.env`: las pruebas usan la instancia local de Supabase.
+- **A-14 resuelto:** `expo` 58.0.26, `expo-router` 58.0.32, `expo-sqlite` 58.0.18 y
+  `jest-expo` 58.0.15. `npx expo install --check`: «Dependencies are up to date». Tras
+  actualizar, `npm run check` sigue en verde con las mismas 954 pruebas.
+- `npx expo install --fix` añadió además por su cuenta el plugin `expo-sqlite` a `app.json`.
+  Se revirtió: nadie lo pidió y toca la configuración nativa de la base local, que este
+  bloque no puede cambiar.
