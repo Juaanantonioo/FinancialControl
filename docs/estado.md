@@ -1112,3 +1112,18 @@ código no está en la rama.
 
 Reinstalar con `npx expo run:ios --device --configuration Release`. Es solo
 JavaScript; los datos se conservan al instalar encima.
+
+---
+
+## 13. B4a · Seguridad local — rama `b4a-seguridad-local`
+
+### 13.1 Baseline (18/11/2026)
+
+- Rama de partida: `b3c-apariencia`, commit `781b0c7`. Rama nueva: `b4a-seguridad-local`.
+- `npm run check`: pasa entero. **748 pruebas en 31 suites.**
+- Esquema de la base de datos: versión 4 (`src/datos/migraciones.ts`).
+- `git status`: limpio salvo `docs/prompt-claude-code-b4a-seguridad-local.md` sin seguimiento
+  (el encargo de este bloque).
+- **Diferencia con el encargo:** el encargo dice 720 pruebas en 29 suites. Esa era la cifra de
+  `b3b-navegacion`; el commit `781b0c7` (B3c) añadió 28 pruebas en 2 suites. Rama y commit
+  coinciden, así que se sigue. Las «pruebas de partida» de este bloque son las 748.
