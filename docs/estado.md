@@ -1127,3 +1127,239 @@ JavaScript; los datos se conservan al instalar encima.
 - **Diferencia con el encargo:** el encargo dice 720 pruebas en 29 suites. Esa era la cifra de
   `b3b-navegacion`; el commit `781b0c7` (B3c) añadió 28 pruebas en 2 suites. Rama y commit
   coinciden, así que se sigue. Las «pruebas de partida» de este bloque son las 748.
+
+### 13.2 Hecho por fase
+
+| Fase | Qué | Commit |
+|---|---|---|
+| 0 | Baseline y lectura | `9ebde7f` |
+| 1 | Auditoría con OWASP MASVS v2.1.0: `docs/seguridad/auditoria-4a.md`. 20 hallazgos: 0 críticos, 0 altos, 5 medios, 7 bajos, 8 informativos | `97b1f8c` |
+| 2 | Validación única de parámetros de ruta (`src/dominio/entradas.ts`) en las catorce pantallas, lista de rutas permitidas para los avisos y limpieza de los textos de Atajos en TypeScript y en Swift | `6852333` |
+| 3 | Bloqueo de la app: reglas puras (`src/dominio/bloqueo.ts`), capa sobre expo-local-authentication (`src/lib/autenticacion.ts`), estado (`src/estado/seguridad.ts`), pantalla de bloqueo por encima de toda la app (`src/componentes/seguridad/`) y Ajustes › Seguridad (`src/app/seguridad.tsx`) | `3374a8b` |
+| 4 | Modo privado: un ajuste en las preferencias del sistema que leen la app y Swift; al widget le llega dentro de sus datos. Avisos, widget, aviso de captura y cubierta del selector de apps. Incluye las pruebas de bloqueo y modo privado | `2b2afcf` |
+| 5 | `docs/seguridad/modelo-de-amenazas.md`: activos, adversarios, defensas, 30 requisitos para 4b y 10 preguntas abiertas | `89d945f` |
+| 6 | Casos límite, capturas y regresión | `ef48154` |
+| 7 | Documentación: este apartado, `07` (bloque 4 en 4a, 4b y 4c), `09` (D10 y D11) y README (Seguridad) | el commit «fase 7» |
+
+Dependencia añadida: `expo-local-authentication ~58.0.3`, con su plugin en `app.json` para
+el texto de uso de Face ID. Ninguna otra.
+
+### 13.3 Cómo funciona
+
+**Entradas.** Cada pantalla lee sus parámetros con `leerParametros(useLocalSearchParams(),
+esquema)`. El esquema dice qué es cada uno: identificador (UUID), mes, día, año, valor de
+una lista, marca de petición, cantidad o texto libre acotado. Lo que no valida vale `null` y
+la pantalla abre su estado por defecto. Una prueba recorre `src/app/` y falla si alguna
+pantalla lee parámetros de otra forma.
+
+**Bloqueo.** Es una barrera de acceso a la interfaz: **no cifra nada** y ninguna clave
+depende de la biometría. La preferencia se lee sin esperar al cargar la raíz de la app, así
+que con bloqueo lo primero que se pinta es la pantalla de bloqueo. Al pasar a segundo plano
+se anotan la hora y un reloj que solo avanza; al volver, `tocaBloquear` decide. La pantalla
+de bloqueo se pinta en una ventana por encima de todo (`FullWindowOverlay`), también de las
+hojas modales, y el contenido sigue montado debajo: un enlace o un aviso abren su pantalla
+ahí y solo se ve tras autenticarse. La cola de Atajos y los avisos quedan fuera de la
+puerta y siguen trabajando con la app bloqueada.
+
+**Modo privado.** Se guarda en las preferencias del sistema (`UserDefaults`, clave
+`modoPrivado`) porque es el único sitio que también lee el código Swift del aviso de
+captura. Al cambiarlo se rehacen todos los avisos programados y se reenvía el dato del
+widget, que pasa a ser «•••»: la cifra deja de salir de la app.
+
+### 13.4 Decisiones tomadas sin consultar
+
+1. **Baseline con 748 pruebas y no 720.** Rama y commit coincidían; la diferencia era la
+   cifra de B3b en el encargo. Se siguió.
+2. **Identificador malformado = «No encontrado», no alta.** El encargo pide que lo que no
+   valide abra el estado por defecto. Para el identificador de lo que la pantalla abre
+   (`movimiento?id=`, `cuenta?id=`…) el estado elegido es «ya no existe», con su botón de
+   volver, y no el formulario de alta. Motivos: una prueba antigua lo exige así
+   (`h3.test.tsx`, «un valor que no existe lo dice…») y no se pueden tocar; y es más seguro
+   que un enlace de edición estropeado no se convierta en un alta. Vacío (`?id=`) sí abre
+   el alta. Los parámetros que solo ajustan la pantalla (mes, sección, vista, filtros) se
+   ignoran sin más.
+3. **Un parámetro repetido en la URL se ignora**, aunque sus dos valores sean válidos: no
+   se sabe cuál se quería.
+4. **Preferencia de bloqueo corrupta = bloqueo activo y sin espera.** Si hay algo guardado
+   es porque la persona pasó por Seguridad; ante la duda se pide autenticación de más. No
+   deja a nadie fuera: se entra con la cara, la huella o el código, como siempre. Si no hay
+   nada guardado (instalación nueva) no hay bloqueo.
+5. **iPhone que se queda sin código ni biometría con el bloqueo activo: se entra**, y
+   Seguridad lo avisa. No hay con qué autenticarse y mantenerlo cerrado dejaría los datos
+   inaccesibles para siempre. Quitar el código del iPhone exige escribirlo.
+6. **Activar y desactivar el bloqueo piden autenticación.** Al activar, comprueba que la
+   persona puede desbloquear; al desactivar, evita que lo quite quien encuentre la app
+   abierta.
+7. **Al abrir la app desde cero se pide siempre**, sea cual sea la espera. La espera solo
+   cuenta al volver de segundo plano.
+8. **Dos relojes para la espera.** Además de la hora del iPhone se usa un reloj que solo
+   avanza. Si la hora retrocede, o avanza menos que el otro reloj, se bloquea.
+9. **Sin espera, la app queda bloqueada al salir, no al volver**, para que lo que iOS guarde
+   para el selector de apps sea la pantalla de bloqueo.
+10. **Los avisos solo llevan a cuatro rutas** (`/cobro`, `/plan`, `/capturas`,
+    `/detalle-de-cuenta`), que son las que la app usa.
+11. **La limpieza de textos de Atajos en TypeScript se hace en `src/estado/cola.ts`**, antes
+    de llegar al dominio, porque `src/dominio/captura.ts` no se podía modificar.
+12. **«Seguridad» es una fila propia en Ajustes**, fuera de la lista `ACCESOS_DE_AJUSTES`,
+    porque dos pruebas antiguas fijan esa lista en cuatro elementos.
+13. **En modo privado el título de todos los avisos es «FinancialControl»** y el cuerpo una
+    frase fija por tipo.
+
+### 13.5 Pruebas
+
+- Antes: 748 en 31 suites. Después: **954 en 35 suites**. `npm run check` pasa entero.
+- Nuevas (206): `src/dominio/__tests__/entradas.test.ts` (54),
+  `src/pruebas/__tests__/entradas.test.tsx` (61), `src/dominio/__tests__/bloqueo.test.ts`
+  (32) y `src/pruebas/__tests__/seguridad.test.tsx` (59).
+- **Pruebas antiguas tocadas: ninguna.** El encargo permitía cambiar las que comprobaran un
+  texto de aviso; no hizo falta, porque el modo privado entra por un parámetro opcional y
+  sin él los textos son los de antes.
+
+### 13.6 Prebuild y compilación
+
+- `npx expo prebuild --clean --platform ios`: correcto.
+- Entitlements de la app y del widget tras el prebuild: solo
+  `com.apple.security.application-groups`. **Sin `aps-environment`.**
+- `PRODUCT_BUNDLE_IDENTIFIER = es.juanantonio.financialcontrol`, sin cambios. Esquema
+  `financialcontrol`, sin cambios.
+- `Info.plist` gana `NSFaceIDUsageDescription` («FinancialControl usa Face ID para
+  desbloquear la app.»), que pone el plugin de expo-local-authentication.
+- `npx expo run:ios` para el simulador iPhone 17: **Build Succeeded, 0 errores**, dos veces
+  (tras la fase 4 y tras el último retoque en Swift). La app se instala y abre.
+- No se ha compilado para el iPhone físico ni se ha instalado nada en él.
+
+### 13.7 Casos límite
+
+«Prueba» es una prueba automática. «Simulador» es visto en una captura del iPhone 17
+simulado, con datos de ejemplo.
+
+| Caso | Resultado | Cómo |
+|---|---|---|
+| `movimiento?id=` vacío | Abre el alta | Prueba y simulador |
+| `id` con texto, 10.000 caracteres, comillas y punto y coma, saltos de línea, emojis, `../` | «Este movimiento ya no existe», con «Cancelar». El texto no llega a ninguna consulta | Prueba (12 valores) y simulador |
+| `id` con un UUID que no existe | «Este movimiento ya no existe» y se puede volver | Prueba |
+| Lo mismo en `plan?seccion=&mes=` y `analisis?vista=&anio=` | Sección y vista por defecto | Prueba y simulador |
+| Parámetro repetido dos veces | Se ignora | Prueba y simulador |
+| Las catorce pantallas con los doce valores hostiles en cada parámetro | Ninguna falla, ninguna escribe en la base, ninguna navega | Prueba (se compara un volcado completo de la base) |
+| Diez enlaces hostiles seguidos en el simulador | La app sigue viva y Metro no registra errores | Simulador |
+| «Registrar pago» con comercio de 5.000 caracteres y caracteres de control | Se guarda limpio y con 200 caracteres como mucho | Prueba de la parte TypeScript |
+| Lo mismo en Swift | El código compila y hace la misma limpieza | **NO DEMOSTRADO** ejecutando la acción: no se puede lanzar un atajo desde la línea de órdenes |
+| Dispositivo sin código ni biometría | El interruptor aparece desactivado con su explicación; no se puede activar | Prueba |
+| Biometría fallida tres veces | Sigue bloqueada, lo dice y deja reintentar | Prueba. Un fallo, en el simulador |
+| Biometría cancelada | Sigue bloqueada, sin mensaje de error | Prueba |
+| Biometría desactivada en el sistema, con código | Sigue bloqueada hasta autenticarse | Prueba de la regla. La hoja del código, NO DEMOSTRADO |
+| Volver a los 30 segundos con los tres tiempos | Bloquea con «al instante»; no con 1 ni con 5 minutos | Prueba |
+| Reloj hacia atrás en segundo plano | Bloquea | Prueba |
+| Abrir por enlace con la app bloqueada | Se ve el bloqueo; tras Face ID, el destino (Plan › Fijos) | Prueba y simulador |
+| Abrir por aviso o por el widget con la app bloqueada | Mismo camino que el enlace | Prueba de la puerta. Tocar un aviso o el widget, **NO DEMOSTRADO** |
+| Acción de Atajos con la app bloqueada | La captura se guarda | Prueba de la importación. En un iPhone, NO DEMOSTRADO |
+| Hoja modal abierta al bloquearse | No se ve detrás; vuelve tras autenticar | Simulador |
+| Preferencia de bloqueo corrupta o desconocida | Arranca bloqueada y sin espera; se entra autenticándose | Prueba |
+| Modo privado con avisos ya programados | Se rehacen los mismos avisos con textos sin importes ni nombres | Prueba |
+| Modo privado con el widget colocado | El dato compartido pasa a «•••» / «Importes ocultos» | Prueba, y leído en el contenedor del grupo en el simulador. Ver el widget pintado, **NO DEMOSTRADO** |
+| Aviso de captura desde Swift en modo privado | El código usa textos fijos y lee la misma clave | Prueba del código fuente. Ver el aviso, **NO DEMOSTRADO** |
+| Selector de apps en claro y en oscuro | La cubierta se pinta al dejar de estar delante | Prueba. Verlo en el selector, **NO DEMOSTRADO** |
+
+### 13.8 Capturas
+
+Trece en `docs/capturas/b4a/`, todas miradas, con el código final y datos de ejemplo:
+
+- Ajustes › Seguridad: `seguridad-desactivado-claro`, `seguridad-bloqueo-activo-oscuro`,
+  `seguridad-todo-activo-claro`.
+- Pantalla de bloqueo: `bloqueo-comprobando-claro`, `bloqueo-comprobando-oscuro`,
+  `bloqueo-fallido-claro`, `bloqueo-cara-no-reconocida-oscuro` (con el diálogo de iOS).
+- Bloqueo sobre una hoja modal: `bloqueo-sobre-hoja-modal-claro` y
+  `hoja-modal-tras-autenticar-claro`.
+- Enlace con la app bloqueada: `bloqueo-face-id-tras-enlace-claro` y
+  `destino-del-enlace-tras-autenticar-claro`.
+- «No encontrado»: `no-encontrado-claro` y `no-encontrado-oscuro`.
+
+Sin captura del widget en modo privado: el simulador no deja colocar un widget desde la
+línea de órdenes.
+
+Cómo se hicieron sin poder tocar la pantalla: el bloqueo y el modo privado se activaron
+escribiendo su preferencia en el almacén del simulador (la misma que escribe la app), y
+Face ID se simuló con las notificaciones de `BiometricKit_Sim`. No se añadió código
+temporal a la app.
+
+### 13.9 Limitaciones
+
+- **El bloqueo no cifra.** Con el iPhone desbloqueado y un ordenador de confianza, o con una
+  copia sin cifrar, los ficheros se leen igual. Va a 4b (D10).
+- Con esperas de 1 o 5 minutos, quien coja el iPhone dentro de ese tiempo entra.
+- La espera se mide con la hora del iPhone y con un reloj que se para mientras el iPhone
+  duerme. Quien retrase la hora lo justo, sin pasarse, puede alargar la espera si el iPhone
+  ha dormido casi todo el rato. Con «al instante», que es el valor por defecto, no aplica.
+- El modo privado no cambia los avisos que ya estén entregados en el centro de
+  notificaciones: solo los programados y los nuevos.
+- El aviso de captura lee el modo privado al ejecutarse la acción; si la app no se ha
+  abierto nunca desde que se instaló, vale desactivado.
+- La cola de Atajos sigue guardando la captura en claro hasta que se abre la app (A-10).
+- Un filtro de Movimientos con un identificador válido que no existe muestra la lista
+  vacía con su filtro, no un «No encontrado»: es una lista, y el filtro se quita con un toque.
+- La pantalla de carga de iOS se ve un instante antes de la pantalla de bloqueo. No lleva
+  datos.
+
+### 13.10 NO DEMOSTRADO
+
+- Nada en un iPhone físico.
+- Face ID, Touch ID y el código reales; la hoja del código cuando la biometría falla.
+- Que la vista del selector de apps quede cubierta. iOS toma esa imagen al salir; la app
+  pinta la cubierta en cuanto iOS avisa, pero no se ha podido mirar el selector.
+- Que no se vea ni un fotograma del contenido al volver de segundo plano. En el simulador
+  las capturas tomadas a los tres segundos de volver muestran el bloqueo; no se ha grabado
+  fotograma a fotograma.
+- El widget pintando «•••» y los avisos en modo privado en la pantalla de bloqueo.
+- El aviso de captura de Swift en modo privado y la limpieza de textos en Swift, en ejecución.
+- VoiceOver sobre la pantalla de bloqueo.
+- El teclado del sistema cerrándose al bloquear.
+
+### 13.11 Lista de comprobación para el iPhone
+
+Instalar con `npx expo run:ios --device --configuration Release`. Hay código nativo nuevo:
+no basta con recargar. Los datos se conservan.
+
+| # | Paso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir la app sin tocar Seguridad | Todo igual que antes; no pide nada |
+| 2 | Inicio › engranaje › Seguridad | Los dos interruptores apagados |
+| 3 | Encender «Pedir Face ID o código» | iOS pide permiso de Face ID la primera vez y luego la cara; el interruptor queda encendido y aparecen los tres tiempos, con «Al instante» elegido |
+| 4 | Ir a la pantalla de inicio del iPhone y volver | Pantalla «App bloqueada»; Face ID abre |
+| 5 | Abrir el selector de apps con la app delante | La tarjeta de la app muestra solo «FinancialControl», sin cifras |
+| 6 | Bloqueada, taparse la cara para que Face ID falle | iOS ofrece reintentar y después el código del iPhone; con el código, entra |
+| 7 | Bloqueada, pulsar «Cancelar» en Face ID | Sigue bloqueada, con el botón «Desbloquear» |
+| 8 | Elegir «Tras 1 min», salir 20 segundos y volver | Entra sin pedir nada |
+| 9 | Salir más de 1 minuto y volver | Pide Face ID |
+| 10 | Cerrar la app del todo y abrirla | Pide Face ID aunque la espera sea de 5 minutos |
+| 11 | Abrir «Nuevo movimiento», salir y volver (con «Al instante») | No se ve el formulario detrás del bloqueo; tras Face ID sigue ahí |
+| 12 | Con la app bloqueada, tocar un aviso de cobro | Bloqueo primero; tras Face ID, la pantalla del cobro |
+| 13 | Con la app bloqueada, tocar el widget | Bloqueo primero; tras Face ID, el alta de movimiento |
+| 14 | Con la app cerrada y el bloqueo activo, ejecutar el atajo «Registrar pago» | Llega el aviso; al abrir y autenticarse, el pago está en la bandeja |
+| 15 | Encender «Ocultar importes fuera de la app» y mirar el widget | «•••» e «Importes ocultos» |
+| 16 | Con el modo privado, ejecutar «Registrar pago» | El aviso dice «Tienes un pago por revisar.», sin importe ni comercio |
+| 17 | Con el modo privado y un fijo que avise hoy | El aviso dice «Tienes un cobro pendiente.» |
+| 18 | Solo modo privado (bloqueo apagado): abrir el selector de apps | Tarjeta cubierta; al volver no pide nada |
+| 19 | En Safari, abrir `financialcontrol://movimiento?id=hola` | «Este movimiento ya no existe», con «Cancelar» |
+| 20 | En Safari, abrir `financialcontrol://plan?seccion=nada` | Plan en Presupuesto |
+| 21 | Apagar el bloqueo | Pide Face ID antes de apagarlo |
+| 22 | Con VoiceOver, bloquear la app | Solo se leen el nombre, el aviso de bloqueo y el botón |
+
+### 13.12 Acciones del usuario
+
+1. Reinstalar en el iPhone y pasar la lista de 13.11.
+2. Revisar `docs/seguridad/auditoria-4a.md` y decidir si se aceptan los destinos «riesgo
+   aceptado» (A-10, A-11, A-13, A-15, A-16, A-18).
+3. Revisar las diez preguntas abiertas de `docs/seguridad/modelo-de-amenazas.md` antes de
+   encargar el bloque 4b.
+
+### 13.13 Búsqueda de secretos antes de subir
+
+Repetida el 18/11/2026 con los patrones de `docs/seguridad/auditoria-4a.md`, apartado 6.1,
+sobre los 51 commits de todas las ramas y sobre el árbol:
+
+- **Una coincidencia, que no es un secreto:** la palabra `service_role` en
+  `docs/seguridad/auditoria-4a.md`, en la línea que enumera los patrones buscados. Entró
+  con el commit de la fase 1.
+- Ninguna clave, token ni dirección de proyecto. El único fichero de entorno con
+  seguimiento es `.env.example`, con valores de relleno.
+- Control positivo: el recorrido encuentra las líneas que nombran `EXPO_PUBLIC_SUPABASE`.

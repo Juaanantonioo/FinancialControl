@@ -243,7 +243,8 @@ y `financialcontrol://`. Los avisos sí llevan importes y nombres en su texto vi
 - Entitlements de la app y del widget: solo `com.apple.security.application-groups` con
   `group.es.juanantonio.financialcontrol`. **Sin `aps-environment`.**
 - `Info.plist`: ningún texto de permiso (`NS…UsageDescription`), ningún modo de segundo
-  plano, `NSAllowsArbitraryLoads = false`, un solo esquema de URL. Los avisos locales piden
+  plano, `NSAllowsArbitraryLoads = false`, y dos esquemas de URL: `financialcontrol` y el
+  identificador de paquete, que añade Expo. Los avisos locales piden
   su permiso en tiempo de ejecución y no necesitan clave en `Info.plist`.
 - `app.json` no declara permisos. Coincide con lo que el código usa: avisos locales,
   Atajos y widget.
@@ -358,4 +359,32 @@ y `financialcontrol://`. Los avisos sí llevan importes y nombres en su texto vi
 
 ## 7. Estado tras el bloque 4a
 
-Se completa al cerrar el bloque. Ver `docs/estado.md`, apartado 13.
+Rama `b4a-seguridad-local`. Detalle y lo no demostrado, en `docs/estado.md`, apartado 13.
+
+| Id | Qué se hizo | Dónde | Estado |
+|---|---|---|---|
+| A-03 | Bloqueo opcional con Face ID, Touch ID o código. Barrera de interfaz; no cifra | `src/dominio/bloqueo.ts`, `src/estado/seguridad.ts`, `src/componentes/seguridad/` | Corregido. Probado y visto en el simulador; no en un iPhone |
+| A-04 | Modo privado: avisos sin importes ni nombres, también el de captura en Swift; widget con «•••» | `src/estado/avisos.ts`, `src/estado/widget.ts`, `app-intents/CapturaEnBruto.swift` | Corregido como opción, desactivada por defecto. Sin modo privado sigue como estaba, por decisión del encargo |
+| A-05 | Cubierta al dejar de estar delante, con bloqueo o modo privado | `src/componentes/seguridad/Puerta.tsx` | Corregido en código. Verlo en el selector de apps: NO DEMOSTRADO |
+| A-06 | Validación única `leerParametros` en las catorce pantallas, con una prueba que impide leer parámetros de otra forma | `src/dominio/entradas.ts` | Corregido |
+| A-07 | Nombre limpio y hasta 80 caracteres; importe solo si es una cantidad; identificadores con forma de UUID | `src/app/regla.tsx` | Corregido |
+| A-08 | Limpieza de caracteres de control en Swift y antes de importar la cola | `app-intents/CapturaEnBruto.swift`, `src/estado/cola.ts` | Corregido. La parte Swift compila; ejecutarla, NO DEMOSTRADO |
+| A-09 | Lista de cuatro rutas permitidas | `src/dominio/entradas.ts`, `src/estado/avisos.ts` | Corregido |
+| A-11 | Con modo privado la cifra no sale de la app | `src/estado/widget.ts` | Reducido. Visto en el contenedor del grupo del simulador |
+
+Sin cambios, con su destino: A-01, A-02, A-12 y A-17 (4b); A-19 y A-20 (4b y 4c); A-10,
+A-13, A-15, A-16 y A-18 (riesgo aceptado, pendiente de que el dueño lo confirme); A-14
+(actualización aparte).
+
+Novedades que el propio bloque introduce y que una próxima auditoría debe mirar:
+
+- Una preferencia nueva en `UserDefaults` (`modoPrivado`) y otra en el almacén de clave y
+  valor (`bloqueo`). No son secretos. Quien pueda escribir en los ficheros de la app puede
+  apagar el bloqueo; quien puede hacer eso ya puede leer la base (A-01).
+- Un permiso nuevo en `Info.plist`: `NSFaceIDUsageDescription`.
+- Una dependencia nueva: `expo-local-authentication ~58.0.3`. `npm audit --omit=dev` sigue
+  dando los mismos 20 avisos moderados.
+
+**Búsqueda de secretos repetida antes de subir la rama** (misma orden y mismos patrones
+del apartado 6.1, sobre todas las ramas incluida esta): ver el resultado en
+`docs/estado.md`, apartado 13.13.

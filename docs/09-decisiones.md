@@ -32,6 +32,17 @@ sigue en Cuentas; anillo en lugar de barras horizontales para el gasto por categ
 | D8 | Versión web | Quiere una versión web para distribuirla y que sea accesible para todo el mundo | **Sí, después de la sincronización.** Se exporta el mismo proyecto de Expo a web y lee y escribe contra Supabase. La base de datos local en web no se usa como única copia: la documentación de Expo declara en alfa el soporte web de `expo-sqlite`. Sin captura de Apple Pay, widgets ni Atajos en web |
 | D9 | Monetización | Preguntó por anuncios o visitas. Aceptó la propuesta de suscripción | **Suscripción, sin anuncios y sin afiliación.** Plan gratuito permanente: registro manual, cuentas, Inicio y análisis del mes. Premium: sincronización entre dispositivos y web, inversiones, vista anual e informes, presupuestos y objetivos sin límite, y exportación. Prueba de Premium de **1 mes**. Sustituye la prueba de 6 meses de D4. Se mantiene la fase de lanzamiento gratuita de D4, avisando desde el principio de qué será de pago |
 
+### Decisiones del 18/11/2026
+
+| Id | Asunto | Lo que dijo el usuario | Decisión |
+|---|---|---|---|
+| D10 | Cifrado de la base de datos local | El cifrado con SQLCipher no entra en el bloque 4a; va en el 4b, junto con la jerarquía de claves de la cuenta | **Aplazado a 4b.** Motivo: una clave que solo viva en el llavero del dispositivo deja los datos ilegibles al cambiar de teléfono o restaurar una copia, y hoy no existe otra copia de los datos. En 4b la clave local quedará envuelta por la clave de la cuenta y será recuperable. Mientras tanto la base queda sin cifrar por la app (hallazgo A-01 de `docs/seguridad/auditoria-4a.md`) y el bloqueo de 4a es solo una barrera de interfaz |
+| D11 | Modelo de sincronización | Cifrado de extremo a extremo con código de recuperación | **El servidor solo almacenará contenido cifrado en el dispositivo.** La contraseña no saldrá del dispositivo; habrá un código de recuperación generado en el alta; sin contraseña y sin código, los datos del servidor no se podrán recuperar. Consecuencias: el operador no puede leer los datos ni ayudar a recuperarlos, y la versión web (D8) tendrá que descifrar en el navegador. Requisitos comprobables en `docs/seguridad/modelo-de-amenazas.md`, apartado 4 |
+
+Decisiones de diseño del bloque 4a tomadas por el dueño en el encargo (no se reabren): el
+bloqueo viene desactivado y no cifra nada; no hay PIN propio de la app; ninguna clave se
+vincula a la biometría; el modo privado es independiente del bloqueo y viene desactivado.
+
 Estado de D7 a 17/11/2026: el bloque 1 está hecho en la rama `h3-vision-completa`. El
 detalle y lo que queda pendiente de cada tarea están en `07`, apartado 2.2, y en
 `estado.md`, apartado 8.

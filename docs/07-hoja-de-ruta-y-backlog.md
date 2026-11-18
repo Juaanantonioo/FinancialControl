@@ -45,7 +45,10 @@ Los hitos y las tareas conservan su identificador. Cambia el orden en que se abo
 | 2 · Planificación | Presupuesto, disponible del mes, gastos fijos y objetivos | H5 completo, y T-070 a T-072 de H6 | Hecho en la rama `h5-planificacion`, sin notificaciones (T-066 y T-067 parciales). Ver apartado 2.3 |
 | 3 · Entrada rápida | Captura con Apple Pay integrada, widget y recordatorios | H3, y cierre de H1 con la medición del spike A | Hecho en la rama `b3-entrada-rapida`, sin medir en un iPhone. T-035 parcial. Ver apartado 2.4 |
 | 3b · Navegación | Inicio en siete bloques, botón de añadir en las cinco pestañas, Ajustes y Cuentas con inversiones | Sin tareas nuevas: reorganiza lo construido | Hecho en la rama `b3b-navegacion`. Solo JavaScript. Ver `docs/notas/navegacion-b3b.md` |
-| 4 · Cuentas y sincronización | Registro, inicio de sesión y sincronización con Supabase | H4 | Pendiente |
+| 3c · Apariencia | Apariencia automática, clara u oscura desde Ajustes | Sin tareas nuevas | Hecho en la rama `b3c-apariencia`. Solo JavaScript. Ver `estado.md`, apartado 12 |
+| 4a · Seguridad local | Auditoría con OWASP MASVS, bloqueo de la app, modo privado, validación de entradas externas y modelo de amenazas | Sin tareas nuevas: prepara H4 | Hecho en la rama `b4a-seguridad-local`, sin probar en un iPhone. Ver apartado 2.5 |
+| 4b · Cuentas y sincronización cifrada | Registro, inicio de sesión, cifrado de extremo a extremo con código de recuperación, sincronización con Supabase y cifrado de la base local con SQLCipher | H4, más los requisitos R-01 a R-30 de `docs/seguridad/modelo-de-amenazas.md` | Pendiente (D10 y D11) |
+| 4c · Privacidad y cierre de seguridad | Política de privacidad, exportación y borrado visibles, aviso de actualización obligatoria y repetición de la auditoría con la red ya en uso | T-102 y T-103 de H9, y parte de H8 | Pendiente |
 | 5 · Versión web | Exportación a web contra Supabase, alojamiento y pruebas en navegador | Sin tareas todavía: se definen al cerrar el bloque 4 | Pendiente (D8) |
 | 6 · Publicación y suscripción | Calidad, beta, envío a revisión y suscripción | H8, H9 y T-120 a T-127 | Pendiente (D9) |
 
@@ -111,6 +114,16 @@ Añadido fuera del backlog: vista por día con calendario (parte de G7).
 Todos los avisos son notificaciones locales. Que lleguen en un iPhone con la app cerrada
 está **NO DEMOSTRADO**: solo se ha probado el cálculo y la programación contra un sistema
 de notificaciones simulado.
+
+### 2.5 Bloque 4 dividido en 4a, 4b y 4c (18/11/2026)
+
+El bloque 4 se parte en tres para no mezclar la seguridad del dispositivo con la de la red.
+
+| Bloque | Qué entrega | Estado |
+|---|---|---|
+| 4a · Seguridad local | `docs/seguridad/auditoria-4a.md` (20 hallazgos, ninguno crítico ni alto), bloqueo de la app con Face ID, Touch ID o código, modo privado para widget, avisos y selector de apps, validación única de parámetros de ruta, limpieza de los textos de Atajos y `docs/seguridad/modelo-de-amenazas.md` | **Hecho** en `b4a-seguridad-local`. No toca la red ni la base de datos. Lo no demostrado en un iPhone está en `estado.md`, apartado 13 |
+| 4b · Cuentas y sincronización cifrada | Cuentas en Supabase, cifrado de extremo a extremo, código de recuperación, RLS probado con dos usuarios, SQLCipher con migración sin pérdida, exportación y borrado de cuenta | **Pendiente.** Debe cumplir los requisitos R-01 a R-30 y resolver las preguntas P-1 a P-10 del modelo de amenazas. Recibe de la auditoría A-01, A-02, A-12, A-17 y parte de A-20 |
+| 4c · Privacidad y cierre de seguridad | Política y ficha de privacidad, forzar actualización, y segunda auditoría con la red en uso | **Pendiente.** Recibe A-19 y el resto de A-20 |
 
 ## 3. Backlog
 

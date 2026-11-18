@@ -106,6 +106,39 @@ npm run format       # corrige el formato
 `npm run check` es lo mismo que ejecuta GitHub con cada subida
 (`.github/workflows/comprobacion.yml`).
 
+## Seguridad
+
+Lo que la app protege hoy y lo que no. El detalle está en
+[docs/seguridad/auditoria-4a.md](docs/seguridad/auditoria-4a.md) y en
+[docs/seguridad/modelo-de-amenazas.md](docs/seguridad/modelo-de-amenazas.md).
+
+**Qué hay**
+
+- Los datos se guardan solo en el iPhone. La app no los envía a ningún servidor.
+- Bloqueo opcional (Ajustes › Seguridad): pide Face ID, Touch ID o el código del iPhone al
+  abrir la app y al volver a ella. Viene desactivado.
+- Modo privado opcional: el widget y los avisos no muestran importes ni nombres, y la app se
+  tapa en el selector de apps. Viene desactivado.
+- Los enlaces `financialcontrol://` solo abren pantallas: ninguno guarda ni borra nada, y sus
+  parámetros se validan.
+- No hay secretos en el repositorio. Las claves van en `.env`, que git ignora, y la app solo
+  usa la clave pública de Supabase.
+
+**Qué no hay todavía**
+
+- **La base de datos no está cifrada por la app.** Solo cuenta con la protección de iOS. Quien
+  tenga el iPhone desbloqueado y un ordenador de confianza, o una copia de seguridad sin
+  cifrar, puede leerla.
+- **El bloqueo no es cifrado.** Es una barrera de acceso a la pantalla. No protege los
+  ficheros.
+- Sin cuentas, sin sincronización y sin copia propia: si se pierde el iPhone y no hay copia
+  de iOS, se pierden los datos.
+- Nada de lo anterior se ha comprobado en un iPhone físico; solo en pruebas automáticas y en
+  el simulador.
+
+El cifrado de la base y la sincronización con cifrado de extremo a extremo están
+planificados para el bloque 4b.
+
 ## Estructura
 
 | Carpeta | Contenido |
