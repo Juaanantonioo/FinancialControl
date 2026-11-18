@@ -42,6 +42,12 @@
       ],
       "expo-app-intents",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "FinancialControl usa Face ID para desbloquear la app."
+        }
+      ],
+      [
         "expo-widgets",
         {
           "widgets": [

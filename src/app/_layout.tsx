@@ -1,20 +1,26 @@
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { PuertaDeSeguridad } from '@/componentes/seguridad/Puerta';
 import { iniciarApariencia } from '@/estado/apariencia';
 import { ProveedorDeAvisos } from '@/estado/Aviso';
 import { seguirReducirMovimiento } from '@/estado/animacion';
 import { useAvisosAutomaticos } from '@/estado/avisos';
 import { useColaDeAtajos } from '@/estado/colaNativa';
+import { iniciarSeguridad } from '@/estado/seguridad';
 import { useWidgetAlDia } from '@/estado/widget';
 import { ProveedorDeDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
 import { almacenDeApariencia } from '@/lib/almacenDeApariencia';
+import { almacenDeSeguridad } from '@/lib/almacenDeSeguridad';
+import { autenticador } from '@/lib/autenticacion';
 import { useColores } from '@/theme';
 
 // La apariencia elegida en Ajustes se aplica al cargar este fichero, antes del primer pintado.
 iniciarApariencia(almacenDeApariencia);
+// El bloqueo también: si está activo, lo primero que se pinta es la pantalla de bloqueo.
+iniciarSeguridad(almacenDeSeguridad, autenticador);
 
 /**
  * Las pestañas son siempre la base de la pila. Así, un enlace que abre la
@@ -33,12 +39,26 @@ export const unstable_settings = { anchor: '(tabs)' };
  * Mantiene al día los avisos locales y el widget, y vuelca la cola de las
  * acciones de Atajos. No pinta nada: existe como componente
  * para poder leer los datos, que solo están disponibles dentro del proveedor.
+ * Sigue trabajando con la app bloqueada: guarda capturas y programa avisos,
+ * pero no enseña nada.
  */
 function AvisosDelSistema() {
   useAvisosAutomaticos();
   useColaDeAtajos();
   useWidgetAlDia();
   return null;
+}
+
+/** Los datos y los avisos en pantalla, disponibles para toda la app. */
+function Proveedores({ children }: { children: ReactNode }) {
+  return (
+    <ProveedorDeDatos>
+      <ProveedorDeAvisos>
+        <AvisosDelSistema />
+        {children}
+      </ProveedorDeAvisos>
+    </ProveedorDeDatos>
+  );
 }
 
 export default function RootLayout() {
@@ -49,9 +69,8 @@ export default function RootLayout() {
   // Los gráficos necesitan saber si está activado «Reducir movimiento».
   useEffect(seguirReducirMovimiento, []);
   return (
-    <ProveedorDeDatos>
-      <ProveedorDeAvisos>
-        <AvisosDelSistema />
+    <Proveedores>
+      <PuertaDeSeguridad>
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: c.fondo },
@@ -69,6 +88,7 @@ export default function RootLayout() {
           <Stack.Screen name="patrimonio" options={{ headerShown: false }} />
           <Stack.Screen name="capturas" options={{ headerShown: false }} />
           <Stack.Screen name="ajustes" options={{ headerShown: false }} />
+          <Stack.Screen name="seguridad" options={{ headerShown: false }} />
           <Stack.Screen name="avisos" options={{ headerShown: false }} />
           <Stack.Screen name="apple-pay" options={{ headerShown: false }} />
           <Stack.Screen name="objetivo" options={{ headerShown: false }} />
@@ -91,7 +111,7 @@ export default function RootLayout() {
           <Stack.Screen name="categorias" options={{ title: t('categorias.titulo') }} />
           <Stack.Screen name="diagnostico" options={{ title: t('diagnostico.titulo') }} />
         </Stack>
-      </ProveedorDeAvisos>
-    </ProveedorDeDatos>
+      </PuertaDeSeguridad>
+    </Proveedores>
   );
 }

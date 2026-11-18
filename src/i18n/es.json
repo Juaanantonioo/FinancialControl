@@ -346,7 +346,8 @@
     "categoriasAyuda": "Crea, ordena y archiva las categorías de gasto e ingreso.",
     "applePayAyuda": "Cómo capturar los pagos con Atajos y qué cuenta va con cada tarjeta.",
     "avisosAyuda": "Qué avisos quieres recibir y cuándo.",
-    "diagnosticoAyuda": "Comprueba la conexión con el servidor."
+    "diagnosticoAyuda": "Comprueba la conexión con el servidor.",
+    "seguridadAyuda": "Bloqueo de la app y modo privado."
   },
   "diagnostico": {
     "titulo": "Diagnóstico",
@@ -771,11 +772,48 @@
     "capturasCuerpo": "Tienes pagos esperando en la bandeja desde ayer.",
     "inversionTitulo": "{{nombre}}",
     "inversionCuerpo": "Hace {{dias}} días que no anotas cuánto vale. Actualízalo cuando puedas.",
-    "categoriaSinNombre": "una categoría"
+    "categoriaSinNombre": "una categoría",
+    "privadoTitulo": "FinancialControl",
+    "privado_cobro": "Tienes un cobro pendiente.",
+    "privado_ingreso": "Tienes un ingreso pendiente.",
+    "privado_presupuesto_cerca": "Una categoría se acerca a su presupuesto.",
+    "privado_presupuesto_excedido": "Una categoría ha superado su presupuesto.",
+    "privado_capturas": "Tienes un pago por revisar.",
+    "privado_inversion": "Hace tiempo que no actualizas una inversión."
   },
   "widget": {
     "anadirGasto": "Añadir gasto",
     "sinPresupuesto": "Crea tu presupuesto",
-    "alDia": "{{importe}} al día"
+    "alDia": "{{importe}} al día",
+    "privadoCifra": "•••",
+    "privadoDetalle": "Importes ocultos"
+  },
+  "seguridad": {
+    "titulo": "Seguridad",
+    "motivo": "Desbloquea FinancialControl",
+    "nombreDeLaApp": "FinancialControl",
+    "bloqueadaTitulo": "App bloqueada",
+    "bloqueadaTexto": "Usa Face ID, Touch ID o el código del iPhone para entrar.",
+    "desbloquear": "Desbloquear",
+    "comprobando": "Comprobando…",
+    "falloAlDesbloquear": "No se ha podido comprobar que eres tú. Inténtalo de nuevo.",
+    "bloqueo": "Bloqueo de la app",
+    "bloqueoInterruptor": "Pedir Face ID o código",
+    "bloqueoAyuda": "Al abrir la app y al volver a ella pide Face ID, Touch ID o el código del iPhone. Es una barrera de acceso: no cifra tus datos.",
+    "bloqueoNoDisponible": "Este iPhone no tiene código ni Face ID. Actívalos en los Ajustes del iPhone para poder usar el bloqueo.",
+    "bloqueoSinProteccion": "El bloqueo está activado, pero este iPhone ya no tiene código ni Face ID, así que la app se abre sin pedir nada. Vuelve a ponerlos en los Ajustes del iPhone.",
+    "bloqueoNoCambiado": "No se ha cambiado nada: no se pudo comprobar que eres tú.",
+    "espera": "Volver a pedirlo",
+    "espera_inmediato": "Al instante",
+    "espera_1min": "Tras 1 min",
+    "espera_5min": "Tras 5 min",
+    "esperaAyuda_inmediato": "Cada vez que salgas de la app.",
+    "esperaAyuda_1min": "Si pasas más de 1 minuto fuera de la app.",
+    "esperaAyuda_5min": "Si pasas más de 5 minutos fuera de la app.",
+    "esperaNota": "Al abrir la app desde cero se pide siempre.",
+    "privado": "Modo privado",
+    "privadoInterruptor": "Ocultar importes fuera de la app",
+    "privadoAyuda": "El widget muestra ••• en lugar de la cifra, los avisos no llevan importes ni nombres, y la app se tapa en el selector de apps.",
+    "privadoNota": "Con el bloqueo activado, la app se tapa siempre en el selector de apps. Los avisos que ya estén en pantalla no cambian."
   }
 }

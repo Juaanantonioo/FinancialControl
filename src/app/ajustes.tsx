@@ -40,8 +40,8 @@ export const ACCESOS_DE_AJUSTES = [
 /**
  * Ajustes: lo que se configura una vez y se toca poco. Se abre con el
  * engranaje de la cabecera de Inicio. Primero, la apariencia de la app
- * (automática, clara u oscura); debajo, Categorías, Apple Pay y tarjetas,
- * Avisos y Diagnóstico.
+ * (automática, clara u oscura); después, Seguridad (bloqueo y modo privado);
+ * debajo, Categorías, Apple Pay y tarjetas, Avisos y Diagnóstico.
  */
 export default function Ajustes() {
   const c = useColores();
@@ -67,6 +67,30 @@ export default function Ajustes() {
             testID="ayuda-de-apariencia">
             {t(`ajustes.aparienciaAyuda_${apariencia}`)}
           </Text>
+        </Tarjeta>
+        <Tarjeta estilo={estilos.tarjeta}>
+          <Pressable
+            onPress={() => router.push('/seguridad')}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('seguridad.titulo')}. ${t('ajustes.seguridadAyuda')}`}
+            testID="abrir-seguridad"
+            style={({ pressed }) => [estilos.fila, { opacity: pressed ? 0.6 : 1 }]}>
+            <View style={estilos.textos}>
+              <Text maxFontSizeMultiplier={1.6} style={[estilos.titulo, { color: c.texto }]}>
+                {t('seguridad.titulo')}
+              </Text>
+              <Text
+                maxFontSizeMultiplier={1.6}
+                style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
+                {t('ajustes.seguridadAyuda')}
+              </Text>
+            </View>
+            <Text
+              allowFontScaling={false}
+              style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>
+              ›
+            </Text>
+          </Pressable>
         </Tarjeta>
         <Tarjeta estilo={estilos.tarjeta}>
           {ACCESOS_DE_AJUSTES.map((acceso, i) => (
