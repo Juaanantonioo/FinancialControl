@@ -7,6 +7,7 @@ import { Tarjeta } from '@/componentes/Tarjeta';
 import { SIN_AVISOS, TIPOS_DE_AVISO, type Preferencias, type TipoDeAviso } from '@/dominio/avisos';
 import { recalcularAvisos } from '@/estado/avisos';
 import { useDatos } from '@/estado/Datos';
+import { useSeguridad } from '@/estado/seguridad';
 import { t, type ClaveTexto } from '@/i18n';
 import { notificador, type EstadoDelPermiso } from '@/lib/notificaciones';
 import { guardarPreferencias, leerPreferencias } from '@/lib/preferencias';
@@ -26,6 +27,7 @@ export default function PantallaDeAvisos() {
   const c = useColores();
   const margen = useSafeAreaInsets();
   const { repos } = useDatos();
+  const { privado } = useSeguridad();
   const [preferencias, setPreferencias] = useState<Preferencias | null>(null);
   const [permiso, setPermiso] = useState<EstadoDelPermiso | null>(null);
   const [programados, setProgramados] = useState<number | null>(null);
@@ -66,7 +68,7 @@ export default function PantallaDeAvisos() {
     const nuevas = { ...preferencias, [tipo]: activo };
     setPreferencias(nuevas);
     await guardarPreferencias(nuevas);
-    setProgramados(await recalcularAvisos(repos, notificador, nuevas, ahora()));
+    setProgramados(await recalcularAvisos(repos, notificador, nuevas, ahora(), privado));
   }
 
   return (

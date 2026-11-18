@@ -27,7 +27,8 @@ enum CapturaEnBruto {
       .union(.illegalCharacters)
     let sinControl = String(
       String.UnicodeScalarView(
-        acotado.unicodeScalars.map { prohibidos.contains($0) ? " " : $0 }
+        // El unidor de anchura cero (U+200D) se conserva: forma parte de emojis compuestos.
+        acotado.unicodeScalars.map { prohibidos.contains($0) && $0.value != 0x200D ? " " : $0 }
       )
     )
     let limpio = sinControl
@@ -46,6 +47,21 @@ enum TextosDeCaptura {
   static let pagoSinComercio = "Pago registrado"
   static let faltaElImporte = "Falta el importe"
   static let gastoAnotado = "Anotado. Se guardará al abrir FinancialControl"
+  /// Textos del aviso en modo privado: sin importe, comercio ni tarjeta.
+  static let pagoPrivadoTitulo = "FinancialControl"
+  static let pagoPrivadoCuerpo = "Tienes un pago por revisar."
+}
+
+/// Modo privado (Ajustes > Seguridad). La app lo guarda en las preferencias
+/// del sistema con esta misma clave (`CLAVE_DE_MODO_PRIVADO` en
+/// `src/lib/seguridad.ts`). Las acciones de Atajos se ejecutan dentro del
+/// proceso de la app, así que leen el mismo `UserDefaults.standard`.
+enum ModoPrivado {
+  static let clave = "modoPrivado"
+
+  static var activo: Bool {
+    UserDefaults.standard.bool(forKey: clave)
+  }
 }
 
 /// Aviso local que acompaña a cada captura (T-012).
@@ -61,9 +77,15 @@ enum AvisoDeCaptura {
     }
 
     let contenido = UNMutableNotificationContent()
-    contenido.title = comercio.isEmpty ? TextosDeCaptura.pagoSinComercio : comercio
-    let lineaDeImporte = importe.isEmpty ? TextosDeCaptura.faltaElImporte : importe
-    contenido.body = tarjeta.isEmpty ? lineaDeImporte : "\(lineaDeImporte) · \(tarjeta)"
+    if ModoPrivado.activo {
+      // Sin importe, comercio ni tarjeta: el aviso puede verse con el iPhone bloqueado.
+      contenido.title = TextosDeCaptura.pagoPrivadoTitulo
+      contenido.body = TextosDeCaptura.pagoPrivadoCuerpo
+    } else {
+      contenido.title = comercio.isEmpty ? TextosDeCaptura.pagoSinComercio : comercio
+      let lineaDeImporte = importe.isEmpty ? TextosDeCaptura.faltaElImporte : importe
+      contenido.body = tarjeta.isEmpty ? lineaDeImporte : "\(lineaDeImporte) · \(tarjeta)"
+    }
     contenido.sound = .default
     // Al tocar el aviso, la app abre la bandeja en esta captura. `id` es el
     // identificador de la entrada en la cola, que la app guarda con la captura.

@@ -17,6 +17,7 @@ import { estadoDelPresupuesto } from '@/dominio/presupuesto';
 import { useDatos } from '@/estado/Datos';
 import { diaYMes } from '@/estado/fechas';
 import { importe } from '@/estado/formato';
+import { useSeguridad } from '@/estado/seguridad';
 import { t } from '@/i18n';
 import {
   alTocarUnAviso,
@@ -28,12 +29,38 @@ import {
 } from '@/lib/notificaciones';
 import { leerPreferencias } from '@/lib/preferencias';
 
+/**
+ * Título y cuerpo de un aviso en modo privado: dicen que hay algo que mirar,
+ * sin importes, sin nombres de fijos, de cuentas ni de categorías.
+ */
+export function textoPrivadoDeAviso(aviso: Aviso): { titulo: string; cuerpo: string } {
+  const c = aviso.contenido;
+  const titulo = t('avisos.privadoTitulo');
+  switch (c.clase) {
+    case 'cobro':
+      return {
+        titulo,
+        cuerpo: t(c.tipo === 'ingreso' ? 'avisos.privado_ingreso' : 'avisos.privado_cobro'),
+      };
+    case 'presupuesto_cerca':
+      return { titulo, cuerpo: t('avisos.privado_presupuesto_cerca') };
+    case 'presupuesto_excedido':
+      return { titulo, cuerpo: t('avisos.privado_presupuesto_excedido') };
+    case 'capturas':
+      return { titulo, cuerpo: t('avisos.privado_capturas') };
+    case 'inversion':
+      return { titulo, cuerpo: t('avisos.privado_inversion') };
+  }
+}
+
 /** Título y cuerpo de un aviso, con los textos del catálogo. */
 export function textoDeAviso(
   aviso: Aviso,
   nombreDeCategoria: (id: string) => string,
   hoy: string,
+  privado = false,
 ): { titulo: string; cuerpo: string } {
+  if (privado) return textoPrivadoDeAviso(aviso);
   const c = aviso.contenido;
   switch (c.clase) {
     case 'cobro': {
@@ -78,13 +105,15 @@ function datosDe(aviso: Aviso): Record<string, string> {
  * Recalcula los avisos. Cancela los que la app tenía programados y programa
  * los que tocan ahora; muestra los de presupuesto que aún no se habían
  * dado. Sin permiso del sistema no programa nada. Devuelve cuántos quedan
- * programados.
+ * programados. En modo privado los textos no llevan importes ni nombres; como
+ * se rehacen todos, los que ya estaban programados cambian también.
  */
 export async function recalcularAvisos(
   repos: Repositorios,
   sistema: Notificador,
   preferencias: Preferencias,
   ahora: number,
+  privado = false,
 ): Promise<number> {
   for (const id of await sistema.programados()) await sistema.cancelar(id);
   const algunoActivo = Object.values(preferencias).some(Boolean);
@@ -122,7 +151,7 @@ export async function recalcularAvisos(
     categorias.find((c) => c.id === id)?.nombre ?? t('avisos.categoriaSinNombre');
   const paraMostrar = (aviso: Aviso): AvisoParaMostrar => ({
     id: `${PREFIJO}${aviso.clave}`,
-    ...textoDeAviso(aviso, nombreDeCategoria, hoy),
+    ...textoDeAviso(aviso, nombreDeCategoria, hoy, privado),
     datos: datosDe(aviso),
   });
 
@@ -171,6 +200,7 @@ export function destinoDelAviso(
  */
 export function useAvisosAutomaticos(): void {
   const { repos, version } = useDatos();
+  const { privado } = useSeguridad();
   const enCurso = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
@@ -185,7 +215,9 @@ export function useAvisosAutomaticos(): void {
   useEffect(() => {
     // Los recálculos van en fila: uno no empieza hasta que acaba el anterior.
     enCurso.current = enCurso.current
-      .then(async () => recalcularAvisos(repos, notificador, await leerPreferencias(), Date.now()))
+      .then(async () =>
+        recalcularAvisos(repos, notificador, await leerPreferencias(), Date.now(), privado),
+      )
       .catch(() => undefined);
-  }, [repos, version]);
+  }, [repos, version, privado]);
 }

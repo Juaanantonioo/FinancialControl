@@ -14,6 +14,7 @@ import { fechaLocal } from '@/dominio/modelo';
 import { useDatos } from '@/estado/Datos';
 import { diaYMes } from '@/estado/fechas';
 import { importe } from '@/estado/formato';
+import { useSeguridad } from '@/estado/seguridad';
 import { t } from '@/i18n';
 import { COLORES, type Colores } from '@/theme';
 import Disponible, { type ColoresDelWidget, type DatosDelWidget } from '@/widgets/Disponible';
@@ -30,10 +31,14 @@ function coloresPara(c: Colores): ColoresDelWidget {
 }
 
 /**
- * Lo que el widget debe mostrar hoy. Usa la divisa principal (la de la
+ * Lo que el widget debe mostrar hoy. En modo privado, sin ninguna cifra. Usa la divisa principal (la de la
  * primera cuenta), igual que el bloque «Disponible este mes» de Inicio.
  */
-export async function datosParaElWidget(repos: Repositorios, hoy: string): Promise<DatosDelWidget> {
+export async function datosParaElWidget(
+  repos: Repositorios,
+  hoy: string,
+  privado = false,
+): Promise<DatosDelWidget> {
   const mes = hoy.slice(0, 7);
   const [cuentas, todos, categorias, reglas, presupuesto] = await Promise.all([
     repos.cuentas.listar({ incluirArchivadas: true }),
@@ -53,6 +58,15 @@ export async function datosParaElWidget(repos: Repositorios, hoy: string): Promi
     claro: coloresPara(COLORES.claro),
     oscuro: coloresPara(COLORES.oscuro),
   };
+  // Modo privado: la cifra no sale de la app. Al widget solo le llega «•••».
+  if (privado) {
+    return {
+      ...comunes,
+      cifra: t('widget.privadoCifra'),
+      detalle: t('widget.privadoDetalle'),
+      excedido: false,
+    };
+  }
   if (!presupuesto) {
     return { ...comunes, cifra: '', detalle: t('widget.sinPresupuesto'), excedido: false };
   }
@@ -83,10 +97,11 @@ export async function datosParaElWidget(repos: Repositorios, hoy: string): Promi
  */
 export function useWidgetAlDia(): void {
   const { repos, version } = useDatos();
+  const { privado } = useSeguridad();
   const enviado = useRef('');
   useEffect(() => {
     let vigente = true;
-    datosParaElWidget(repos, fechaLocal()).then(
+    datosParaElWidget(repos, fechaLocal(), privado).then(
       (datos) => {
         const firma = JSON.stringify(datos);
         if (!vigente || firma === enviado.current) return;
@@ -102,5 +117,5 @@ export function useWidgetAlDia(): void {
     return () => {
       vigente = false;
     };
-  }, [repos, version]);
+  }, [repos, version, privado]);
 }
