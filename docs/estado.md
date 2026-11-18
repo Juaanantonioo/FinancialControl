@@ -1384,3 +1384,151 @@ sobre los 51 commits de todas las ramas y sobre el árbol:
 - `npx expo install --fix` añadió además por su cuenta el plugin `expo-sqlite` a `app.json`.
   Se revirtió: nadie lo pidió y toca la configuración nativa de la base local, que este
   bloque no puede cambiar.
+
+### 14.2 PARADO: `react-native-libsodium` no compila con React Native 0.88
+
+El encargo manda parar aquí (apartado 13) y dejar el diagnóstico y las alternativas, sin
+adoptar ninguna. **Estado del bloque: `BLOCKED_BY_EXTERNAL_DEPENDENCY`.**
+
+**Qué pasa.** `react-native-libsodium` 1.7.0 (la última publicada, del 09/02/2026) no
+compila para iOS con React Native 0.88.1:
+
+```
+node_modules/react-native-libsodium/ios/Libsodium.mm:16:3
+  unknown type name 'RCTCxxBridge'
+node_modules/react-native-libsodium/ios/Libsodium.mm:17:18
+  property 'runtime' not found on object of type 'RCTBridge *'
+```
+
+El paquete obtiene el motor de JavaScript a través de la clase `RCTCxxBridge`, del puente
+antiguo de React Native. React Native 0.88 la ha eliminado.
+
+**Los tres intentos.**
+
+| # | Intento | Resultado |
+|---|---|---|
+| 1 | Compilar el paquete tal cual, tras `expo prebuild --clean` | Falla con los errores de arriba (6 errores) |
+| 2 | Buscar una opción de React Native que conserve el puente antiguo (`RCT_REMOVE_LEGACY_ARCH=0`) o una versión del paquete que ya lo arregle | No existe. En el código de React Native 0.88 no queda ninguna declaración de `RCTCxxBridge` (el fichero se eliminó), así que ninguna opción la devuelve. La rama principal del paquete tiene el mismo código que la 1.7.0 |
+| 3 | Evaluar, sin adoptarlo, el arreglo propuesto en el repositorio del paquete (PR #109), aplicándolo a mano en `node_modules` | **Compila y funciona.** Detalle abajo. Después se restauró el fichero original |
+
+**Estado aguas arriba** (consultado el 18/11/2026 en GitHub, `serenity-kit/react-native-libsodium`):
+incidencia #110 abierta, «iOS build fails with React Native 0.88 (Expo SDK 58): RCTCxxBridge
+no longer exists», sin respuesta. PR #109 abierto desde el 17/10/2026, «read the JSI runtime
+from the bridge proxy instead of RCTCxxBridge», de una persona ajena al equipo del paquete,
+sin revisar y sin fusionar. Cambia un solo fichero (`ios/Libsodium.mm`, +7 −3): deja de usar
+`RCTCxxBridge` y pide el motor al objeto que React Native 0.88 pone en su lugar. No toca
+libsodium, ni el código C++ que la llama, ni el JavaScript.
+
+**Lo que se vio con ese cambio aplicado a mano** (simulador iPhone 17, código temporal que
+no está en la rama):
+
+- Compilación: correcta, 0 errores.
+- La biblioteca nativa da **exactamente los mismos resultados** que la de WebAssembly para
+  todos los vectores de `src/cripto/__tests__/vectores.json`: sal, clave maestra, subclave
+  de autenticación, subclave de envoltura, apertura del sobre por contraseña y del sobre por
+  código, ida y vuelta, código nuevo y fallo con clave equivocada.
+- Llavero (`expo-secure-store`, accesible tras el primer desbloqueo y solo en este
+  dispositivo): guarda y devuelve un texto de 6.000 caracteres, y lo borra.
+- Tiempo de Argon2id, tres medidas cada uno. **Es el procesador del Mac, no el de un iPhone.**
+
+| Pasadas | Memoria | Simulador (nativa) | Node (WebAssembly) |
+|---|---|---|---|
+| 2 | 64 MiB (INTERACTIVE de libsodium) | 64–66 ms | 99 ms |
+| 4 | 128 MiB | 277–289 ms | 321–337 ms |
+| 6 | 128 MiB | 429–462 ms | 473–506 ms |
+| 8 | 128 MiB | no medido | 648–731 ms |
+| 3 | 256 MiB (MODERATE de libsodium) | 433–449 ms | 498 ms |
+
+**Alternativas.** Ninguna está adoptada.
+
+| | Alternativa | A favor | En contra |
+|---|---|---|---|
+| A | Esperar a que el paquete publique el arreglo | No se toca nada ajeno | Sin fecha. La incidencia lleva 8 días sin respuesta y el PR un mes. Mientras, la app no compila para iOS con la biblioteca |
+| B | Aplicar ese cambio de 7 líneas con un plugin propio en `plugins/`, que solo actúe si el fichero es exactamente el esperado y que falle con un mensaje claro si no | Evaluado y funciona. Sin dependencias nuevas. El cambio es corto, se lee entero y no toca la criptografía. Sigue el patrón de `plugins/sin-push.js` | Mantenemos un parche sobre código nativo de la dependencia criptográfica. Hay que retirarlo cuando el paquete lo arregle. Es código de un tercero sin revisar por los autores: lo habríamos revisado nosotros |
+| C | Instalar el paquete desde la rama del PR (dependencia de git fijada a su commit) | No hay parche propio | Pasamos a depender del repositorio de una persona desconocida para la biblioteca criptográfica. No evaluado en compilación |
+| D | Otro paquete que envuelva libsodium | — | Es una dependencia fuera de las permitidas. **No evaluado ninguno**: no se ha comprobado que exista uno con las tres plataformas, Argon2id y soporte de React Native 0.88 |
+| E | Un módulo nativo propio, pequeño, sobre libsodium | Control total | Dependencia nueva (libsodium para iOS) y un puente nativo que escribir, probar y mantener, y otro para Android. Mucho más trabajo y más superficie que B |
+
+No es alternativa: usar en el iPhone la libsodium de WebAssembly. El motor de JavaScript de
+la app (Hermes) no ejecuta WebAssembly. NO DEMOSTRADO en esta sesión; es lo que dice su
+documentación.
+
+**Recomendación** (la decisión es del dueño): **B**, como medida temporal y documentada, y
+retirarla en cuanto se publique el arreglo. Es la única evaluada de principio a fin, y la
+que menos cosas ajenas mete en el proyecto.
+
+**Otras cosas que el dueño debe decidir, ya que hay que parar:**
+
+1. **Parámetros de Argon2id.** El encargo pide entre 0,5 y 2 segundos. Con 4 pasadas y
+   128 MiB, que es lo que hay ahora en `src/cripto/parametros.ts`, el simulador tarda 0,28 s:
+   se queda corto. Propuesta: **8 pasadas y 128 MiB** (unos 0,65–0,75 s en este Mac; en un
+   teléfono, más). Supera el mínimo de OWASP (19 MiB y 2 pasadas, o 46 MiB y 1). No se
+   propone subir a 256 MiB porque la beta será en navegador y un navegador de móvil puede
+   no conceder tanta memoria. NO DEMOSTRADO en un teléfono ni en un navegador.
+2. **Longitud del código de recuperación.** Hoy son 14 grupos de 4 símbolos: 256 bits de
+   secreto y 24 de control. El encargo pedía «al menos 160 bits». Con 256 el secreto sirve
+   directamente de clave para la función de subclaves de libsodium, sin ningún paso
+   intermedio diseñado por nosotros. Con 160 serían 9 grupos, más cómodos de copiar, a
+   cambio de añadir un paso de BLAKE2b para estirarlo a 256.
+
+### 14.3 Lo que sí está hecho y probado
+
+| Fase | Qué | Estado |
+|---|---|---|
+| 0 | Baseline y paquetes de Expo al día | Hecho, commit `d8fbd96` |
+| 1 | Diseño criptográfico por escrito | **Pendiente.** Los parámetros están en `src/cripto/parametros.ts` y los vectores se calculan con `node scripts/vectores-de-cripto.cjs`, pero el documento no está escrito |
+| 2 | Módulo criptográfico `src/cripto/` | **Hecho en JavaScript, con 39 pruebas. Sin compilar en nativo** por el bloqueo |
+| 3 | Esquema remoto y aislamiento | **Hecho.** Migración en `supabase/migrations/` y 33 pruebas contra la instancia local |
+| 4 a 6 | Cuenta en la app, capturas, documentación | Sin empezar |
+
+**Módulo criptográfico.** Capa sin estado sobre libsodium: Argon2id (`crypto_pwhash`),
+subclaves (`crypto_kdf_derive_from_key`), XChaCha20-Poly1305, BLAKE2b (`crypto_generichash`)
+para la sal y para el control del código, y el generador aleatorio de la biblioteca. No hay
+ninguna primitiva escrita a mano; una prueba lo vigila. Solo `src/cripto/sodio.ts` carga la
+biblioteca; otra prueba lo vigila.
+
+Dos límites de la versión nativa del paquete, que el módulo ya respeta: los datos
+autenticados del cifrado tienen que ser texto (no admite bytes), y `crypto_generichash`
+solo funciona bien con bytes (con texto tiene un error).
+
+**Esquema remoto.** Dos tablas, `claves_de_usuario` y `fila_cifrada`, con RLS activado y
+forzado, políticas solo para el rol autenticado y sin ningún permiso para el anónimo. La
+función `borrar_mi_cuenta()` no admite parámetros. `aviso_emitido` queda fuera de la lista
+de tablas que se sincronizarán: dice qué avisos ha dado ya un dispositivo, y eso es de cada
+dispositivo. Decisión propia.
+
+**Pruebas.**
+
+- `npm run check`: pasa entero. Antes 954 en 35 suites; ahora **993 en 36**.
+- Antigua tocada: una. `src/pruebas/__tests__/seguridad.test.tsx`, «la única dependencia
+  nueva del bloque es expo-local-authentication», que fija la lista completa de dependencias
+  de la app. Se le añaden `react-native-libsodium` y `expo-secure-store` y se renombra a
+  «las dependencias de la app son las autorizadas, y ninguna más». No es de las dos clases
+  que el encargo permitía tocar, pero era inevitable: el propio encargo manda añadir esas
+  dependencias. Sigue vigilando lo mismo.
+- Aislamiento: **33 de 33**, contra la instancia local, solo con la clave pública. Para
+  repetirlas:
+
+  ```sh
+  npx supabase start      # necesita Docker
+  npx supabase db reset   # aplica las migraciones a la instancia local
+  npm run test:remoto
+  ```
+
+  Comprobado además a mano: al crear una tabla sin RLS en el esquema público, la prueba del
+  catálogo falla; al borrarla, vuelve a pasar.
+- El analizador de seguridad de Supabase (`npx supabase db advisors`) no encuentra problemas.
+
+**Dependencias añadidas.** `react-native-libsodium ^1.7.0` y `expo-secure-store ~58.0.3`; de
+desarrollo, `supabase ^3.2.0` (la CLI) y `libsodium-wrappers-sumo ^0.8.4` (para las pruebas).
+
+**Defecto propio corregido por el camino.** La primera versión de la migración usaba una
+expresión regular con una repetición de 98 a 400, y Postgres no admite más de 255. Lo
+detectaron las pruebas de aislamiento. Ahora la longitud se comprueba aparte.
+
+**Efecto lateral en el simulador.** Al deshacer la evaluación se desinstaló la app del
+simulador, y con ella sus datos de ejemplo. No afecta a ningún dato real ni al iPhone.
+Habrá que volver a cargar datos de ejemplo para las capturas.
+
+**Nada se ha aplicado al proyecto remoto de Supabase.** No se ha ejecutado `supabase login`,
+`link` ni `db push`.
