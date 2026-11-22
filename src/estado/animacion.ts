@@ -5,6 +5,7 @@
  * «Reducir movimiento», o mientras no se sabe si lo tiene, aparecen ya
  * colocados y sin transición.
  */
+import { ES_WEB } from '@/lib/plataforma';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Animated } from 'react-native';
 
@@ -60,7 +61,8 @@ export function useEntrada(clave: string): Animated.Value {
     const animacion = Animated.timing(valor, {
       toValue: 1,
       duration: 380,
-      useNativeDriver: true,
+      // En el navegador no hay motor nativo de animación; allí la mueve JavaScript.
+      useNativeDriver: !ES_WEB,
     });
     animacion.start();
     return () => animacion.stop();

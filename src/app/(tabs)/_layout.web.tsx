@@ -93,12 +93,12 @@ const estilos = StyleSheet.create({
   contenido: { flex: 1, alignItems: 'center' },
   // En escritorio el contenido no se estira a todo lo ancho: se lee mejor en una columna.
   columna: { flex: 1, width: '100%', maxWidth: 760 },
-  pantallas: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minHeight: 0 },
+  // `overflow: hidden`: el contenedor no se desplaza por su cuenta al mover el foco; se desplazan las listas.
+  pantallas: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minHeight: 0, overflow: 'hidden' },
   inferior: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: Espacio.xs,
   },
   lateral: {
     flexDirection: 'column',
@@ -122,7 +122,8 @@ const estilos = StyleSheet.create({
     paddingHorizontal: Espacio.s,
     borderRadius: Radio.s,
   },
-  textoInferior: { fontSize: 12 },
+  // A 360 px cada enlace tiene 72 px: «Movimientos» cabe a 11.
+  textoInferior: { fontSize: 11 },
   textoLateral: { fontSize: Letra.secundario },
   activo: { fontWeight: '700' },
 });

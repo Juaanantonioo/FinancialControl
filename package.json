@@ -59,7 +59,8 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
     "web": "expo start --web",
     "web:exportar": "expo export -p web && node scripts/cabeceras-web.cjs",
-    "web:servir": "node scripts/servir-web.cjs"
+    "web:servir": "node scripts/servir-web.cjs",
+    "test:web": "node scripts/pruebas-web.cjs"
   },
   "private": true
 }

@@ -8,5 +8,6 @@ module.exports = {
     '^react-native-libsodium$': '<rootDir>/src/pruebas/sodioDePrueba.ts',
   },
   // Las pruebas contra la instancia local de Supabase van aparte: `npm run test:remoto`.
-  testPathIgnorePatterns: ['/node_modules/', '/ios/', '/android/', '/supabase/'],
+  // Las de la versión web, en un navegador real: `npm run test:web`.
+  testPathIgnorePatterns: ['/node_modules/', '/ios/', '/android/', '/supabase/', '/web/', '/dist/'],
 };

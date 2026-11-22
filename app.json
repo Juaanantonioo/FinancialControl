@@ -33,7 +33,14 @@
       "./plugins/sin-sandbox-de-scripts.js",
       "./plugins/parche-libsodium.js",
       "./plugins/sin-cache-de-red.js",
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": false
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {
