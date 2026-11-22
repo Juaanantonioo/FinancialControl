@@ -75,6 +75,10 @@
     },
     "locales": {
       "es": "./src/i18n/nativo-es.json"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
     }
   }
 }

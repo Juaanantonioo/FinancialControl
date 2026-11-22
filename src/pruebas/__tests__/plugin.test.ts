@@ -78,7 +78,9 @@ describe('plugin parche-libsodium', () => {
 
   it('las versiones de la biblioteca criptográfica están fijadas, sin ^ ni ~', () => {
     expect(paquete.dependencies['react-native-libsodium']).toBe(parche.VERSION_DEL_PAQUETE);
-    expect(paquete.devDependencies['libsodium-wrappers-sumo']).toMatch(/^\d+\.\d+\.\d+$/);
+    // Desde el bloque 5 es dependencia de producción: es la biblioteca de cifrado de la versión web.
+    expect(paquete.dependencies['libsodium-wrappers-sumo']).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(paquete.devDependencies['libsodium-wrappers-sumo']).toBeUndefined();
     const instalado = JSON.parse(
       readFileSync(join(raiz, 'node_modules', 'react-native-libsodium', 'package.json'), 'utf8'),
     );

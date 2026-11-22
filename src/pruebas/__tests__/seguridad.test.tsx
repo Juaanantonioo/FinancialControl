@@ -870,10 +870,15 @@ describe('configuración nativa', () => {
   });
 
   // B4b-1 añade react-native-libsodium y expo-secure-store, las dos permitidas por su encargo.
+  // B5 añade las tres que su encargo permite para la web: react-native-web,
+  // @expo/metro-runtime y libsodium-wrappers-sumo (que pasa de desarrollo a producción).
   it('las dependencias de la app son las autorizadas, y ninguna más', () => {
     expect(Object.keys(paquete.dependencies).sort()).toEqual(
       [
+        '@expo/metro-runtime',
         '@expo/ui',
+        'libsodium-wrappers-sumo',
+        'react-native-web',
         '@supabase/supabase-js',
         'expo',
         'expo-app-intents',

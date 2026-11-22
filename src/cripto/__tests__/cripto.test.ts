@@ -626,7 +626,8 @@ describe('higiene del módulo', () => {
       )
       .map(([f]) => f)
       .sort();
-    expect(usan).toEqual(['cripto/sodio.ts', 'pruebas/sodioDePrueba.ts']);
+    // `sodio.web.ts` es el mismo punto de carga para el navegador (bloque 5).
+    expect(usan).toEqual(['cripto/sodio.ts', 'cripto/sodio.web.ts', 'pruebas/sodioDePrueba.ts']);
     const sodioInterno = fuentes
       .filter(([f, codigo]) => !f.startsWith('cripto/') && /cripto\/sodio'/.test(codigo))
       .map(([f]) => f);

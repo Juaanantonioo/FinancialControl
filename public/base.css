@@ -1,0 +1,44 @@
+/*
+ * Estilos base de la web. Sustituyen al bloque <style> en línea de la plantilla
+ * de Expo, que la política de seguridad de contenido del sitio no permite.
+ */
+
+/* La página ocupa toda la ventana y no se desplaza: se desplazan las listas de dentro. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  overflow: hidden;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+}
+#root {
+  display: flex;
+  height: 100%;
+  flex: 1;
+}
+
+/* Foco visible al navegar con el teclado, en claro y en oscuro. */
+:focus-visible {
+  outline: 3px solid #2563eb !important;
+  outline-offset: 2px !important;
+}
+@media (prefers-color-scheme: dark) {
+  :focus-visible {
+    outline-color: #93c5fd !important;
+  }
+}
+
+noscript {
+  display: block;
+  padding: 24px;
+  font-size: 16px;
+}
