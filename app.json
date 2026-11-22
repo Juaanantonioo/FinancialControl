@@ -31,6 +31,8 @@
     "plugins": [
       "./plugins/sin-push.js",
       "./plugins/sin-sandbox-de-scripts.js",
+      "./plugins/parche-libsodium.js",
+      "./plugins/sin-cache-de-red.js",
       "expo-router",
       [
         "expo-splash-screen",
@@ -62,7 +64,6 @@
           ]
         }
       ],
-      "react-native-libsodium",
       "expo-secure-store"
     ],
     "experiments": {
