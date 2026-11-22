@@ -244,6 +244,62 @@ describe('dos dispositivos con la misma cuenta', () => {
   });
 });
 
+describe('casos límite', () => {
+  it('una fila demasiado grande para el servidor no sube, se cuenta, y no detiene a las demás', async () => {
+    const { a, b, datos } = await cuentaConDosDispositivos('grande');
+    // La app no limita la longitud de una nota; el servidor admite sobres de hasta 64 KiB de texto.
+    const enorme = await a.movimientos.crear({
+      tipo: 'gasto',
+      fecha: '2026-11-21',
+      importe: 100,
+      cuentaId: datos.banco.id,
+      nombre: 'Con una nota enorme',
+      nota: 'x'.repeat(70_000),
+    });
+    const normal = await gasto(a, datos.banco.id, 'Normal');
+    expect(await a.motor.ciclo()).toMatchObject({ estado: 'parcial', subidas: 1, noSubidas: 1 });
+    expect(await pendientes(a)).toBe(1);
+    await b.motor.ciclo();
+    expect(await b.movimientos.obtener(normal.id)).not.toBeNull();
+    expect(await b.movimientos.obtener(enorme.id)).toBeNull();
+    // En local la fila sigue entera; si se acorta, sube.
+    expect((await a.movimientos.obtener(enorme.id))?.nota).toHaveLength(70_000);
+    await a.movimientos.modificar(enorme.id, {
+      tipo: 'gasto',
+      fecha: '2026-11-21',
+      importe: 100,
+      cuentaId: datos.banco.id,
+      nombre: 'Con una nota razonable',
+      nota: 'x'.repeat(2_000),
+    });
+    expect(await a.motor.ciclo()).toMatchObject({ estado: 'correcto', subidas: 1 });
+    await b.motor.ciclo();
+    expect((await b.movimientos.obtener(enorme.id))?.nota).toHaveLength(2_000);
+  });
+
+  it('borrar la cuenta borra del servidor todas sus filas cifradas', async () => {
+    const { usuario } = await cuentaConDosDispositivos('borrada');
+    expect(filasRemotasDe(usuario).length).toBeGreaterThan(12);
+    const { error } = await usuario.cliente.rpc('borrar_mi_cuenta');
+    expect(error).toBeNull();
+    expect(filasRemotasDe(usuario)).toEqual([]);
+  });
+
+  it('dos dispositivos que sincronizan a la vez acaban iguales', async () => {
+    const { a, b, datos } = await cuentaConDosDispositivos('alavez');
+    for (let i = 0; i < 20; i += 1) {
+      await gasto(a, datos.banco.id, `De A ${i}`, 100 + i);
+      await gasto(b, datos.banco.id, `De B ${i}`, 200 + i);
+    }
+    await Promise.all([a.motor.ciclo(), b.motor.ciclo()]);
+    await Promise.all([a.motor.ciclo(), b.motor.ciclo()]);
+    await a.motor.ciclo();
+    const enA = await a.volcar();
+    expect(enA.movimiento.filter((m) => String(m.nombre).startsWith('De '))).toHaveLength(40);
+    expect(await b.volcar()).toEqual(enA);
+  });
+});
+
 describe('lo que llega al servidor', () => {
   it('ningún campo de ninguna fila en claro: ni en las peticiones ni en la tabla remota', async () => {
     const usuario = await crearUsuario('espia');
