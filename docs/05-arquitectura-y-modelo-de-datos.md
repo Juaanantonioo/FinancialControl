@@ -426,6 +426,34 @@ que acaba la anterior.
 filas de todas las tablas de datos (formato `financialcontrol.exportacion`, versión 1) y
 un CSV de movimientos con signo y divisa. En claro. No depende de la cuenta.
 
+### 4.10 Versión web (22/11/2026, bloque 5)
+
+Diseño completo: `docs/seguridad/diseno-web.md`.
+
+La web es la misma app exportada como sitio estático (`npx expo export -p web`,
+`web.output: "single"`). No hay servidor propio. Usa el mismo dominio, los mismos
+repositorios, el mismo cifrado y el mismo motor de sincronización; lo que cambia va en
+ficheros `.web.ts(x)`, que Metro elige solo al compilar para web.
+
+| Capa | iOS | Web |
+|---|---|---|
+| Base de datos | expo-sqlite en disco | expo-sqlite (WebAssembly) abierto como `:memory:` |
+| Biblioteca de cifrado | `react-native-libsodium` (nativo) | `libsodium-wrappers-sumo` (WebAssembly) |
+| Clave de datos y sesión | Llavero del sistema | Memoria de la pestaña |
+| Cuenta | Opcional | Obligatoria |
+| Navegación | Pestañas nativas | Enlaces: abajo o barra lateral desde 900 px |
+
+En el navegador solo se guardan el correo y la apariencia. Recargar pide la contraseña.
+
+Ficheros de la web fuera de `src/`: `metro.config.js` (WebAssembly como recurso y
+cabeceras de aislamiento en desarrollo), `public/index.html` y `public/base.css`
+(plantilla sin nada en línea), `public/_headers` (cabeceras del sitio),
+`scripts/cabeceras-web.cjs`, `scripts/servir-web.cjs` y `scripts/pruebas-web.cjs`,
+`playwright.config.ts` y `web/pruebas/`.
+
+**Límites de texto** (`src/dominio/textos.ts`, en las dos plataformas): 200 caracteres en
+nombres y comercio, 2.000 en notas.
+
 ## 5. Correspondencia con el Notion del primer usuario
 
 Solo sirve para comprobar que el modelo cubre el uso actual. La app no importa ni

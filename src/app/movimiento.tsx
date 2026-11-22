@@ -224,8 +224,15 @@ export default function PantallaDeMovimiento() {
         categoriaId: tipo === 'transferencia' ? null : categoriaId,
         nombre,
       };
-      if (original) await repos.movimientos.modificar(original.id, datos);
-      else if (captura) await repos.capturas.guardarEditada(captura.id, datos);
+      // El formulario no enseña el comercio ni la nota: al editar se conservan los que había.
+      // Sin esto, guardar cualquier cambio los borraba.
+      if (original) {
+        await repos.movimientos.modificar(original.id, {
+          ...datos,
+          comercio: original.comercio,
+          nota: original.nota,
+        });
+      } else if (captura) await repos.capturas.guardarEditada(captura.id, datos);
       else await repos.movimientos.crear(datos);
       notificarCambio();
       router.back();

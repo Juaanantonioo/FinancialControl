@@ -403,7 +403,23 @@ describe('B5 · textos demasiado largos ya guardados', () => {
       /más largo de lo que la app admite ahora\. No se ha recortado/,
     );
     expect((await repos.movimientos.obtener(largo.id))?.nota).toHaveLength(5000);
-    pantalla.unmount();
+    // Guardar un cambio (el nombre) conserva la nota entera y el comercio: el formulario
+    // no los enseña, y antes de este bloque guardar los borraba.
+    await bdCompartida.ejecutar('UPDATE movimiento SET comercio = ? WHERE id = ?', [
+      'Comercio de la captura',
+      largo.id,
+    ]);
+    await pantalla.unmount();
+    const otraVez = await pintar(<PantallaDeMovimiento />);
+    await screen.findByDisplayValue('Con nota larga');
+    await fireEvent.changeText(screen.getByTestId('nombre'), 'Renombrado');
+    await screen.findByDisplayValue('Renombrado');
+    await fireEvent.press(screen.getByTestId('guardar'));
+    await waitFor(() => expect(router.back).toHaveBeenCalled());
+    const guardado = await repos.movimientos.obtener(largo.id);
+    expect(guardado).toMatchObject({ nombre: 'Renombrado', comercio: 'Comercio de la captura' });
+    expect(guardado?.nota).toHaveLength(5000);
+    await otraVez.unmount();
 
     conParametros({ id: normal.id });
     await pintar(<PantallaDeMovimiento />);

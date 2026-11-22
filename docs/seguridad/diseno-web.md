@@ -181,6 +181,10 @@ que se ve como texto y que no se ejecuta nada.
 La web **no funciona sin conexión**: no hay copia local desde la que arrancar. Sin red no
 se puede entrar.
 
+Todo el código de la app llega en la primera carga: en la web las rutas **no** se cargan a
+demanda (`asyncRoutes` desactivado para web en `app.json`). Con carga a demanda, una
+pantalla aún no visitada no abría si la red caía a mitad de sesión.
+
 Con la sesión ya abierta, si la red cae:
 
 - Una banda fija lo dice: «Sin conexión. Lo que cambies no se está guardando en tu
@@ -229,8 +233,24 @@ pierde al cerrar.
 | Datos locales | SQLite en disco, sin cifrar | SQLite en memoria |
 | Clave de datos | Llavero del sistema | Memoria |
 
-Las rutas ocultas en la web siguen existiendo en el código (son las de iOS). Si alguien
-escribe su dirección a mano, ve un aviso de que esa función es de la app del iPhone.
+Las rutas ocultas en la web tienen una versión `.web.tsx` que solo enseña un aviso: esa
+función es de la app del iPhone. Es lo que ve quien llega a su dirección.
+
+Cómo se separa el código, sin duplicar nada de dominio, datos, cifrado ni sincronización:
+
+| Fichero `.web` | Sustituye a | Qué hace en la web |
+|---|---|---|
+| `datos/bdExpo.web.ts` | `bdExpo.ts` | Abre SQLite como `:memory:` |
+| `cripto/sodio.web.ts` | `sodio.ts` | Carga libsodium en WebAssembly |
+| `lib/almacenSeguroNativo.web.ts` | Llavero | Guarda en memoria |
+| `lib/almacenDeApariencia.web.ts` | Preferencias | `localStorage` |
+| `lib/almacenDeSeguridad.web.ts`, `autenticacion.web.ts` | Bloqueo y Face ID | Sin bloqueo |
+| `lib/notificaciones.web.ts`, `preferencias.web.ts` | Avisos | Sin efecto |
+| `lib/compartirFichero.web.ts`, `compartirTexto.web.ts` | Hoja de compartir | Descarga |
+| `lib/correoRecordado.web.ts` | — | Recuerda el correo |
+| `estado/colaNativa.web.ts`, `estado/widget.web.ts` | Atajos y widget | Sin efecto |
+| `app/(tabs)/_layout.web.tsx` | Pestañas nativas | Navegación por enlaces |
+| `componentes/web/PuertaDeLaWeb.web.tsx` | — | Cuenta obligatoria, carga, avisos |
 
 ## 10. Diseño adaptable
 
@@ -265,7 +285,9 @@ No se ha desplegado nada. Los pasos están en `pasos-del-propietario-b5.md`.
 4. **Lo no subido se pierde al cerrar.** El aviso de `beforeunload` depende del navegador;
    en móvil no siempre aparece.
 5. **Argon2id con 64 MiB en un móvil modesto** puede tardar o fallar. Medido en escritorio
-   y con emulación de móvil; en un móvil real, no.
+   (unos 300 ms) y con emulación de móvil (unos 1.300 ms con el procesador frenado cuatro
+   veces). La emulación no limita la memoria: **en un móvil real no está medido**, y la
+   memoria que usa la pestaña tampoco se ha podido medir.
 6. **`expo-sqlite` en web depende de un worker en `blob:` y de aislamiento entre
    orígenes.** Si un alojamiento no envía esas cabeceras, la web no arranca.
 7. **El correo queda en `localStorage`**: en un ordenador compartido, el siguiente ve qué

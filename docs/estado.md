@@ -1888,9 +1888,104 @@ mientras no se cambie, y al editar ese movimiento la pantalla avisa. Una prueba 
 fila más grande posible de cada una de las doce tablas, en el peor caso de codificación, y
 comprueba que ocupa menos de la mitad de lo que admite el servidor.
 
-**Observado y no cambiado:** editar un movimiento desde su pantalla guarda `comercio` y
-`nota` vacíos, porque el formulario no los tiene y no los reenvía. Un movimiento nacido de
-una captura pierde su comercio al editarlo. Es anterior a este bloque. Queda planteado en
-el informe.
+**Defecto anterior, corregido al cerrar el bloque:** editar un movimiento desde su
+pantalla guardaba `comercio` y `nota` vacíos, porque el formulario no los tiene y no los
+reenviaba. Chocaba con D-c. Ahora se conservan los que había, con prueba.
 
 Pruebas tras la fase 3: **1.266 locales en 50 suites** y **81 remotas**, en verde.
+
+### 16.4 Parte B · Versión web
+
+Diseño: `docs/seguridad/diseno-web.md`. Pasos del dueño:
+`docs/seguridad/pasos-del-propietario-b5.md`. Informe: `docs/informes/b5-informe-final.md`.
+
+| Fase | Qué | Commit |
+|---|---|---|
+| 0 | Baseline | `9be468f` |
+| 1 | Diagnóstico del simulador; parte A parada | `6e74244` |
+| 2 | Prueba con dos simuladores | **No hecha** (16.2) |
+| 3 | Preguntar antes de subir (D-b) y límite de textos (D-c) | `7c29185` |
+| 4 | Diseño de la web | `4f56ea3` |
+| 5 | La app arranca en web: dependencias y capas por plataforma | `0ce2620` |
+| 6 | Cuenta obligatoria, entrada, carga y diseño adaptable | `8b9208e` |
+| 7 | Sustituciones por plataforma | `e197ccf` |
+| 8 | Cabeceras del sitio y servidor local de pruebas | `eda7727` |
+| 9 | Pruebas en navegador, casos límite y capturas | `bd773ea` |
+| 10 | Documentación, pasos del propietario e informe | ver `git log` |
+
+Los commits 6 a 8 no separan del todo lo que dicen sus títulos: las páginas legales y los
+avisos de sin conexión entraron con la puerta de la web (fase 6), porque la puerta los
+enlaza y los pinta.
+
+**Órdenes nuevas**
+
+| Orden | Qué hace |
+|---|---|
+| `npm run web` | Servidor de desarrollo de la web |
+| `npm run web:exportar` | Genera `dist/` y escribe en sus cabeceras la dirección de Supabase |
+| `npm run web:servir` | Sirve `dist/` en `http://127.0.0.1:4173` con las cabeceras definitivas |
+| `npm run test:web` | Exporta contra la instancia local y lanza las 22 pruebas de navegador |
+
+**Dependencias.** Nuevas, las que permitía el encargo: `react-native-web` (^0.21.4),
+`@expo/metro-runtime` (~58.0.17) y, de desarrollo, `@playwright/test`.
+`libsodium-wrappers-sumo` 0.8.4 pasa de desarrollo a producción, con versión exacta.
+Ninguna otra.
+
+### 16.5 Pruebas
+
+| | Antes | Después |
+|---|---|---|
+| `npm test` | 1.236 en 49 suites | **1.270 en 51 suites** |
+| `npm run test:remoto` | 81 en 5 suites | **81 en 5 suites** |
+| `npm run test:web` (navegador real) | — | **22 en 6 ficheros** |
+
+Las de navegador corren en Chromium sobre el sitio exportado y servido con sus cabeceras
+definitivas, contra la instancia local de Supabase. Solo Chromium: **Safari y Firefox no
+se han probado.**
+
+Pruebas que ya existían y han cambiado, porque lo que comprobaban cambió a propósito:
+
+1. Las de sincronización que entraban en una cuenta con datos locales: ahora responden
+   «sí» a la pregunta de subida (D-b).
+2. La de «fila demasiado grande»: ya no puede crear la nota de 70.000 caracteres con el
+   repositorio (D-c); la escribe directamente en la base, como dato anterior al límite.
+3. `seguridad.test.tsx`: la lista de dependencias autorizadas incluye las tres de la web.
+4. `plugin.test.ts`: `libsodium-wrappers-sumo` se busca en dependencias de producción.
+5. `cripto.test.ts`: el punto de carga de la biblioteca admite además `sodio.web.ts`.
+
+Ninguna se ha debilitado.
+
+### 16.6 Medidas (22/11/2026, MacBook de 8 GiB, Chromium sin interfaz)
+
+| | Valor |
+|---|---|
+| Argon2id (64 MiB, 8 pasadas), escritorio | 291, 310 y 320 ms |
+| Argon2id, móvil emulado (Pixel 7, procesador ×4 más lento) | 1.306, 1.279 y 1.279 ms |
+| Alta completa (derivación, autocomprobación, alta y primera sincronización), escritorio | 1,3 s |
+| Alta completa, móvil emulado | 4,1 s |
+| Memoria de la pestaña | **No medida**: el navegador de pruebas no ofrece esa medición |
+| Tamaño del sitio | 3.484 KiB en 26 ficheros; 1.127 KiB comprimido con gzip |
+| Mayores ficheros | `entry.js` 2.697 KiB, `wa-sqlite.wasm` 626 KiB, `worker.js` 135 KiB |
+| Carga en frío hasta el formulario, servidor en la misma máquina | 613, 607 y 601 ms |
+
+64 MiB no ha fallado en ningún caso. La emulación de móvil frena el procesador pero **no
+limita la memoria**: en un teléfono real no está medido.
+
+### 16.7 Compilación de iOS
+
+`npx expo prebuild --clean --platform ios` correcto, y `xcodebuild` para el SDK del
+simulador (sin arrancar ninguno): **BUILD SUCCEEDED, 0 errores**. Sin `aps-environment`;
+identificador y esquema sin cambios. La app no se ha arrancado. No cambia de comportamiento: todo lo de la web
+va en ficheros `.web.*` o detrás de `ES_WEB`, salvo las fases 3 (D-b y D-c), que eran
+cambios pedidos para las dos plataformas.
+
+### 16.8 NO DEMOSTRADO
+
+1. Todo lo del bloque 4b-2 en un dispositivo (16.2): sigue sin verse.
+2. La web en un móvil real: tiempos de Argon2id, memoria y el aviso al cerrar la pestaña.
+3. La web en Safari y en Firefox.
+4. La web desplegada: que el alojamiento sirve las cabeceras tal como el servidor local.
+5. La web contra el proyecto remoto de Supabase.
+6. Una cuenta creada en un iPhone de verdad abriendo en la web. Probado con el mismo
+   código del iPhone ejecutado en Node.
+7. La app de iOS arrancando con los cambios de este bloque.

@@ -96,6 +96,38 @@ apartado «Decisiones propias»; las que el dueño puede querer cambiar, en «Te
 | C7 | «Cancelar» en la pregunta de entrada | Cierra la sesión |
 | C8 | Límite de inicios de sesión de la instancia local | Subido a 600 cada cinco minutos en `supabase/config.toml`, solo para las pruebas |
 
+### Decisiones del 22/11/2026 (bloque 5)
+
+Del dueño, en el encargo del bloque:
+
+| Id | Asunto | Decisión |
+|---|---|---|
+| D33 | Entrar con datos en una cuenta vacía | Ya no sube sin preguntar. «Cancelar» no sincroniza ni borra |
+| D34 | Textos libres | Tienen límite de longitud. Lo ya guardado no se trunca; se avisa al editarlo |
+| D35 | Cuenta en la web | Obligatoria. No hay modo «solo en este navegador» |
+| D36 | Qué guarda el navegador | Nada sensible: ni datos, ni claves, ni contraseña. Solo el correo y la apariencia. Recargar pide la contraseña. Cierra la decisión que el 4b-1 dejó abierta sobre el almacén seguro en web |
+| D37 | Datos en la web | Se bajan cifrados, se descifran en memoria y se trabaja sobre una base en memoria |
+| D38 | Sin conexión en la web | No funciona; lo dice y no pierde lo escrito. Avisa al cerrar con cambios sin subir |
+| D39 | Seguridad del sitio | Política de contenido estricta, nada de terceros, cabeceras en el repositorio |
+| D40 | Alojamiento | Estático, gratuito, con cabeceras propias. No lo despliega Claude Code |
+| D41 | Legal | Privacidad y condiciones en borrador, con los datos del titular entre corchetes |
+| D42 | Pendiente para el 4b-3 | Cerrar las demás sesiones al cambiar la contraseña, recuperación con el código y cifrado de la base local |
+
+De Claude Code, sin consultar (explicadas en `docs/informes/b5-informe-final.md`):
+
+| Id | Asunto | Decisión |
+|---|---|---|
+| C9 | Base en memoria | `expo-sqlite` para web abierto como `:memory:` |
+| C10 | Alojamiento | Cloudflare Pages, con subida directa de la carpeta |
+| C11 | Límites de texto | 200 caracteres en nombres y comercio; 2.000 en notas |
+| C12 | «Cancelar» en la pregunta de subida | Deja la sesión abierta y la sincronización en pausa |
+| C13 | Dispositivo recién instalado y nube vacía | Sube sin preguntar: no hay datos de nadie |
+| C14 | Cerrar sesión en la web | Recarga la página, para vaciar la memoria |
+| C15 | Rutas en la web | Sin carga a demanda: todo el código llega al abrir |
+| C16 | Aislamiento | `Cross-Origin-Embedder-Policy: require-corp` en vez de `credentialless` |
+| C17 | Bandeja de capturas en la web | Oculta |
+| C18 | Simuladores | Parada la prueba tras el reinicio del Mac, por indicación del dueño |
+
 Estado de D7 a 17/11/2026: el bloque 1 está hecho en la rama `h3-vision-completa`. El
 detalle y lo que queda pendiente de cada tarea están en `07`, apartado 2.2, y en
 `estado.md`, apartado 8.

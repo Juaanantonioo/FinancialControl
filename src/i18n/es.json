@@ -248,7 +248,7 @@
     "generico": "Ha ocurrido un error inesperado. Inténtalo de nuevo.",
     "nombre_vacio": "Escribe un nombre.",
     "texto_demasiado_largo": "Ese texto es demasiado largo. Acórtalo para poder guardarlo.",
-    "textoGuardadoLargo": "Este apunte tiene un texto más largo de lo que la app admite ahora. No se ha recortado. Si lo cambias, tendrás que acortarlo.",
+    "textoGuardadoLargo": "Este apunte tiene un texto más largo de lo que la app admite ahora. No se ha recortado y se conserva al guardar. Si lo cambias, tendrás que acortarlo.",
     "nombre_duplicado": "Ya existe otro elemento con ese nombre.",
     "importe_no_valido": "El importe no es válido.",
     "importe_cero": "Escribe un importe mayor que cero.",

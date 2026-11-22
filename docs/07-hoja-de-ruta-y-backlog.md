@@ -51,7 +51,8 @@ Los hitos y las tareas conservan su identificador. Cambia el orden en que se abo
 | 4b-2 · Sincronización cifrada | Sincronización fila a fila con cifrado en el dispositivo, entrada en una cuenta, cambio de contraseña y exportación | H4 en parte; R-01, R-03, R-07, R-13 y R-24 | Hecho en la rama `b4b2-sincronizacion`, sin probar con dos dispositivos reales y con una migración remota por aplicar. Ver apartado 2.7 |
 | 4b-3 · Recuperación y base local cifrada | Recuperación con el código (necesita una función en el servidor) y cifrado de la base local con SQLCipher | R-11 y R-20 a R-23 | Pendiente |
 | 4c · Privacidad y cierre de seguridad | Política de privacidad, exportación y borrado visibles, aviso de actualización obligatoria y repetición de la auditoría con la red ya en uso | T-102 y T-103 de H9, y parte de H8 | Pendiente |
-| 5 · Versión web | Exportación a web contra Supabase, alojamiento y pruebas en navegador | Sin tareas todavía: se definen al cerrar el bloque 4 | Pendiente (D8) |
+| 5 · Versión web | Sitio estático con cuenta obligatoria, datos solo en memoria, mismas claves que iOS, cabeceras de seguridad y páginas legales en borrador | Sin tareas previas | Hecho en la rama `b5-web`, **sin desplegar** y sin probar en un móvil real ni en Safari. La verificación del 4b-2 en simuladores, que era la parte A, no se pudo hacer. Ver `estado.md`, apartado 16 |
+| 5b · Android | La app en Android | Sin tareas todavía | Pendiente. Notas en `docs/informes/b5-informe-final.md` |
 | 6 · Publicación y suscripción | Calidad, beta, envío a revisión y suscripción | H8, H9 y T-120 a T-127 | Pendiente (D9) |
 
 El total de 18 semanas del apartado 2 ya no es válido: el rediseño y la versión web no

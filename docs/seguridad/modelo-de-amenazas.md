@@ -394,3 +394,42 @@ servidor comprometido aún puede hacer está en su apartado 10 y alimenta el 4c.
    datos a esa cuenta** (regla de entrada D-h).
 6. **Pérdida silenciosa por conflicto:** de dos cambios sin conexión a la misma fila, se
    pierde el que sube antes.
+
+## 8. Estado tras el bloque 5 (22/11/2026): la versión web
+
+La web añade una superficie nueva: un navegador, y un servidor que entrega el código.
+Diseño y límites: `diseno-web.md`.
+
+### 8.1 Adversarios nuevos o que cambian
+
+| Adversario | Qué puede hacer | Defensa | Qué queda |
+|---|---|---|---|
+| Quien controla lo que sirve la web (alojamiento, su cuenta, el dominio) | Entregar un JavaScript que robe la contraseña o la clave de datos | **Ninguna técnica.** Solo la seguridad de esa cuenta | **Riesgo principal de la web.** En iOS no existe |
+| Script inyectado en la página | Leer la clave de datos de la memoria | Política de contenido sin scripts en línea ni de terceros, sin `eval`, y conexiones solo al propio origen y a Supabase; nada de terceros en el sitio. Probado: un script inyectado no se ejecuta y no puede enviar nada fuera | Un fallo de inyección en el propio código sigue siendo grave; React escapa los textos y hay prueba |
+| Extensión del navegador con permiso sobre la página | Leerlo todo | Ninguna | Sin defensa |
+| Otra persona en el mismo ordenador, después | Leer lo que quedó guardado | No queda nada: ni datos, ni claves, ni sesión. Probado volcando todos los almacenes | Queda el correo |
+| Otra persona en el mismo ordenador, con la pestaña abierta | Ver y cambiar los datos | Ninguna: no hay bloqueo por inactividad | Sin defensa |
+| Otro sitio web | Incrustar la app en un marco, abrirla desde otra ventana | `frame-ancestors 'none'`, `X-Frame-Options: DENY`, aislamiento entre orígenes | — |
+| Red | Leer o cambiar el tráfico | HTTPS y HSTS | Primera visita antes de HSTS |
+
+### 8.2 Requisitos del apartado 4, en la web
+
+| Requisito | Estado en la web |
+|---|---|
+| R-01, R-03 | Cumplido: mismo código y mismas pruebas. Además, prueba de navegador: ninguna petición lleva datos en claro |
+| R-04 | Cumplido: libsodium en WebAssembly, misma versión que las pruebas. Autocomprobación en el navegador |
+| R-05 | Cumplido |
+| R-08 (claves en el llavero) | **No aplica:** no hay llavero. La clave vive en memoria y no se guarda |
+| R-09 (claves fuera de registros y almacenes) | Cumplido, con prueba que vuelca `localStorage`, `sessionStorage`, IndexedDB, cookies, Cache Storage y OPFS |
+| R-18 (TLS) | Depende del alojamiento; HSTS en las cabeceras. Sin desplegar: NO DEMOSTRADO |
+| R-20 a R-23 (base local cifrada) | **No aplica:** en la web no hay base local en disco |
+| R-24 (exportación) | Cumplido: descarga |
+| R-25 (borrado de cuenta) | Cumplido: misma pantalla |
+| R-26 (explicar qué ve el servidor) | Cumplido: en la entrada y en la política de privacidad (borrador) |
+| R-27, R-28 (bloqueo) | **No aplican:** no hay bloqueo en la web; recargar pide la contraseña |
+
+### 8.3 Lo que este bloque cambia en iOS
+
+- Un dispositivo con datos ya no los sube a una cuenta vacía sin preguntar (cierra el
+  riesgo 5 del apartado 7.2).
+- Los textos libres tienen límite: ninguna fila nueva puede quedarse sin subir por tamaño.
