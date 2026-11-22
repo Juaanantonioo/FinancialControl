@@ -1820,3 +1820,17 @@ visto pintada en un simulador ni en un iPhone**; lo que hay son pruebas de panta
 
 `docs/seguridad/pasos-del-propietario-4b2.md`: aplicar la migración remota, instalar en el
 iPhone y hacer la prueba con dos dispositivos. Informe: `docs/informes/b4b2-informe-final.md`.
+
+## 16. B5 · Verificación en simulador y versión web — rama `b5-web`
+
+### 16.1 Baseline (22/11/2026)
+
+- Rama de partida: `b4b2-sincronizacion`, commit `f680e9f`, igual que en GitHub. Coincide
+  con el encargo. Rama nueva: `b5-web`.
+- `npm run check`: pasa entero. **1.236 pruebas en 49 suites.** Coincide.
+- `npm run test:remoto` (instancia local): **81 pruebas en 5 suites**, en verde. Coincide.
+- Esquema local: versión 5.
+- Docker: disponible (29.0.1). Instancia local de Supabase arrancada para este bloque.
+- `git status` al empezar: limpio salvo el encargo de este bloque, sin seguimiento.
+- El proyecto sigue enlazado al remoto. En este bloque solo se usan órdenes contra la
+  instancia local. Ninguna con `--remote`, ni `login`, `link`, `db push` o `config push`.
