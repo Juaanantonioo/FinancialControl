@@ -1662,3 +1662,32 @@ o `npm ci` (script `postinstall`) y en cada `expo prebuild` (plugin de `app.json
 `docs/seguridad/pasos-del-propietario-4b1.md`: aplicar las migraciones al proyecto remoto,
 crear `.env`, desactivar la confirmación de correo, probar en el iPhone y fijar Argon2id.
 No borrar el stash de respaldo (`27c3df3`) hasta dar el bloque por bueno.
+
+## 15. B4b-2 · Sincronización cifrada — rama `b4b2-sincronizacion`
+
+### 15.1 Baseline (22/11/2026)
+
+- Rama de partida: `b4b1-cuenta-y-claves`, commit `2650f9c`, igual que en GitHub. Coincide
+  con el encargo. Rama nueva: `b4b2-sincronizacion`.
+- `npm test`: **1.092 pruebas en 38 suites**, en verde. `npm run lint` y `npm run typecheck`:
+  sin avisos. Coincide con el encargo.
+- Pruebas remotas (`npm run test:remoto`, instancia local): **41 pruebas en 2 suites**, en
+  verde. Coincide.
+- Esquema local: versión 4.
+- Docker: disponible (29.0.1). CLI de Supabase 3.2.0. Instancia local arrancada.
+- `git status` al empezar: `package-lock.json` modificado (una línea, `"hasInstallScript":
+  true`, que npm añade porque el proyecto tiene `postinstall`; se confirma tal cual) y el
+  encargo de este bloque sin seguimiento.
+- **Una diferencia con el encargo, sin efecto en el código:** `npm run check` fallaba en su
+  primer paso (`prettier --check`) por `supabase/.temp/linked-project.json`. Es un fichero
+  que la CLI de Supabase dejó el 22/11 al enlazar el proyecto para aplicar la migración; git
+  lo ignora y no pertenece a la rama. Se añade `supabase/.temp` a `.prettierignore` y
+  `npm run check` pasa entero. No se ha leído ni tocado nada de esa carpeta. No se ha
+  considerado motivo para parar: el código, las pruebas y el commit son los del encargo.
+- **El proyecto está enlazado** (`supabase/.temp/project-ref`). En este bloque solo se usan
+  órdenes que actúan sobre la instancia local (`start`, `status`, `db reset`, `db query`).
+  Ninguna con `--linked` ni `--remote`, ni `db push`.
+- Stash antiguo (`27c3df3`): comprobado que cada línea que añadía a los ficheros con
+  seguimiento está en la rama, y que sus ficheros sin seguimiento están en la rama iguales
+  o en una versión posterior (`cuenta.ts`, `cuenta.test.ts`, `almacenSeguro.ts` y el diseño
+  criptográfico cambiaron después). Borrado.

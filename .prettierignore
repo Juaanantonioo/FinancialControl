@@ -8,3 +8,5 @@ package-lock.json
 docs
 README.md
 AGENTS.md
+# Estado que deja la CLI de Supabase al enlazar el proyecto (git ya lo ignora).
+supabase/.temp
