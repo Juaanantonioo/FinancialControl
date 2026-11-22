@@ -17,6 +17,10 @@ import { gruposDelCodigo } from '@/cripto';
 import { useAviso } from '@/estado/Aviso';
 import type { ErrorDeCuenta, Resultado } from '@/estado/cuenta';
 import { cuenta, useCuenta } from '@/estado/cuentaDeLaApp';
+import { exportacion } from '@/estado/exportacionDeLaApp';
+import { describirFecha, diaLocalDe, horaLocalDe } from '@/estado/fechas';
+import { sincronizacion, useSincronizacion } from '@/estado/sincronizacionDeLaApp';
+import type { ResultadoDeExportar } from '@/exportacion/exportador';
 import { t, type ClaveTexto } from '@/i18n';
 import { LONGITUD_MAXIMA_DE_CONTRASENA } from '@/lib/contrasena';
 import { Espacio, Letra, Radio, TactilMinimo, useColores } from '@/theme';
@@ -30,13 +34,17 @@ const textoDelError = (error: ErrorDeCuenta | 'no_coinciden'): string =>
  * Ajustes › Cuenta. Crear cuenta, guardar y confirmar el código de
  * recuperación, iniciar y cerrar sesión, y borrar la cuenta.
  *
- * Hoy la cuenta no sincroniza nada: solo crea y guarda las claves. La
- * pantalla lo dice. Queda detrás del bloqueo de la app como todas.
+ * Con sesión enseña además el estado de la sincronización cifrada (última
+ * vez, cambios pendientes, apuntes que no se han podido aplicar y, si algo
+ * falla, un mensaje sin detalles internos), el botón «Sincronizar ahora» y, al
+ * entrar en una cuenta con datos desde un dispositivo con datos, la pregunta
+ * de qué datos usar. Queda detrás del bloqueo de la app como todas.
  */
 export default function CuentaDeUsuario() {
   const c = useColores();
   const margen = useSafeAreaInsets();
   const estado = useCuenta();
+  const sinc = useSincronizacion();
   const mostrarAviso = useAviso();
   const [modo, setModo] = useState<Modo>('crear');
   const [correo, setCorreo] = useState('');
@@ -80,6 +88,42 @@ export default function CuentaDeUsuario() {
     // La contraseña se quita de la pantalla en cuanto ha servido.
     void ejecutar(operacion, olvidarFormulario);
   };
+
+  /** «Usar los datos de la nube»: primero la copia de lo local; sin copia no se toca nada. */
+  async function usarLaNube() {
+    setError(null);
+    // En un objeto, porque se rellena desde dentro de la función que se pasa al motor.
+    const copiaHecha: { resultado: ResultadoDeExportar } = { resultado: 'error' };
+    const resultado = await sincronizacion().usarLaNube(async () => {
+      copiaHecha.resultado = await exportacion().todo('-copia-local');
+      return copiaHecha.resultado === 'compartido';
+    });
+    const copia = copiaHecha.resultado;
+    if (resultado.estado === 'hecho') {
+      mostrarAviso({ texto: t('sinc.nubeUsada') });
+    } else if (resultado.estado === 'sin_copia') {
+      if (copia === 'descartado') setError(t('sinc.sinCopia'));
+      else if (copia === 'no_autenticado') setError(t('exportar.noAutenticado'));
+      else setError(t('sinc.sinCopiaPosible'));
+    } else if (resultado.estado === 'sin_conexion') {
+      setError(t('sinc.sinConexion'));
+    } else if (resultado.estado === 'sesion_caducada') {
+      setError(t('sinc.sesionCaducada'));
+    } else {
+      setError(t('sinc.error'));
+    }
+  }
+
+  const textoDeFase: Record<typeof sinc.fase, ClaveTexto> = {
+    inactiva: 'sinc.inactiva',
+    preguntar: 'sinc.inactiva',
+    al_dia: 'sinc.alDia',
+    parcial: 'sinc.parcial',
+    sin_conexion: 'sinc.sinConexion',
+    sesion_caducada: 'sinc.sesionCaducada',
+    error: 'sinc.error',
+  };
+  const hayProblema = ['parcial', 'sin_conexion', 'sesion_caducada', 'error'].includes(sinc.fase);
 
   const campo = [estilos.campo, { color: c.texto, borderColor: c.borde, backgroundColor: c.fondo }];
   const nota = [estilos.nota, { color: c.textoSecundario }];
@@ -209,6 +253,48 @@ export default function CuentaDeUsuario() {
         />
       </Tarjeta>
     );
+  } else if (estado.fase === 'con_sesion' && sinc.fase === 'preguntar') {
+    // La nube y el dispositivo tienen datos: no se sincroniza nada hasta que la persona decida.
+    cuerpo = (
+      <Tarjeta titulo={t('sinc.preguntaTitulo')} testID="cuenta-pregunta">
+        <Text maxFontSizeMultiplier={1.6} style={[estilos.texto, { color: c.texto }]}>
+          {t('sinc.preguntaTexto')}
+        </Text>
+        <Text maxFontSizeMultiplier={1.6} style={nota}>
+          {`⚠ ${t('sinc.preguntaCopia')}`}
+        </Text>
+        <TextoDeError texto={error} />
+        {sinc.trabajando ? (
+          <View style={estilos.trabajando} testID="sincronizando">
+            <ActivityIndicator color={c.acento} />
+            <Text maxFontSizeMultiplier={1.6} style={nota}>
+              {t('sinc.trabajando')}
+            </Text>
+          </View>
+        ) : null}
+        <Boton
+          texto={t('sinc.usarLaNube')}
+          variante="primario"
+          desactivado={sinc.trabajando || estado.ocupado}
+          alPulsar={() => void usarLaNube()}
+          testID="usar-la-nube"
+        />
+        <Boton
+          texto={t('sinc.cancelar')}
+          desactivado={sinc.trabajando || estado.ocupado}
+          alPulsar={() =>
+            void ejecutar(
+              () => cuenta().cerrarSesion(),
+              () => {
+                olvidarFormulario();
+                mostrarAviso({ texto: t('sinc.entradaCancelada') });
+              },
+            )
+          }
+          testID="cancelar-entrada"
+        />
+      </Tarjeta>
+    );
   } else if (estado.fase === 'con_sesion') {
     cuerpo = (
       <>
@@ -221,9 +307,6 @@ export default function CuentaDeUsuario() {
           </Text>
           <Text maxFontSizeMultiplier={1.6} style={nota}>
             {t('usuario.conSesionTexto')}
-          </Text>
-          <Text maxFontSizeMultiplier={1.6} style={nota}>
-            {t('usuario.hoyNoSincroniza')}
           </Text>
           <TextoDeError texto={borrando ? null : error} />
           <Boton
@@ -243,6 +326,55 @@ export default function CuentaDeUsuario() {
           <Text maxFontSizeMultiplier={1.6} style={nota}>
             {t('usuario.cerrarAyuda')}
           </Text>
+        </Tarjeta>
+        <Tarjeta titulo={t('sinc.titulo')} testID="cuenta-sincronizacion">
+          {sinc.trabajando ? (
+            <View style={estilos.trabajando} testID="sincronizando">
+              <ActivityIndicator color={c.acento} />
+              <Text maxFontSizeMultiplier={1.6} style={nota}>
+                {t('sinc.trabajando')}
+              </Text>
+            </View>
+          ) : null}
+          <Text
+            maxFontSizeMultiplier={1.6}
+            style={[estilos.texto, { color: hayProblema ? c.negativo : c.texto }]}
+            testID="estado-de-sincronizacion">
+            {`${hayProblema ? '⚠ ' : ''}${t(textoDeFase[sinc.fase])}`}
+          </Text>
+          <Text maxFontSizeMultiplier={1.6} style={nota} testID="ultima-sincronizacion">
+            {sinc.ultima
+              ? t('sinc.ultima', {
+                  cuando: `${describirFecha(diaLocalDe(sinc.ultima))}, ${horaLocalDe(sinc.ultima)}`,
+                })
+              : t('sinc.nunca')}
+          </Text>
+          <Text maxFontSizeMultiplier={1.6} style={nota} testID="cambios-pendientes">
+            {sinc.pendientes === 0
+              ? t('sinc.sinPendientes')
+              : sinc.pendientes === 1
+                ? t('sinc.unPendiente')
+                : t('sinc.pendientes', { numero: sinc.pendientes })}
+          </Text>
+          {sinc.ilegibles > 0 ? (
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={[estilos.nota, { color: c.negativo }]}
+              testID="filas-ilegibles">
+              {`⚠ ${t('sinc.ilegibles', { numero: sinc.ilegibles })}`}
+            </Text>
+          ) : null}
+          {sinc.noAplicables > 0 ? (
+            <Text maxFontSizeMultiplier={1.6} style={nota} testID="filas-no-aplicables">
+              {t('sinc.noAplicables', { numero: sinc.noAplicables })}
+            </Text>
+          ) : null}
+          <Boton
+            texto={t('sinc.ahora')}
+            desactivado={sinc.trabajando}
+            alPulsar={() => void sincronizacion().pedir('manual')}
+            testID="sincronizar-ahora"
+          />
         </Tarjeta>
         <Tarjeta titulo={t('usuario.borrarTitulo')} testID="cuenta-borrar">
           <Text maxFontSizeMultiplier={1.6} style={[estilos.texto, { color: c.texto }]}>
@@ -315,7 +447,7 @@ export default function CuentaDeUsuario() {
             {t('usuario.sinSesionTexto')}
           </Text>
           <Text maxFontSizeMultiplier={1.6} style={nota}>
-            {t('usuario.hoyNoSincroniza')}
+            {t('usuario.conCuenta')}
           </Text>
         </Tarjeta>
         <Tarjeta titulo={t(crear ? 'usuario.crear' : 'usuario.entrar')} testID="cuenta-formulario">

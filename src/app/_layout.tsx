@@ -9,6 +9,7 @@ import { seguirReducirMovimiento } from '@/estado/animacion';
 import { useAvisosAutomaticos } from '@/estado/avisos';
 import { useColaDeAtajos } from '@/estado/colaNativa';
 import { iniciarSeguridad } from '@/estado/seguridad';
+import { useSincronizacionAutomatica } from '@/estado/sincronizacionDeLaApp';
 import { useWidgetAlDia } from '@/estado/widget';
 import { ProveedorDeDatos } from '@/estado/Datos';
 import { t } from '@/i18n';
@@ -36,8 +37,8 @@ export const unstable_settings = { anchor: '(tabs)' };
  * acceso a los datos a todas ellas.
  */
 /**
- * Mantiene al día los avisos locales y el widget, y vuelca la cola de las
- * acciones de Atajos. No pinta nada: existe como componente
+ * Mantiene al día los avisos locales y el widget, vuelca la cola de las
+ * acciones de Atajos y lanza la sincronización. No pinta nada: existe como componente
  * para poder leer los datos, que solo están disponibles dentro del proveedor.
  * Sigue trabajando con la app bloqueada: guarda capturas y programa avisos,
  * pero no enseña nada.
@@ -46,6 +47,8 @@ function AvisosDelSistema() {
   useAvisosAutomaticos();
   useColaDeAtajos();
   useWidgetAlDia();
+  // Sincronización cifrada: solo hace algo si hay una cuenta abierta.
+  useSincronizacionAutomatica();
   return null;
 }
 

@@ -23,6 +23,7 @@ import {
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { prepararBaseDeDatos, type CategoriaInicial, type Repositorios } from '@/datos';
+import type { BaseDeDatos } from '@/datos/bd';
 import { abrirBdExpo } from '@/datos/bdExpo';
 import { ErrorDeDominio } from '@/dominio/modelo';
 import { t, type ClaveTexto } from '@/i18n';
@@ -37,7 +38,8 @@ type ValorDelContexto = {
 
 const Contexto = createContext<ValorDelContexto | null>(null);
 
-function categoriasIniciales(): CategoriaInicial[] {
+/** Las categorías que la app crea al instalarse. La sincronización las usa para reconocerlas. */
+export function categoriasIniciales(): CategoriaInicial[] {
   return [
     { nombre: t('categoriasIniciales.comida'), tipo: 'gasto' },
     { nombre: t('categoriasIniciales.casa'), tipo: 'gasto' },
@@ -51,13 +53,38 @@ function categoriasIniciales(): CategoriaInicial[] {
   ];
 }
 
+type Apertura = { repos: Repositorios; bd: BaseDeDatos };
+
 // La base de datos se abre una única vez por ejecución de la app.
-let apertura: Promise<Repositorios> | null = null;
+let apertura: Promise<Apertura> | null = null;
+
+// Avisos entre los datos y la sincronización, sin que ninguno conozca al otro:
+// las pantallas avisan de un cambio local, y la sincronización, de uno remoto.
+const oyentesDeCambiosLocales = new Set<() => void>();
+const oyentesDeCambiosRemotos = new Set<() => void>();
+
+/** Se llama cada vez que una pantalla ha escrito algo. Devuelve cómo dejar de escuchar. */
+export function alCambiarDatosLocales(avisar: () => void): () => void {
+  oyentesDeCambiosLocales.add(avisar);
+  return () => {
+    oyentesDeCambiosLocales.delete(avisar);
+  };
+}
+
+/** La sincronización ha cambiado datos: las pantallas vuelven a leer. No cuenta como cambio local. */
+export function refrescarDatos(): void {
+  oyentesDeCambiosRemotos.forEach((avisar) => avisar());
+}
+
+/** La base de datos de la app, ya abierta y migrada. Para la sincronización y la exportación. */
+export async function baseDeDatosDeLaApp(): Promise<BaseDeDatos> {
+  return (await abrirRepositorios()).bd;
+}
 
 /** Último paso alcanzado al abrir los datos y, si falla, el motivo. Solo para diagnóstico. */
 const diagnostico = { paso: 'inicio', error: '' };
 
-function abrirRepositorios(): Promise<Repositorios> {
+function abrirRepositorios(): Promise<Apertura> {
   if (!apertura) {
     apertura = (async () => {
       diagnostico.paso = 'abrir';
@@ -69,7 +96,7 @@ function abrirRepositorios(): Promise<Repositorios> {
         categoriasIniciales(),
       );
       diagnostico.paso = 'listo';
-      return repos;
+      return { repos, bd };
     })();
     // Si falla, se permite reintentar en el siguiente arranque del proveedor.
     apertura.catch((e) => {
@@ -88,15 +115,22 @@ export function ProveedorDeDatos({ children }: { children: ReactNode }) {
   useEffect(() => {
     let vigente = true;
     abrirRepositorios().then(
-      (r) => vigente && setRepos(r),
+      (r) => vigente && setRepos(r.repos),
       () => vigente && setFallo(true),
     );
+    // Lo que trae la sincronización refresca las pantallas igual que un cambio propio.
+    const refrescar = () => setVersion((v) => v + 1);
+    oyentesDeCambiosRemotos.add(refrescar);
     return () => {
       vigente = false;
+      oyentesDeCambiosRemotos.delete(refrescar);
     };
   }, []);
 
-  const notificarCambio = useCallback(() => setVersion((v) => v + 1), []);
+  const notificarCambio = useCallback(() => {
+    setVersion((v) => v + 1);
+    oyentesDeCambiosLocales.forEach((avisar) => avisar());
+  }, []);
   const valor = useMemo(
     () => (repos ? { repos, version, notificarCambio } : null),
     [repos, version, notificarCambio],

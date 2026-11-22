@@ -207,6 +207,31 @@ export async function cambiarBloqueo(activo: boolean): Promise<ResultadoDeAutent
   return resultado === 'correcto' ? 'fallido' : resultado;
 }
 
+/**
+ * Pide autenticación antes de una acción delicada (exportar los datos a un
+ * fichero). Con el bloqueo desactivado no pide nada y devuelve `true`. No
+ * cambia ningún ajuste ni el estado de bloqueo de la app.
+ */
+export async function autenticarParaAccion(motivo: string): Promise<boolean> {
+  if (!estado.bloqueo.activo) return true;
+  if (estado.autenticando || !autenticador) return false;
+  fijar({ autenticando: true });
+  let resultado: ResultadoDeAutenticacion = 'fallido';
+  let capacidad: Capacidad = 'codigo';
+  try {
+    resultado = await autenticador.autenticar(motivo, t('comun.cancelar'));
+    capacidad = resultado === 'correcto' ? 'biometria' : await autenticador.capacidad();
+  } catch {
+    // Un error inesperado es un no.
+  }
+  // La hoja del sistema pudo dejar anotada una salida a segundo plano: ya no cuenta.
+  salida = null;
+  fijar({ autenticando: false, cubierta: false });
+  // Si el iPhone ya no tiene código ni biometría, el bloqueo no protege nada: se deja pasar,
+  // igual que al desbloquear.
+  return trasAutenticar(resultado, capacidad) !== 'seguir_bloqueada';
+}
+
 /** Cambia el tiempo que la app puede pasar en segundo plano sin volver a pedir autenticación. */
 export async function elegirEspera(espera: Espera): Promise<void> {
   await guardarBloqueo({ ...estado.bloqueo, espera });

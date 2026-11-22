@@ -16,11 +16,23 @@ import {
 
 let gestor: GestorDeCuenta | null = null;
 
+// Quién quiere enterarse de que la cuenta se ha borrado (la sincronización, para
+// desligar de ella la base local). Se apuntan ellos: este fichero no los conoce.
+const alBorrar = new Set<() => Promise<void>>();
+
+/** Apunta una tarea que se hará cuando la cuenta se borre del servidor. */
+export function alBorrarLaCuenta(tarea: () => Promise<void>): void {
+  alBorrar.add(tarea);
+}
+
 /** El gestor de la cuenta. Se crea la primera vez que se pide. */
 export function cuenta(): GestorDeCuenta {
   gestor ??= crearGestorDeCuenta({
     cliente: obtenerSupabase() as unknown as ClienteDeCuenta | null,
     almacen: almacenSeguro,
+    alBorrarCuenta: async () => {
+      await Promise.all([...alBorrar].map((tarea) => tarea()));
+    },
   });
   return gestor;
 }

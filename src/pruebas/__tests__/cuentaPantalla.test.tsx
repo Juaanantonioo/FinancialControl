@@ -58,6 +58,22 @@ jest.mock('@/estado/cuentaDeLaApp', () => {
   };
 });
 
+// La sincronización tiene sus propias pruebas de pantalla (sincronizacionPantalla.test.tsx).
+jest.mock('@/estado/sincronizacionDeLaApp', () => ({
+  sincronizacion: () => ({ pedir: jest.fn(), usarLaNube: jest.fn() }),
+  useSincronizacion: () => ({
+    fase: 'inactiva',
+    trabajando: false,
+    pendientes: 0,
+    ilegibles: 0,
+    noAplicables: 0,
+    ultima: null,
+  }),
+}));
+jest.mock('@/estado/exportacionDeLaApp', () => ({
+  exportacion: () => ({ todo: jest.fn(), movimientos: jest.fn() }),
+}));
+
 const CORREO = 'ana.ejemplo@example.com';
 const CONTRASENA = 'correcta batería caballo grapa';
 let servidor: ReturnType<typeof servidorDeMentira>;
@@ -131,17 +147,23 @@ describe('Ajustes', () => {
 });
 
 describe('Cuenta sin sesión', () => {
-  it('explica que los datos están solo en el dispositivo y que hoy la cuenta no sincroniza nada', async () => {
+  it('explica que los datos están solo en el dispositivo y qué verá el servidor si se crea una cuenta', async () => {
     await pintar();
     const tarjeta = await screen.findByTestId('cuenta-sin-sesion');
     expect(tarjeta).toHaveTextContent(new RegExp(es.usuario.sinSesionTexto.slice(0, 40)));
-    expect(tarjeta).toHaveTextContent(/todavía no sincroniza nada/);
     expect(es.usuario.sinSesionTexto).toMatch(/solo en este dispositivo, sin cifrar/);
-    // Ningún texto de la cuenta promete lo que no hay.
-    for (const [clave, texto] of Object.entries(es.usuario)) {
+    // Desde el 4b-2 la cuenta sincroniza. Antes del alta se dice qué sale y qué ve el servidor.
+    expect(tarjeta).toHaveTextContent(/se cifran en este dispositivo antes de salir/);
+    expect(tarjeta).toHaveTextContent(
+      /solo ve cuántos apuntes tienes, de qué clase son y cuándo cambian/,
+    );
+    // Ningún texto de la cuenta ni de la sincronización promete lo que no hay.
+    for (const [clave, texto] of Object.entries({ ...es.usuario, ...es.sinc })) {
       expect([
         clave,
-        /ya sincroniza|se sincronizan|copia en la nube|a salvo en el servidor/i.test(texto),
+        /a salvo en el servidor|nunca los perderás|copia de seguridad garantizada|no se pueden perder/i.test(
+          texto,
+        ),
       ]).toEqual([clave, false]);
     }
   });
@@ -285,7 +307,8 @@ describe('código de recuperación', () => {
     await confirmarGrupos();
     const tarjeta = await screen.findByTestId('cuenta-con-sesion');
     expect(tarjeta).toHaveTextContent(new RegExp(CORREO));
-    expect(tarjeta).toHaveTextContent(/todavía no sincroniza nada/);
+    // Con sesión aparece el estado de la sincronización.
+    expect(screen.getByTestId('cuenta-sincronizacion')).toBeTruthy();
     expect(screen.getByTestId('volver')).toBeTruthy();
     expect(mockPantalla).toHaveBeenLastCalledWith({ gestureEnabled: true });
     expect(servidor.claves.size).toBe(1);

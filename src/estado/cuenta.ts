@@ -150,6 +150,8 @@ export type Dependencias = {
   esperaMaxima?: number;
   /** Milisegundos que se cede a la pantalla antes de un cálculo largo, para que pinte «Calculando…». */
   pausaAntesDeCalcular?: number;
+  /** Se llama cuando la cuenta se ha borrado del servidor, para desligar de ella la base local. */
+  alBorrarCuenta?: () => Promise<void>;
 };
 
 export type GestorDeCuenta = ReturnType<typeof crearGestorDeCuenta>;
@@ -441,12 +443,17 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
       const { error } = await conLimite(cliente!.rpc('borrar_mi_cuenta'), limite);
       if (error) return fallo(esDeRed(error) ? 'sin_conexion' : 'desconocido');
       await limpiarDispositivo();
+      try {
+        await dependencias.alBorrarCuenta?.();
+      } catch {
+        // La cuenta ya está borrada; lo que quede del estado local se rehace al entrar en otra.
+      }
       fijar({ fase: 'sin_sesion', correo: null, codigo: null, gruposPedidos: [] });
       return OK;
     });
   }
 
-  /** La clave de datos guardada, para cifrar (bloque 4b-2). Quien la pide debe borrarla al acabar. */
+  /** La clave de datos guardada, para cifrar las filas. Quien la pide debe borrarla al acabar. */
   async function leerClaveDeDatos(): Promise<Uint8Array | null> {
     if (estado.fase !== 'con_sesion') return null;
     try {
