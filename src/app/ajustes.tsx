@@ -117,6 +117,32 @@ export default function Ajustes() {
               ›
             </Text>
           </Pressable>
+          <Pressable
+            onPress={() => router.push('/exportar')}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('exportar.entrada')}. ${t('ajustes.exportarAyuda')}`}
+            testID="abrir-exportar"
+            style={({ pressed }) => [
+              estilos.fila,
+              { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.borde },
+              { opacity: pressed ? 0.6 : 1 },
+            ]}>
+            <View style={estilos.textos}>
+              <Text maxFontSizeMultiplier={1.6} style={[estilos.titulo, { color: c.texto }]}>
+                {t('exportar.entrada')}
+              </Text>
+              <Text
+                maxFontSizeMultiplier={1.6}
+                style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
+                {t('ajustes.exportarAyuda')}
+              </Text>
+            </View>
+            <Text
+              allowFontScaling={false}
+              style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>
+              ›
+            </Text>
+          </Pressable>
         </Tarjeta>
         <Tarjeta estilo={estilos.tarjeta}>
           {ACCESOS_DE_AJUSTES.map((acceso, i) => (

@@ -348,7 +348,8 @@
     "avisosAyuda": "Qué avisos quieres recibir y cuándo.",
     "diagnosticoAyuda": "Comprueba la conexión con el servidor.",
     "seguridadAyuda": "Bloqueo de la app y modo privado.",
-    "cuentaAyuda": "Crea una cuenta o inicia sesión. Hoy no sincroniza nada."
+    "exportarAyuda": "Guarda una copia de todos tus datos en un fichero.",
+    "cuentaAyuda": "Cuenta, sincronización cifrada entre tus dispositivos y contraseña."
   },
   "diagnostico": {
     "titulo": "Diagnóstico",
