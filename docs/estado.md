@@ -1532,3 +1532,133 @@ Habrá que volver a cargar datos de ejemplo para las capturas.
 
 **Nada se ha aplicado al proyecto remoto de Supabase.** No se ha ejecutado `supabase login`,
 `link` ni `db push`.
+
+### 14.4 Reanudación del 21/11/2026: revisión del trabajo sin confirmar
+
+La sesión del 18/11 se cortó en mitad de la fase 4. El dueño había decidido el bloqueo
+(opción B, con condiciones; Argon2id con 64 MiB y 8 pasadas; código de 256 bits). El
+trabajo que quedó sin confirmar se ha revisado como si fuera de otra persona.
+
+- Estado al reanudar: rama `b4b1-cuenta-y-claves`, commit `4db59ce`, como decía el encargo
+  de continuación. Docker disponible. Sin `.env`.
+- **Respaldo:** `git stash push --include-untracked` y `git stash apply --index`. El stash
+  queda como copia: **`stash@{0}`, identificador `27c3df33d795a758d75662b173ae2363a08b09b6`**,
+  «respaldo B4b1 antes de revisar (21/11/2026)». No se borra.
+- **`npm run check` tal como estaba: FALLA.** Formato, análisis y tipos pasan; de 1.054
+  pruebas fallan 2:
+  1. `cripto.test.ts`, «no hay primitivas a mano…»: el módulo llama a `randombytes_uniform`
+     (para elegir qué dos grupos del código se piden) y la lista de la prueba no lo incluía.
+  2. `cuenta.test.ts`, «ninguna petición lleva la contraseña…»: esperaba 5 peticiones y el
+     recorrido hace 4. Error de la prueba.
+
+**Revisión fichero a fichero.** Todos están enteros: ninguno termina a mitad de una función,
+ninguna importación apunta a algo que no existe, y `tsc` pasa.
+
+| Fichero | Veredicto | Detalle |
+|---|---|---|
+| `plugins/parche-libsodium.js` | Completo y correcto | Huella del original y del resultado, idempotente, falla con otra huella |
+| `package.json`, `package-lock.json` | Completo y correcto | Versiones exactas `1.7.0` y `0.8.4`; `postinstall` |
+| `app.json` | Completo y correcto | Plugin del parche añadido; se quitó el plugin vacío del paquete, que no hace nada |
+| `src/cripto/parametros.ts` | Completo y correcto | 8 pasadas, 64 MiB, marcados como provisionales |
+| `scripts/vectores-de-cripto.cjs`, `src/cripto/vectores.json` | Completo y correcto | Regenerados con los parámetros nuevos. El JSON se movió fuera de `__tests__` porque ahora lo lee la app |
+| `src/cripto/autocomprobacion.ts` | Completo y correcto | Con 11 pruebas |
+| `src/cripto/index.ts` | Completo y correcto | Añade `posicionesAlAzar` |
+| `src/cripto/__tests__/cripto.test.ts` | **Incorrecto** | La prueba 1 de arriba. Corregida: `randombytes_uniform` entra en la lista permitida |
+| `src/pruebas/__tests__/plugin.test.ts` | Incompleto | Faltaba comprobar que el paquete instalado está parcheado. Añadido |
+| `docs/seguridad/diseno-criptografico.md` | Incompleto | Coincide con el código y con los vectores (comprobado con un programa: los 18 valores de `vectores.json` y las 7 constantes aparecen iguales). Faltaba el correo guardado en el llavero y lo que tarda la autocomprobación. Añadido |
+| `docs/seguridad/riesgo-de-dependencia-libsodium.md` | Completo y correcto | |
+| `src/lib/contrasena.ts` | Completo y correcto | |
+| `src/lib/almacenSeguro.ts`, `almacenSeguroNativo.ts` | Completo y correcto | Llavero tras el primer desbloqueo, solo este dispositivo, sin biometría |
+| `src/lib/supabase.ts` | Completo y correcto | Sesión en el llavero; sin renovación automática |
+| `src/estado/cuenta.ts` | **Incorrecto** (un defecto) e incompleto | Ver abajo |
+| `src/estado/cuentaDeLaApp.ts` | Completo y correcto | |
+| `src/app/cuenta-de-usuario.tsx` | Completo, **sin pruebas** | Faltaban las pruebas de pantalla |
+| `src/app/diagnostico.tsx` | Completo, sin pruebas | Ídem |
+| `src/app/ajustes.tsx`, `src/app/_layout.tsx` | Completo y correcto | Entrada «Cuenta» y su ruta |
+| `src/i18n/es.json` | Completo y correcto | 76 textos nuevos; comprobado con un programa que ninguno queda sin uso, que todo texto usado existe y que cada error de cuenta tiene su texto |
+| `src/pruebas/cuentaDePrueba.ts` | Completo y correcto | |
+| `src/pruebas/__tests__/cuenta.test.ts` | **Incorrecto** | La prueba 2 de arriba y una variable sobrante. Corregido |
+
+**Defecto encontrado en `src/estado/cuenta.ts`.** Al arrancar, decidía si había cuenta
+abierta preguntando la sesión al cliente de Supabase, y si no la obtenía borraba la clave
+del llavero. Pero con la sesión caducada (dura una hora) y sin conexión, el cliente no
+puede renovarla y responde que no hay sesión: **abrir la app sin cobertura habría borrado
+la clave de datos del dispositivo.** En este bloque se recupera volviendo a entrar; en el
+4b-2, con datos cifrados con esa clave, habría sido grave. Corregido: lo que dice si hay
+cuenta abierta es la clave del llavero, sin consultar al servidor. El correo se guarda
+junto a la clave. Con prueba («sin conexión y con la sesión caducada…»).
+
+Otros dos cambios en ese fichero: el cierre local de sesión tiene ahora límite de tiempo, y
+antes de derivar las claves se cede un instante a la pantalla para que pinte «Calculando
+las claves…», porque la derivación ocupa el hilo de la interfaz.
+
+**Condiciones de las decisiones del dueño, contra el código.**
+
+| Decisión | Condición | Estado | Dónde |
+|---|---|---|---|
+| 1 | Versiones exactas, sin `^` ni `~` | Cumplida | `package.json`: `"react-native-libsodium": "1.7.0"`, `"libsodium-wrappers-sumo": "0.8.4"`. Prueba en `plugin.test.ts`, «las versiones… están fijadas» |
+| 1 | Huella SHA-256 del original antes de parchear; si no coincide, falla con mensaje claro | Cumplida | `plugins/parche-libsodium.js`, función `parchear`: constante `HUELLA_ORIGINAL` y el error «no es el fichero esperado…» |
+| 1 | Comprueba la huella del resultado | Cumplida | Misma función: `HUELLA_PARCHEADA` y el error «El resultado del parche no tiene la huella esperada» |
+| 1 | Aplicarlo dos veces no cambia nada | Cumplida | Misma función, primera línea: si la huella ya es la parcheada, devuelve el contenido igual. Prueba «aplicarlo dos veces no cambia nada» |
+| 1 | Texto legible, con origen, qué cambia, que no toca criptografía y cuándo retirarlo | Cumplida | Cabecera de `plugins/parche-libsodium.js` y lista `SUSTITUCIONES` |
+| 1 | Autocomprobación antes de cualquier operación de cuenta; si falla, cuenta desactivada y el resto sigue | Cumplida | `src/cripto/autocomprobacion.ts`; `src/estado/cuenta.ts`, funciones `iniciar` y `operar` (fase `cripto_no_fiable`). Pruebas en `cripto.test.ts` («autocomprobación») y `cuenta.test.ts` («si la autocomprobación falla…») |
+| 1 | Los dos límites del paquete en nativo, en el diseño y con prueba | Cumplida, con una corrección | `diseno-criptografico.md`, apartado 2.2; prueba «límites del paquete en nativo». **Corrección de lo dicho el 18/11:** BLAKE2b en nativo sí admite texto como mensaje; lo que no admite es texto como *clave* |
+| 1 | Riesgo de mantenimiento anotado para el 4c | Cumplida | `docs/seguridad/riesgo-de-dependencia-libsodium.md` |
+| 2 | Argon2id con 64 MiB y 8 pasadas | Cumplida | `src/cripto/parametros.ts`, constante `ARGON2ID` |
+| 2 | Vectores regenerados | Cumplida | `src/cripto/vectores.json` |
+| 2 | Escrito que son provisionales y se fijan antes de la primera cuenta real | Cumplida | Comentario de `ARGON2ID` y `diseno-criptografico.md`, apartado 3.2 |
+| 2 | Diagnóstico mide la derivación sin mostrar claves | Cumplida | `src/app/diagnostico.tsx` (`medir-derivacion`) y `medirDerivacion` en `autocomprobacion.ts` |
+| 3 | 256 bits, 14 grupos de 4 | Cumplida | `src/cripto/parametros.ts` |
+| 3 | Detección de errores de transcripción | Cumplida | `src/cripto/index.ts`, `secretoDelCodigo`; pruebas «detecta un error de transcripción en cualquier símbolo» |
+| 3 | Pantalla para guardarlo o imprimirlo | Cumplida | `src/app/cuenta-de-usuario.tsx`, botón `guardar-codigo`: abre la hoja de compartir de iOS, que incluye Imprimir y Guardar en Archivos |
+
+**El mecanismo del parche (`postinstall`).** Se aplica en dos momentos: tras `npm install`
+o `npm ci` (script `postinstall`) y en cada `expo prebuild` (plugin de `app.json`).
+
+- `npm ci` desde cero, probado en una carpeta aparte con solo `package.json`,
+  `package-lock.json` y el plugin: termina bien y deja el fichero con la huella parcheada.
+- Con el fichero alterado, el parche se niega y sale con error.
+- Tras `expo prebuild --clean` partiendo del fichero original: queda parcheado (apartado 14.6).
+- Añadido: una prueba de `npm run check` comprueba que el paquete instalado tiene la huella
+  parcheada. Así lo vigila también GitHub en cada subida.
+- Hueco que queda: quien reinstale el paquete con `--ignore-scripts` y compile sin prebuild.
+  En ese caso la compilación falla con «unknown type name 'RCTCxxBridge'»: falla, no pasa
+  en silencio. No se ha añadido una tercera comprobación dentro de Xcode porque exigiría
+  tocar el proyecto nativo para cubrir un caso que ya falla solo.
+
+### 14.5 Cierre del bloque (22/11/2026)
+
+**Estado: `COMPLETED_WITH_EXTERNAL_GATES`.** El informe completo está en
+`docs/informes/b4b1-informe-final.md`.
+
+| Fase | Qué | Commit |
+|---|---|---|
+| 0 | Baseline y paquetes de Expo al día | `d8fbd96` |
+| 1 | Diseño criptográfico y riesgo de la dependencia | `2fab482` |
+| 2 | Módulo criptográfico, compilado en nativo con el parche y con autocomprobación | `a089605` y `33b3930` |
+| 3 | Esquema remoto con RLS y aislamiento | `4db59ce` |
+| 4 | Cuenta en la app | `5d96bc6` |
+| 5 | Capturas | `e4bf40d` |
+| 6 | Documentación e informe | el commit «fase 6» |
+
+- `npm run check`: **1.092 pruebas en 38 suites**, en verde.
+- Remotas contra la instancia local: **41 de 41** (33 de aislamiento, 8 de la cuenta).
+- Prebuild limpio y compilación para el simulador: correctos; sin `aps-environment`.
+- Autocomprobación con la biblioteca nativa en el simulador: correcta. Argon2id (64 MiB, 8
+  pasadas): 244–298 ms en el procesador del Mac.
+- 13 capturas en `docs/capturas/b4b1/`.
+
+### 14.6 Defectos encontrados y corregidos al terminar
+
+1. **Arranque sin conexión borraba la clave** (apartado 14.4).
+2. **La caché de red de iOS guardaba los tokens de la sesión en disco**, fuera del llavero
+   (`Library/Caches/<app>/Cache.db`). Visto en el simulador. Corregido con
+   `plugins/sin-cache-de-red.js`. Verificado después: ninguna coincidencia.
+3. **Diagnóstico mostraba el mensaje interno del servidor** y leía una tabla que no existe
+   en el esquema nuevo (hallazgo A-12). Rehecho.
+
+### 14.7 Pendiente del dueño
+
+`docs/seguridad/pasos-del-propietario-4b1.md`: aplicar las migraciones al proyecto remoto,
+crear `.env`, desactivar la confirmación de correo, probar en el iPhone y fijar Argon2id.
+No borrar el stash de respaldo (`27c3df3`) hasta dar el bloque por bueno.

@@ -114,13 +114,19 @@ Lo que la app protege hoy y lo que no. El detalle está en
 
 **Qué hay**
 
-- Los datos se guardan solo en el iPhone. La app no los envía a ningún servidor.
+- Los datos financieros se guardan solo en el iPhone. La app no los envía a ningún servidor.
 - Bloqueo opcional (Ajustes › Seguridad): pide Face ID, Touch ID o el código del iPhone al
   abrir la app y al volver a ella. Viene desactivado.
 - Modo privado opcional: el widget y los avisos no muestran importes ni nombres, y la app se
   tapa en el selector de apps. Viene desactivado.
 - Los enlaces `financialcontrol://` solo abren pantallas: ninguno guarda ni borra nada, y sus
   parámetros se validan.
+- Cuenta opcional (Ajustes › Cuenta). La contraseña no sale del dispositivo: al servidor
+  llega una clave derivada de ella, y las claves de cifrado se guardan en el llavero del
+  sistema. En el alta se entrega un código de recuperación. **Hoy la cuenta no sincroniza
+  nada**: solo deja las claves preparadas.
+- En el servidor, cada persona solo puede leer y escribir sus propias filas (RLS), y hay
+  pruebas con dos usuarios que lo comprueban.
 - No hay secretos en el repositorio. Las claves van en `.env`, que git ignora, y la app solo
   usa la clave pública de Supabase.
 
@@ -129,15 +135,27 @@ Lo que la app protege hoy y lo que no. El detalle está en
 - **La base de datos no está cifrada por la app.** Solo cuenta con la protección de iOS. Quien
   tenga el iPhone desbloqueado y un ordenador de confianza, o una copia de seguridad sin
   cifrar, puede leerla.
-- **El bloqueo no es cifrado.** Es una barrera de acceso a la pantalla. No protege los
-  ficheros.
-- Sin cuentas, sin sincronización y sin copia propia: si se pierde el iPhone y no hay copia
-  de iOS, se pierden los datos.
+- **El bloqueo no es cifrado.** Es una barrera de acceso a la pantalla.
+- **Sin sincronización ni copia propia**: si se pierde el iPhone y no hay copia de iOS, se
+  pierden los datos, con cuenta o sin ella.
+- **Sin recuperación de la contraseña.** Quien la olvide no puede restablecerla; la
+  recuperación con el código está diseñada pero no construida.
+- Los parámetros de derivación de claves son provisionales, y la biblioteca de cifrado
+  necesita un parche propio para compilar
+  ([riesgo](docs/seguridad/riesgo-de-dependencia-libsodium.md)).
+- El diseño criptográfico no lo ha revisado nadie ajeno al proyecto.
 - Nada de lo anterior se ha comprobado en un iPhone físico; solo en pruebas automáticas y en
   el simulador.
 
-El cifrado de la base y la sincronización con cifrado de extremo a extremo están
-planificados para el bloque 4b.
+Cómo está hecho el cifrado: [docs/seguridad/diseno-criptografico.md](docs/seguridad/diseno-criptografico.md).
+
+### Pruebas contra Supabase en local
+
+```sh
+npx supabase start      # necesita Docker en marcha
+npx supabase db reset   # aplica las migraciones a la instancia local
+npm run test:remoto     # aislamiento entre usuarios y cuenta
+```
 
 ## Estructura
 

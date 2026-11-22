@@ -328,6 +328,58 @@ calendario local, así que no cambia con la hora de verano. Las preferencias (qu
 están activados) se guardan en el almacén de clave y valor de expo-sqlite, no en estas
 tablas.
 
+### 4.8 Esquema remoto (22/11/2026, bloque 4b-1)
+
+En Supabase (Postgres), definido en `supabase/migrations/`. El servidor no guarda ningún
+dato financiero en claro. Diseño del cifrado: `docs/seguridad/diseno-criptografico.md`.
+
+**`claves_de_usuario`**: una fila por cuenta.
+
+| Columna | Contenido | ¿En claro? |
+|---|---|---|
+| `user_id` | Clave primaria. Referencia a `auth.users`, con borrado en cascada. Por defecto, `auth.uid()` | Sí |
+| `clave_por_contrasena` | La clave de datos, cifrada en el dispositivo con la clave que sale de la contraseña | Cifrado |
+| `clave_por_recuperacion` | La misma clave de datos, cifrada con la que sale del código de recuperación | Cifrado |
+| `version_de_derivacion` | Con qué parámetros se derivaron las claves de la contraseña | Sí |
+| `version_de_formato` | Formato de los dos sobres | Sí |
+| `creado_en`, `actualizada_en` | Las pone el servidor | Sí |
+
+**`fila_cifrada`**: una fila por cada fila de la base local. **En el 4b-1 queda creada y
+vacía**; la usa el 4b-2.
+
+| Columna | Contenido | ¿En claro? |
+|---|---|---|
+| `user_id` | Dueño. Por defecto, `auth.uid()` | Sí |
+| `tabla` | Tabla local de origen. Restringida a una lista | Sí |
+| `id` | UUID de la fila local | Sí |
+| `contenido` | El sobre cifrado, hasta 64 KiB de texto | Cifrado |
+| `version_de_formato` | Formato del sobre | Sí |
+| `borrada` | Marca de borrado, para que llegue a los demás dispositivos | Sí |
+| `actualizada_en` | La pone el servidor; decide qué escritura es la última | Sí |
+
+Clave primaria: (`user_id`, `tabla`, `id`).
+
+Tablas locales que se sincronizarán (12): `cuenta`, `categoria`, `movimiento`,
+`valor_de_inversion`, `objetivo`, `aportacion_a_objetivo`, `regla_recurrente`,
+`presupuesto`, `linea_de_presupuesto`, `captura`, `alias_de_tarjeta` y `regla_de_comercio`.
+
+**`aviso_emitido` no se sincroniza.** Dice qué avisos ha dado ya un dispositivo, y eso es de
+cada dispositivo. Consecuencia aceptada por el dueño: con dos dispositivos, un aviso de
+presupuesto («llevas el 80 %», «te has pasado») puede darse una vez en cada uno.
+
+**Aislamiento.** En las dos tablas: RLS activado y forzado; cuatro políticas (leer, crear,
+cambiar, borrar) solo para el rol `authenticated`, todas con `auth.uid() = user_id`; ningún
+permiso para el rol anónimo. Las marcas de tiempo las pone un disparador: lo que envíe el
+cliente en esas columnas se ignora.
+
+**Funciones.** `borrar_mi_cuenta()`: borra las filas, las claves y el usuario de quien la
+llama. No admite parámetros; a quién borrar lo dice la sesión. Tiene privilegios elevados
+porque un usuario no puede borrar de `auth.users`; por eso lleva `search_path` vacío y solo
+puede ejecutarla el rol `authenticated`.
+
+**Pruebas.** 33 de aislamiento y 8 de la cuenta, contra una instancia local:
+`npx supabase start`, `npx supabase db reset`, `npm run test:remoto`.
+
 ## 5. Correspondencia con el Notion del primer usuario
 
 Solo sirve para comprobar que el modelo cubre el uso actual. La app no importa ni

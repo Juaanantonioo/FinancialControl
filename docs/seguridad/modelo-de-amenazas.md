@@ -273,3 +273,75 @@ Cada opción cambia qué puede hacer el operador y cómo es el restablecimiento.
 - b) Solo en local, con base cifrada y clave únicamente en el llavero, aceptando que no
   sobrevive a un cambio de teléfono sin copia cifrada de iOS.
 - c) La cuenta es obligatoria.
+
+## 6. Estado tras el bloque 4b-1 (22/11/2026)
+
+Todo este apartado es **[HECHO]** en la rama `b4b1-cuenta-y-claves`, salvo donde dice otra
+cosa. El bloque 4b se partió en dos: el 4b-1 crea la cuenta, las claves y el esquema
+remoto; el 4b-2 sincroniza y cifra la base local.
+
+### 6.1 Las diez preguntas, respondidas por el dueño
+
+| | Respuesta | Estado |
+|---|---|---|
+| P-1 | libsodium, con `react-native-libsodium` 1.7.0 en iOS y Android y `libsodium-wrappers-sumo` 0.8.4 en web | Hecho en iOS (simulador). El paquete necesita un parche propio para compilar: `riesgo-de-dependencia-libsodium.md`. Android y web, sin compilar |
+| P-2 | Argon2id con `crypto_pwhash`: 64 MiB y 8 pasadas | Hecho. **Provisional** hasta medirlo en un iPhone y en un navegador de móvil |
+| P-3 | Se cifra fila a fila | Esquema preparado (`fila_cifrada`). El cifrado de filas es del 4b-2 |
+| P-4 | Gana la última escritura, por fila | Esquema preparado: `actualizada_en` la pone el servidor. Se construye en 4b-2 |
+| P-5 | De la contraseña sale una clave maestra y de ella una subclave de autenticación, que es lo que recibe Supabase Auth | Hecho y probado espiando la red |
+| P-6 | Grupos de letras y cifras sin caracteres ambiguos, más pantalla para guardarlo o imprimirlo | Hecho: 256 bits, 14 grupos de 4, con detección de erratas |
+| P-7 | La cola de Atajos y el widget se quedan como están | Sin cambios |
+| P-8 | La base local sigue dentro de la copia de iOS | Sin cambios |
+| P-9 | Sin fijación de certificados | Sin cambios |
+| P-10 | Sin cuenta, la app funciona solo en local y sin cifrado de base | Hecho: la pantalla Cuenta lo explica |
+
+### 6.2 Riesgos de la auditoría
+
+Aceptados por el dueño: **A-10, A-11, A-13, A-15, A-16 y A-18**.
+
+| Id | Estado tras 4b-1 |
+|---|---|
+| A-12 (Diagnóstico mostraba el error interno) | **Corregido.** Diagnóstico explica el resultado con textos propios |
+| A-14 (paquetes de Expo atrasados) | **Corregido** en la fase 0 |
+| A-17 (clave pública en la app; RLS sin comprobar) | **Corregido en el esquema**, con 33 pruebas de aislamiento contra la instancia local. En el proyecto remoto, pendiente de que el dueño aplique las migraciones |
+| A-01, A-02 (base local sin cifrar y dentro de las copias) | Siguen. Van al 4b-2 |
+| A-19, A-20 | Siguen. Borrado de cuenta, hecho; exportación, 4b-2; política y forzar actualización, 4c |
+
+Hallazgo nuevo de este bloque, ya corregido:
+
+- **B-01 · iOS guardaba en su caché de red las respuestas del inicio de sesión.** Media.
+  Visto en el simulador: `Library/Caches/<app>/Cache.db` contenía en claro los tokens de la
+  sesión y la respuesta con la clave de datos envuelta, fuera del llavero. Esa carpeta no
+  entra en las copias de seguridad, pero sí la lee quien acceda a los ficheros de la app.
+  Corregido con `plugins/sin-cache-de-red.js`: la caché de red de la app no escribe en
+  disco. Comprobado en el simulador tras alta, cierre e inicio de sesión: ninguna
+  coincidencia. MASVS-STORAGE-2.
+
+### 6.3 Requisitos del apartado 4
+
+| Requisito | Estado |
+|---|---|
+| R-01, R-03 (el servidor solo guarda cifrado; cifrado autenticado) | **Cumplido para las claves de la cuenta.** Para las filas, 4b-2 |
+| R-02 (columnas en claro mínimas) | Cumplido en el esquema: `docs/05`, apartado 4.8 |
+| R-04 (biblioteca auditada, nada a mano) | Cumplido, con prueba |
+| R-05 (la contraseña no sale; dos claves distintas) | Cumplido, con prueba contra un Supabase real |
+| R-06 (parámetros con versión) | Cumplido: `version_de_derivacion` |
+| R-07 (clave de datos aleatoria envuelta) | Cumplido. El cambio de contraseña en sí, 4b-2 |
+| R-08 (claves en el llavero, sin biometría) | Cumplido. Leer los atributos reales en un iPhone: NO DEMOSTRADO |
+| R-09 (claves fuera de registros y `UserDefaults`) | Cumplido, con prueba y comprobado en el simulador |
+| R-10 (código de recuperación en el alta, confirmado) | Cumplido |
+| R-11 (recuperar con el código) | **4b-2.** El sobre por recuperación ya se guarda y se prueba que abre |
+| R-12 (sin contraseña ni código no hay recuperación, y la app lo dice) | Cumplido |
+| R-13 (volver a subir tras restablecer) | 4b-2 |
+| R-14, R-15 (RLS en todas las tablas; dos usuarios) | Cumplido en local. En remoto, tras aplicar las migraciones |
+| R-16, R-17 (clave de servicio fuera; la pública sola no lee nada) | Cumplido |
+| R-18 (TLS, sin excepciones) | Cumplido: `NSAllowsArbitraryLoads` sigue en `false` |
+| R-19 (límite de intentos de inicio de sesión) | Lo pone Supabase Auth. Sus valores en el proyecto remoto: NO COMPROBADO |
+| R-20 a R-23 (SQLCipher y migración de la base local) | 4b-2 |
+| R-24 (exportación) | 4b-2 |
+| R-25 (borrado de cuenta) | Cumplido, con prueba de que solo borra a quien lo pide |
+| R-26 (explicar qué ve el servidor antes del alta) | Parcial: la pantalla explica la contraseña y que no hay sincronización. El detalle de metadatos, 4c |
+| R-27 (el bloqueo no toca claves) | Cumplido |
+| R-28 (con bloqueo, ninguna pantalla sin autenticar) | Cumplido para Cuenta, con prueba |
+| R-29 (modo privado en avisos nuevos) | No aplica: este bloque no añade avisos |
+| R-30 (parámetros de ruta por `leerParametros`) | Cumplido: la pantalla nueva no lee parámetros |

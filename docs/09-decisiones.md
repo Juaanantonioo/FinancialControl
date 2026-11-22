@@ -43,6 +43,27 @@ Decisiones de diseño del bloque 4a tomadas por el dueño en el encargo (no se r
 bloqueo viene desactivado y no cifra nada; no hay PIN propio de la app; ninguna clave se
 vincula a la biometría; el modo privado es independiente del bloqueo y viene desactivado.
 
+### Decisiones del 18 al 22/11/2026 (bloque 4b-1)
+
+| Id | Asunto | Decisión del dueño |
+|---|---|---|
+| D12 | Estrategia de lanzamiento | **Coste cero.** La primera versión pública será una beta gratuita en la web. Todo lo que se construya debe poder funcionar en un navegador. Consecuencias: sin proveedor de correo (el integrado de Supabase solo envía al equipo), así que la confirmación de correo va desactivada y no hay restablecimiento por correo |
+| D13 | Biblioteca criptográfica | libsodium. En iOS y Android con `react-native-libsodium` 1.7.0, y en web con `libsodium-wrappers-sumo` 0.8.4, las dos en versión exacta |
+| D14 | `react-native-libsodium` no compila con React Native 0.88 | Se aplica el arreglo propuesto en su repositorio (PR #109) con un parche propio y verificado por huella (`plugins/parche-libsodium.js`), más una autocomprobación en la app. Es temporal: se retira cuando el paquete lo arregle. El riesgo queda en `docs/seguridad/riesgo-de-dependencia-libsodium.md`, para revisar en el 4c |
+| D15 | Derivación de claves | Argon2id con **64 MiB y 8 pasadas**. 64 MiB y no más porque no está probado que un navegador de móvil conceda más. **Provisional**: se mide en un iPhone y en un navegador de móvil y se fija antes de la primera cuenta real |
+| D16 | Sal de Argon2id | Se deriva del correo, sin consultarla al servidor. Consecuencia aceptada: no se puede cambiar el correo de una cuenta |
+| D17 | Autenticación | De la contraseña sale una clave maestra; de ella, una subclave de autenticación que se envía a Supabase Auth en lugar de la contraseña. La contraseña y la clave maestra no salen del dispositivo |
+| D18 | Código de recuperación | 256 bits, en 14 grupos de 4 símbolos sin caracteres ambiguos, con detección de erratas. Se enseña una vez y hay que confirmarlo escribiendo dos grupos |
+| D19 | Claves en el dispositivo | Solo en el llavero del sistema, accesibles tras el primer desbloqueo, sin salir del dispositivo y sin biometría. En web, pendiente para su bloque |
+| D20 | Contraseña | Mínimo 12 caracteres y rechazo de una lista corta de evidentes. Sin restablecimiento |
+| D21 | Sincronización | Fila a fila; gana la última escritura. `aviso_emitido` no se sincroniza: un aviso de presupuesto puede repetirse en un segundo dispositivo |
+| D22 | Sin cuenta | La app funciona solo en local y sin cifrado de base. La pantalla Cuenta lo explica |
+| D23 | Riesgos de la auditoría 4a | Aceptados A-10, A-11, A-13, A-15, A-16 y A-18 |
+
+Pendiente del dueño tras el 4b-1: aplicar las migraciones al proyecto remoto y fijar los
+parámetros de Argon2id con sus medidas. Pasos en
+`docs/seguridad/pasos-del-propietario-4b1.md`.
+
 Estado de D7 a 17/11/2026: el bloque 1 está hecho en la rama `h3-vision-completa`. El
 detalle y lo que queda pendiente de cada tarea están en `07`, apartado 2.2, y en
 `estado.md`, apartado 8.
