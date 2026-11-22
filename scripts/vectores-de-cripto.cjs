@@ -44,8 +44,8 @@ function sobre(clave, contenido, nonce, uso) {
     correo_escrito: '  Ana.Ejemplo@Example.COM ',
     correo_normalizado: 'ana.ejemplo@example.com',
     contrasena: 'correcta batería caballo grapa',
-    argon2id_pasadas: 4,
-    argon2id_memoria_bytes: 134217728,
+    argon2id_pasadas: 8,
+    argon2id_memoria_bytes: 67108864,
     clave_de_datos_hex: hex(secuencia(0x00, 32)),
     nonce_contrasena_hex: hex(secuencia(0x40, 24)),
     nonce_recuperacion_hex: hex(secuencia(0x60, 24)),
@@ -101,7 +101,7 @@ function sobre(clave, contenido, nonce, uso) {
   const vectores = { libsodium: sodium.SODIUM_VERSION_STRING, entrada, salida };
   const texto = `${JSON.stringify(vectores, null, 2)}\n`;
   if (process.argv.includes('--guardar')) {
-    writeFileSync(join(__dirname, '..', 'src', 'cripto', '__tests__', 'vectores.json'), texto);
+    writeFileSync(join(__dirname, '..', 'src', 'cripto', 'vectores.json'), texto);
   }
   process.stdout.write(texto);
 })();

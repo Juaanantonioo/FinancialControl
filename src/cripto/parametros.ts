@@ -10,12 +10,19 @@ export const VERSION_DE_DERIVACION = 1;
 /** Versión del formato del sobre cifrado. Es su primer byte. */
 export const VERSION_DE_FORMATO = 1;
 
-/** Argon2id (libsodium `crypto_pwhash`, algoritmo ARGON2ID13). */
+/**
+ * Argon2id (libsodium `crypto_pwhash`, algoritmo ARGON2ID13).
+ *
+ * PROVISIONALES: decididos el 18/11/2026 sin haberlos medido en un iPhone ni
+ * en un navegador de móvil. Hay que medirlos (Ajustes › Diagnóstico) y
+ * fijarlos antes de crear la primera cuenta real: cambiarlos después exige
+ * una versión de derivación nueva.
+ */
 export const ARGON2ID = {
   /** Pasadas sobre la memoria (`opslimit`). */
-  pasadas: 4,
-  /** Memoria en bytes (`memlimit`): 128 MiB. */
-  memoria: 128 * 1024 * 1024,
+  pasadas: 8,
+  /** Memoria en bytes (`memlimit`): 64 MiB. */
+  memoria: 64 * 1024 * 1024,
 } as const;
 
 /** Clave de BLAKE2b con la que se calcula la sal a partir del correo. */

@@ -29,7 +29,6 @@ import {
   BYTES_DE_SECRETO_DE_RECUPERACION,
   CONSTANTE_DE_CONTROL,
   CONSTANTE_DE_SAL,
-  GRUPOS_DEL_CODIGO,
   SIMBOLOS_POR_GRUPO,
   SUBCLAVE_DE_AUTENTICACION,
   SUBCLAVE_DE_ENVOLTURA,
@@ -275,6 +274,20 @@ export async function leerCodigoDeRecuperacion(texto: string): Promise<string | 
   borrar(secreto);
   const completo = deBase32(texto);
   return completo ? enGrupos(aBase32(completo)) : null;
+}
+
+/**
+ * Posiciones distintas elegidas al azar entre `total`, en orden creciente. Se
+ * usa para pedir a la persona dos grupos de su código. El azar sale del
+ * generador de la biblioteca.
+ */
+export async function posicionesAlAzar(total: number, cuantas: number): Promise<number[]> {
+  const sodio = await cargarSodio();
+  const elegidas = new Set<number>();
+  while (elegidas.size < Math.min(cuantas, total)) {
+    elegidas.add(sodio.randombytes_uniform(total));
+  }
+  return [...elegidas].sort((x, y) => x - y);
 }
 
 /** Los grupos de un código, en orden. */

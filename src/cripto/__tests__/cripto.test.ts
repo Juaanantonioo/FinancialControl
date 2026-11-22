@@ -35,9 +35,19 @@ import {
   subclavesDe,
 } from '@/cripto';
 import { aBase32, ALFABETO, deBase32 } from '@/cripto/base32';
-import { ARGON2ID } from '@/cripto/parametros';
+import {
+  autocomprobarCripto,
+  medirDerivacion,
+  olvidarAutocomprobacion,
+} from '@/cripto/autocomprobacion';
+import {
+  ARGON2ID,
+  SUBCLAVE_DE_AUTENTICACION,
+  SUBCLAVE_DE_ENVOLTURA,
+  SUBCLAVE_DE_RECUPERACION,
+} from '@/cripto/parametros';
 
-import v from './vectores.json';
+import v from '../vectores.json';
 
 const hex = (bytes: Uint8Array) => sodio.to_hex(bytes);
 const deHex = (texto: string) => sodio.from_hex(texto);
@@ -458,6 +468,151 @@ describe('código de recuperación', () => {
   });
 });
 
+describe('autocomprobación', () => {
+  beforeEach(() => olvidarAutocomprobacion());
+
+  it('con la biblioteca correcta, pasa y dice cuánto tardó la derivación', async () => {
+    const resultado = await autocomprobarCripto();
+    expect(resultado.correcta).toBe(true);
+    expect(resultado.milisegundosDeDerivacion).toBeGreaterThan(0);
+  });
+
+  it('se calcula una sola vez por arranque', async () => {
+    const derivacion = jest.spyOn(sodio, 'crypto_pwhash');
+    await Promise.all([autocomprobarCripto(), autocomprobarCripto()]);
+    await autocomprobarCripto();
+    expect(derivacion).toHaveBeenCalledTimes(1);
+    derivacion.mockRestore();
+  });
+
+  it.each([
+    ['Argon2id', 'crypto_pwhash'],
+    ['las subclaves', 'crypto_kdf_derive_from_key'],
+    ['BLAKE2b', 'crypto_generichash'],
+    ['el descifrado', 'crypto_aead_xchacha20poly1305_ietf_decrypt'],
+  ] as const)('si %s da otro resultado, falla', async (_n, funcion) => {
+    const real = sodio[funcion] as (...a: unknown[]) => Uint8Array;
+    const espia = jest.spyOn(sodio, funcion).mockImplementation(((...args: unknown[]) => {
+      const bueno = Uint8Array.from(real(...args));
+      bueno[0] ^= 0x01;
+      return bueno;
+    }) as never);
+    expect((await autocomprobarCripto()).correcta).toBe(false);
+    espia.mockRestore();
+  });
+
+  it('si el cifrado no rechaza un sobre presentado para otro uso, falla', async () => {
+    const real = sodio.crypto_aead_xchacha20poly1305_ietf_decrypt as (
+      ...a: unknown[]
+    ) => Uint8Array;
+    const espia = jest
+      .spyOn(sodio, 'crypto_aead_xchacha20poly1305_ietf_decrypt')
+      .mockImplementation(((...args: unknown[]) => {
+        // Un enlace roto que ignorase los datos autenticados.
+        const [a, cifrado, datos, nonce, clave] = args;
+        return real(a, cifrado, String(datos).replace('/otro-uso', ''), nonce, clave);
+      }) as never);
+    expect((await autocomprobarCripto()).correcta).toBe(false);
+    espia.mockRestore();
+  });
+
+  it('si la biblioteca lanza un error, falla sin propagarlo', async () => {
+    const espia = jest.spyOn(sodio, 'crypto_pwhash').mockImplementation(() => {
+      throw new Error('biblioteca rota');
+    });
+    await expect(autocomprobarCripto()).resolves.toEqual({
+      correcta: false,
+      milisegundosDeDerivacion: null,
+    });
+    espia.mockRestore();
+  });
+
+  it('si los vectores no son de los parámetros de la app, falla', async () => {
+    const original = v.entrada.argon2id_pasadas;
+    v.entrada.argon2id_pasadas = original + 1;
+    expect((await autocomprobarCripto()).correcta).toBe(false);
+    v.entrada.argon2id_pasadas = original;
+  });
+
+  it('la medición de la derivación devuelve solo un tiempo', async () => {
+    const tiempo = await medirDerivacion();
+    expect(typeof tiempo).toBe('number');
+    expect(tiempo).toBeGreaterThan(0);
+  });
+});
+
+describe('límites del paquete en nativo', () => {
+  // En iOS y Android, react-native-libsodium 1.7.0:
+  //  - solo admite los datos autenticados del cifrado como texto, no como bytes;
+  //  - solo admite el contenido cifrado como bytes al descifrar;
+  //  - solo admite la clave de BLAKE2b como bytes, no como texto.
+  // En las pruebas corre la versión de WebAssembly, que lo admite todo: por eso
+  // se vigila aquí con qué tipos llama el módulo a la biblioteca.
+  it('el módulo llama a la biblioteca solo con los tipos que la versión nativa admite', async () => {
+    const cifrado = jest.spyOn(sodio, 'crypto_aead_xchacha20poly1305_ietf_encrypt');
+    const descifrado = jest.spyOn(sodio, 'crypto_aead_xchacha20poly1305_ietf_decrypt');
+    const resumen = jest.spyOn(sodio, 'crypto_generichash');
+    const subclave = jest.spyOn(sodio, 'crypto_kdf_derive_from_key');
+    const derivacion = jest.spyOn(sodio, 'crypto_pwhash');
+
+    // Todas las operaciones del módulo, una vez.
+    const { envoltura } = await derivarClaves(CONTRASENA, CORREO);
+    const datos = await generarClaveDeDatos();
+    const codigo = await generarCodigoDeRecuperacion();
+    await desenvolverConContrasena(await envolverConContrasena(datos, envoltura), envoltura);
+    await desenvolverConCodigo(await envolverConCodigo(datos, codigo), codigo);
+    await descifrar(datos, await cifrar(datos, utf8('x'), 'fila/cuenta/1'), 'fila/cuenta/1');
+    await leerCodigoDeRecuperacion(codigo);
+
+    expect(cifrado.mock.calls.length).toBeGreaterThanOrEqual(3);
+    for (const [mensaje, autenticados, secreto, nonce, clave, formato] of cifrado.mock.calls) {
+      expect(mensaje).toBeInstanceOf(Uint8Array);
+      expect(typeof autenticados).toBe('string');
+      expect(secreto).toBeNull();
+      expect(nonce).toBeInstanceOf(Uint8Array);
+      expect(clave).toBeInstanceOf(Uint8Array);
+      expect(formato).toBeUndefined();
+    }
+    expect(descifrado.mock.calls.length).toBeGreaterThanOrEqual(3);
+    for (const [secreto, contenido, autenticados, nonce, clave, formato] of descifrado.mock.calls) {
+      expect(secreto).toBeNull();
+      expect(contenido).toBeInstanceOf(Uint8Array);
+      expect(typeof autenticados).toBe('string');
+      expect(nonce).toBeInstanceOf(Uint8Array);
+      expect(clave).toBeInstanceOf(Uint8Array);
+      expect(formato).toBeUndefined();
+    }
+    expect(resumen.mock.calls.length).toBeGreaterThanOrEqual(3);
+    for (const [longitud, mensaje, clave, formato] of resumen.mock.calls) {
+      expect(typeof longitud).toBe('number');
+      expect(mensaje).toBeInstanceOf(Uint8Array);
+      expect(clave).toBeInstanceOf(Uint8Array);
+      expect(formato).toBeUndefined();
+    }
+    for (const [longitud, numero, contexto, clave, formato] of subclave.mock.calls) {
+      expect([longitud, typeof numero, typeof contexto]).toEqual([32, 'number', 'string']);
+      expect(contexto).toHaveLength(8);
+      expect(clave).toBeInstanceOf(Uint8Array);
+      expect(formato).toBeUndefined();
+    }
+    for (const [longitud, contrasena, sal, pasadas, memoria, algoritmo, formato] of derivacion.mock
+      .calls) {
+      expect(longitud).toBe(32);
+      expect(contrasena).toBeInstanceOf(Uint8Array);
+      expect(sal).toBeInstanceOf(Uint8Array);
+      expect([pasadas, memoria, algoritmo]).toEqual([8, 64 * 1024 * 1024, 2]);
+      expect(formato).toBeUndefined();
+    }
+    jest.restoreAllMocks();
+  });
+
+  it('cada contexto de subclave se usa para una sola cosa', () => {
+    const contextos = [SUBCLAVE_DE_AUTENTICACION, SUBCLAVE_DE_ENVOLTURA, SUBCLAVE_DE_RECUPERACION];
+    expect(new Set(contextos.map((c) => c.contexto)).size).toBe(3);
+    for (const { contexto } of contextos) expect(contexto).toMatch(/^[\x21-\x7E]{8}$/);
+  });
+});
+
 describe('higiene del módulo', () => {
   const raiz = join(__dirname, '..', '..');
   const fuentes = (readdirSync(raiz, { recursive: true }) as string[])
@@ -502,6 +657,8 @@ describe('higiene del módulo', () => {
       'crypto_kdf_derive_from_key',
       'crypto_pwhash',
       'randombytes_buf',
+      // Solo para elegir qué dos grupos del código se piden al confirmar.
+      'randombytes_uniform',
     ]);
     // Ni operaciones de bits sobre claves ni bucles de mezcla fuera de base32, que no es criptografía.
     expect(codigo.replace(/\/\*[^]*?\*\/|\/\/.*$/gm, '')).not.toMatch(/\s\^=?\s|>>>|<<|\s>>\s/);
