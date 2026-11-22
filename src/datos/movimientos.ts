@@ -13,6 +13,7 @@ import {
   type TipoDeMovimiento,
 } from '@/dominio/modelo';
 
+import { exigirLongitud } from '@/dominio/textos';
 import type { BaseDeDatos, Entorno, ValorSql } from './bd';
 import { filaACategoria, type FilaCategoria } from './categorias';
 import { filaACuenta, type FilaCuenta } from './cuentas';
@@ -104,6 +105,10 @@ export function crearRepositorioDeMovimientos(bd: BaseDeDatos, entorno: Entorno)
   async function validar(datos: DatosDeMovimiento, anterior: Movimiento | null) {
     if (!TIPOS_DE_MOVIMIENTO.includes(datos.tipo)) throw new ErrorDeDominio('no_encontrado');
     if (!esFechaValida(datos.fecha)) throw new ErrorDeDominio('fecha_no_valida');
+    // Un texto que ya estaba guardado y no cambia se conserva aunque supere el límite.
+    exigirLongitud((datos.nombre ?? '').trim().replace(/\s+/g, ' '), 'nombre', anterior?.nombre);
+    exigirLongitud(textoONulo(datos.comercio), 'comercio', anterior?.comercio);
+    exigirLongitud(textoONulo(datos.nota), 'nota', anterior?.nota);
 
     if (!Number.isSafeInteger(datos.importe)) throw new ErrorDeDominio('importe_no_valido');
     if (datos.importe === 0) throw new ErrorDeDominio('importe_cero');

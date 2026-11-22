@@ -13,6 +13,7 @@ import {
 } from '@/dominio/modelo';
 import { calcularSaldo } from '@/dominio/saldo';
 
+import { exigirLongitud } from '@/dominio/textos';
 import type { BaseDeDatos, Entorno } from './bd';
 import { filaAMovimiento, type FilaMovimiento } from './filas';
 
@@ -85,6 +86,7 @@ export function crearRepositorioDeCuentas(bd: BaseDeDatos, entorno: Entorno) {
     const limpio = nombre.trim().replace(/\s+/g, ' ');
     if (limpio === '') throw new ErrorDeDominio('nombre_vacio');
     const existentes = await listar({ incluirArchivadas: true });
+    exigirLongitud(limpio, 'nombre', existentes.find((c) => c.id === idPropio)?.nombre);
     const clave = normalizarNombre(limpio);
     if (existentes.some((c) => c.id !== idPropio && normalizarNombre(c.nombre) === clave)) {
       throw new ErrorDeDominio('nombre_duplicado');

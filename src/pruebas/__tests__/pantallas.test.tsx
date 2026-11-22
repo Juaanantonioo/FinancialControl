@@ -379,3 +379,38 @@ describe('gestión de categorías (T-027)', () => {
     expect(despues).toHaveLength(usados.length);
   });
 });
+
+describe('B5 · textos demasiado largos ya guardados', () => {
+  it('al editar un movimiento con un texto que supera el límite, avisa y no lo recorta', async () => {
+    const { bdCompartida } = jest.requireMock('@/datos/bdExpo');
+    const datos = {
+      tipo: 'gasto' as const,
+      fecha: HOY,
+      importe: 500,
+      cuentaId: principalId,
+      nombre: 'Con nota larga',
+    };
+    const largo = await repos.movimientos.crear(datos);
+    const normal = await repos.movimientos.crear({ ...datos, nombre: 'Normal' });
+    await bdCompartida.ejecutar('UPDATE movimiento SET nota = ? WHERE id = ?', [
+      'x'.repeat(5000),
+      largo.id,
+    ]);
+
+    conParametros({ id: largo.id });
+    const pantalla = await pintar(<PantallaDeMovimiento />);
+    expect(await screen.findByTestId('aviso-texto-largo')).toHaveTextContent(
+      /más largo de lo que la app admite ahora\. No se ha recortado/,
+    );
+    expect((await repos.movimientos.obtener(largo.id))?.nota).toHaveLength(5000);
+    pantalla.unmount();
+
+    conParametros({ id: normal.id });
+    await pintar(<PantallaDeMovimiento />);
+    await screen.findByDisplayValue('Normal');
+    expect(screen.queryByTestId('aviso-texto-largo')).toBeNull();
+    // No se dejan restos para las pruebas que cuentan movimientos.
+    await repos.movimientos.borrar(largo.id);
+    await repos.movimientos.borrar(normal.id);
+  });
+});

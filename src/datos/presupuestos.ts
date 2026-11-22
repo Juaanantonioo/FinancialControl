@@ -7,6 +7,7 @@ import { ErrorDeDominio } from '@/dominio/modelo';
 import type { LineaDePresupuesto, Presupuesto } from '@/dominio/presupuesto';
 import { esMesValido } from '@/dominio/resumen';
 
+import { exigirLongitud } from '@/dominio/textos';
 import type { BaseDeDatos, Entorno } from './bd';
 
 type FilaPresupuesto = {
@@ -119,6 +120,7 @@ export function crearRepositorioDePresupuestos(bd: BaseDeDatos, entorno: Entorno
     const notaLimpia = (nota ?? '').trim() || null;
     await bd.transaccion(async () => {
       const existente = await delMes(periodo);
+      exigirLongitud(notaLimpia, 'nota', existente?.nota);
       let presupuestoId = existente?.id;
       if (!presupuestoId) {
         presupuestoId = entorno.generarId();

@@ -20,6 +20,7 @@ import {
 } from '@/dominio/recurrentes';
 import { esMesValido } from '@/dominio/resumen';
 
+import { exigirLongitud } from '@/dominio/textos';
 import type { BaseDeDatos, Entorno } from './bd';
 import { filaAMovimiento, type FilaMovimiento } from './filas';
 import type { MovimientoListado, RepositorioDeMovimientos } from './movimientos';
@@ -132,6 +133,7 @@ export function crearRepositorioDeReglas(
   async function validar(datos: DatosDeRegla, anterior: ReglaRecurrente | null) {
     const nombre = datos.nombre.trim().replace(/\s+/g, ' ');
     if (nombre === '') throw new ErrorDeDominio('nombre_vacio');
+    exigirLongitud(nombre, 'nombre', anterior?.nombre);
     const existentes = await bd.consultar<{ id: string; nombre: string }>(
       'SELECT id, nombre FROM regla_recurrente WHERE borrado_en IS NULL',
     );

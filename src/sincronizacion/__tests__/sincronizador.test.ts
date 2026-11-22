@@ -3,7 +3,12 @@ import { randomUUID } from 'node:crypto';
 
 import { generarClaveDeDatos } from '@/cripto';
 import { nubeDeMentira, type NubeDeMentira } from '@/pruebas/nubeDeMentira';
-import { crearDispositivo, sembrarTodo, type Dispositivo } from '@/pruebas/sincronizacionDePrueba';
+import {
+  crearDispositivo,
+  sembrarTodo,
+  type Dispositivo,
+  entrarSubiendo,
+} from '@/pruebas/sincronizacionDePrueba';
 import {
   AGRUPACION_DE_CAMBIOS_MS,
   crearSincronizador,
@@ -70,6 +75,14 @@ const asentar = async (s: { estado: () => { trabajando: boolean } }) => {
   for (let i = 0; i < 500 && s.estado().trabajando; i += 1) await ceder();
 };
 
+/** Entra en la cuenta y, si se pregunta por subir los datos del dispositivo, responde que sí. */
+async function iniciar(s: ReturnType<typeof crearSincronizador>) {
+  await s.pedir('sesion');
+  if (s.estado().fase === 'preguntar' && s.estado().pregunta === 'subir') {
+    expect(await s.confirmarSubida()).toBe('hecho');
+  }
+}
+
 describe('sin sesión', () => {
   it('no hace nada: ni toca el motor ni la red', async () => {
     const { s } = await montar();
@@ -91,7 +104,7 @@ describe('con sesión', () => {
     const { s } = await montar();
     const fases: string[] = [];
     s.suscribir(() => fases.push(`${s.estado().fase}/${s.estado().trabajando}`));
-    await s.pedir('sesion');
+    await iniciar(s);
     expect(s.estado()).toMatchObject({ fase: 'al_dia', trabajando: false, pendientes: 0 });
     expect(s.estado().ultima).not.toBeNull();
     expect(fases[0]).toBe('inactiva/true');
@@ -100,7 +113,7 @@ describe('con sesión', () => {
 
   it('los cambios seguidos se agrupan en una sola sincronización, poco después', async () => {
     const { s } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     const subidas = () => nube.estado.llamadas.filter((l) => l === 'subir').length;
     const antes = subidas();
     for (let i = 0; i < 5; i += 1) {
@@ -118,7 +131,8 @@ describe('con sesión', () => {
   });
 
   it('solo hay un ciclo a la vez; lo pedido mientras tanto se hace al terminar', async () => {
-    const { s } = await montar();
+    // Dispositivo recién instalado: no hay datos de nadie, así que no se pregunta nada.
+    const { s } = await montar({ sembrar: false });
     const ciclo = jest.spyOn(d.motor, 'ciclo');
     const todas = [s.pedir('sesion'), s.pedir('primer_plano'), s.pedir('manual')];
     await Promise.all(todas);
@@ -130,7 +144,7 @@ describe('con sesión', () => {
 
   it('«Sincronizar ahora» hace además el repaso completo', async () => {
     const { s } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     const marcas = () => nube.estado.llamadas.filter((l) => l === 'marcas').length;
     await s.pedir('primer_plano');
     expect(marcas()).toBe(0);
@@ -140,10 +154,10 @@ describe('con sesión', () => {
 
   it('avisa a las pantallas solo cuando ha traído cambios', async () => {
     const { s, clave } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     expect(aplicados).toBe(0);
     const otro = await crearDispositivo({ servidor: nube.servidorDe(() => usuario), clave });
-    await otro.motor.evaluarEntrada();
+    await entrarSubiendo(otro);
     await otro.motor.ciclo();
     await otro.categorias.crear({ nombre: 'Desde el otro', tipo: 'gasto' });
     await otro.motor.ciclo();
@@ -157,7 +171,7 @@ describe('con sesión', () => {
 describe('fallos y reintentos', () => {
   it('sin conexión lo dice, guarda lo pendiente y reintenta con espera creciente', async () => {
     const { s } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     nube.estado.sinRed = true;
     await d.categorias.crear({ nombre: 'Sin red', tipo: 'gasto' });
     await s.pedir('primer_plano');
@@ -185,7 +199,7 @@ describe('fallos y reintentos', () => {
 
   it('una sesión caducada no se reintenta sola: hay que volver a entrar', async () => {
     const { s } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     const sesion = usuario;
     usuario = null as unknown as string;
     await s.pedir('primer_plano');
@@ -198,7 +212,7 @@ describe('fallos y reintentos', () => {
 
   it('un servidor averiado es «error», no «sin conexión», y cuenta lo que no se puede aplicar', async () => {
     const { s } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     nube.estado.averiado = true;
     await s.pedir('primer_plano');
     expect(s.estado().fase).toBe('error');
@@ -213,7 +227,7 @@ describe('fallos y reintentos', () => {
 
   it('una fila que el servidor rechaza deja el estado en «parcial»', async () => {
     const { s } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     const mala = await d.categorias.crear({ nombre: 'Rechazada', tipo: 'gasto' });
     nube.estado.rechazados.add(mala.id);
     await s.pedir('primer_plano');
@@ -226,7 +240,7 @@ describe('la pregunta de entrada', () => {
     const { s, clave } = await montar();
     const otro = await crearDispositivo({ servidor: nube.servidorDe(() => usuario), clave });
     await sembrarTodo(otro);
-    await otro.motor.evaluarEntrada();
+    await entrarSubiendo(otro);
     await otro.motor.ciclo();
     return { s, otro };
   }
@@ -235,7 +249,7 @@ describe('la pregunta de entrada', () => {
     const { s } = await conDatosEnLosDosLados();
     const local = await d.volcar();
     const remotas = nube.filas.size;
-    await s.pedir('sesion');
+    await iniciar(s);
     expect(s.estado()).toMatchObject({ fase: 'preguntar', trabajando: false });
     // Ni volver a primer plano, ni un cambio, ni el botón mueven nada mientras no se responda.
     await s.pedir('primer_plano');
@@ -251,7 +265,7 @@ describe('la pregunta de entrada', () => {
   it('«usar la nube» sin copia no cambia nada; con copia, reemplaza y sigue sincronizando', async () => {
     const { s, otro } = await conDatosEnLosDosLados();
     const local = await d.volcar();
-    await s.pedir('sesion');
+    await iniciar(s);
     expect(await s.usarLaNube(async () => false)).toEqual({ estado: 'sin_copia' });
     expect(await d.volcar()).toEqual(local);
     expect(s.estado().fase).toBe('preguntar');
@@ -266,7 +280,7 @@ describe('la pregunta de entrada', () => {
   it('cancelar (cerrar sesión) deja todo como estaba y el estado en reposo', async () => {
     const { s } = await conDatosEnLosDosLados();
     const local = await d.volcar();
-    await s.pedir('sesion');
+    await iniciar(s);
     conSesion = false;
     s.alCerrarSesion();
     expect(s.estado()).toMatchObject({ fase: 'inactiva', ultima: null });
@@ -275,10 +289,74 @@ describe('la pregunta de entrada', () => {
   });
 });
 
+describe('la pregunta de subida', () => {
+  it('con datos en el dispositivo y la nube vacía se queda preguntando y no sube nada', async () => {
+    const { s } = await montar();
+    await s.pedir('sesion');
+    expect(s.estado()).toMatchObject({ fase: 'preguntar', pregunta: 'subir', trabajando: false });
+    await s.pedir('primer_plano');
+    await s.pedir('manual');
+    void s.pedir('cambio');
+    reloj.saltar();
+    await asentar(s);
+    expect(nube.filas.size).toBe(0);
+    expect(reloj.esperas()).toEqual([]);
+  });
+
+  it('«cancelar» deja la sincronización en pausa: ni sube ni borra, hasta que la persona lo pida', async () => {
+    const { s } = await montar();
+    const local = await d.volcar();
+    await s.pedir('sesion');
+    s.posponerSubida();
+    expect(s.estado()).toMatchObject({ fase: 'en_pausa', pregunta: null });
+    await d.categorias.crear({ nombre: 'En pausa', tipo: 'gasto' });
+    for (const motivo of ['arranque', 'primer_plano', 'cambio', 'reintento'] as const) {
+      await s.pedir(motivo);
+    }
+    reloj.saltar();
+    await asentar(s);
+    expect(nube.filas.size).toBe(0);
+    expect((await d.volcar()).cuenta).toEqual(local.cuenta);
+    expect((await d.motor.resumen()).usuario).toBeNull();
+    // «Sincronizar ahora» vuelve a preguntar; no sube por su cuenta.
+    await s.pedir('manual');
+    expect(s.estado()).toMatchObject({ fase: 'preguntar', pregunta: 'subir' });
+    expect(nube.filas.size).toBe(0);
+  });
+
+  it('con el «sí» sube todo y sigue sincronizando con normalidad', async () => {
+    const { s } = await montar();
+    await s.pedir('sesion');
+    expect(await s.confirmarSubida()).toBe('hecho');
+    expect(s.estado()).toMatchObject({ fase: 'al_dia', pregunta: null, pendientes: 0 });
+    expect(nube.de(usuario).length).toBeGreaterThan(12);
+  });
+
+  it('sin conexión el «sí» no hace nada y la pregunta sigue abierta', async () => {
+    const { s } = await montar();
+    await s.pedir('sesion');
+    nube.estado.sinRed = true;
+    expect(await s.confirmarSubida()).toBe('sin_conexion');
+    expect(s.estado()).toMatchObject({ fase: 'preguntar', pregunta: 'subir' });
+    expect((await d.motor.resumen()).usuario).toBeNull();
+  });
+
+  it('posponer no hace nada si la pregunta abierta es la otra', async () => {
+    const { s, clave } = await montar();
+    const otro = await crearDispositivo({ servidor: nube.servidorDe(() => usuario), clave });
+    await sembrarTodo(otro);
+    await otro.motor.subirLoLocal();
+    await otro.motor.ciclo();
+    await s.pedir('sesion');
+    s.posponerSubida();
+    expect(s.estado()).toMatchObject({ fase: 'preguntar', pregunta: 'nube' });
+  });
+});
+
 describe('cerrar sesión y borrar la cuenta', () => {
   it('cerrar sesión para los relojes y conserva la liga; borrar la cuenta la quita', async () => {
     const { s } = await montar();
-    await s.pedir('sesion');
+    await iniciar(s);
     nube.estado.sinRed = true;
     await s.pedir('primer_plano');
     expect(reloj.esperas()).toHaveLength(1);

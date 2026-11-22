@@ -85,8 +85,12 @@ export type Resumen = {
 export type Entrada =
   /** La base queda ligada a la cuenta: ya se puede sincronizar. */
   | { estado: 'lista'; accion: 'continuar' | 'subir' | 'bajar' }
-  /** La nube y el dispositivo tienen datos: hay que preguntar. */
-  | { estado: 'preguntar' }
+  /**
+   * Hay que preguntar a la persona antes de hacer nada. «subir»: el dispositivo
+   * tiene datos y la nube está vacía (¿subirlos a la cuenta?). «nube»: los dos
+   * tienen datos y no se fusionan (¿usar los de la nube?).
+   */
+  | { estado: 'preguntar'; pregunta: 'subir' | 'nube' }
   | { estado: 'sin_conexion' | 'sesion_caducada' | 'error' | 'sin_clave' };
 
 export type ResultadoDeUsarLaNube =
@@ -760,16 +764,56 @@ export function crearMotor(dependencias: DependenciasDelMotor) {
         const nube = await servidor.hayFilas(usuario);
         if (!nube.ok) return { estado: estadoDe(nube.error) };
         if (!nube.datos) {
-          await bd.transaccion(() => ligar(usuario, true));
-          return { estado: 'lista', accion: 'subir' };
+          return await bd.transaccion(async (): Promise<Entrada> => {
+            // Los datos de este dispositivo no suben a una cuenta sin que la persona lo diga:
+            // pueden ser de otra persona, o de otra cuenta.
+            if (await hayDatosDelUsuario(bd, categoriasIniciales)) {
+              return { estado: 'preguntar', pregunta: 'subir' };
+            }
+            // Solo hay categorías iniciales intactas: no hay nada de nadie que proteger.
+            await ligar(usuario, true);
+            return { estado: 'lista', accion: 'subir' };
+          });
         }
         return await bd.transaccion(async (): Promise<Entrada> => {
-          if (await hayDatosDelUsuario(bd, categoriasIniciales)) return { estado: 'preguntar' };
+          if (await hayDatosDelUsuario(bd, categoriasIniciales)) {
+            return { estado: 'preguntar', pregunta: 'nube' };
+          }
           // Solo quedan categorías iniciales intactas: se quitan para no duplicar las de la nube.
           await bd.ejecutar('DELETE FROM categoria');
           await ligar(usuario, false);
           return { estado: 'lista', accion: 'bajar' };
         });
+      } catch {
+        return { estado: 'error' };
+      } finally {
+        borrar(claveDeDatos);
+      }
+    });
+  }
+
+  /**
+   * Respuesta «sí» a «¿Subir los datos de este dispositivo a tu cuenta?»: liga
+   * la base y deja todo pendiente de subir. Vuelve a mirar la nube: si mientras
+   * tanto otro dispositivo ha subido datos, ya no se sube encima y toca la otra
+   * pregunta.
+   */
+  function subirLoLocal(): Promise<Entrada> {
+    return enSerie(async (): Promise<Entrada> => {
+      let claveDeDatos: Uint8Array | null = null;
+      try {
+        const sesion = await abrirSesion();
+        if (!sesion.ok) return { estado: sesion.estado };
+        claveDeDatos = sesion.clave;
+        const usuario = sesion.usuario;
+        if ((await leerEstado(ESTADO.usuario)) === usuario) {
+          return { estado: 'lista', accion: 'continuar' };
+        }
+        const nube = await servidor.hayFilas(usuario);
+        if (!nube.ok) return { estado: estadoDe(nube.error) };
+        if (nube.datos) return { estado: 'preguntar', pregunta: 'nube' };
+        await bd.transaccion(() => ligar(usuario, true));
+        return { estado: 'lista', accion: 'subir' };
       } catch {
         return { estado: 'error' };
       } finally {
@@ -851,5 +895,5 @@ export function crearMotor(dependencias: DependenciasDelMotor) {
     };
   }
 
-  return { ciclo, evaluarEntrada, usarLaNube, desligar, resumen };
+  return { ciclo, evaluarEntrada, subirLoLocal, usarLaNube, desligar, resumen };
 }

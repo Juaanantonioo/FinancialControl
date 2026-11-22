@@ -13,6 +13,7 @@ import {
   type TipoDeObjetivo,
 } from '@/dominio/objetivos';
 
+import { exigirLongitud } from '@/dominio/textos';
 import type { BaseDeDatos, Entorno } from './bd';
 import type { RepositorioDeMovimientos } from './movimientos';
 
@@ -127,6 +128,8 @@ export function crearRepositorioDeObjetivos(
   async function validar(datos: DatosDeObjetivo, idPropio: string | null) {
     const nombre = datos.nombre.trim().replace(/\s+/g, ' ');
     if (nombre === '') throw new ErrorDeDominio('nombre_vacio');
+    if (idPropio === null) exigirLongitud(nombre, 'nombre');
+    else exigirLongitud(nombre, 'nombre', (await obtener(idPropio))?.nombre);
     const existentes = await bd.consultar<{ id: string; nombre: string }>(
       'SELECT id, nombre FROM objetivo WHERE borrado_en IS NULL',
     );
@@ -264,6 +267,7 @@ export function crearRepositorioDeObjetivos(
     const id = entorno.generarId();
     const ahora = entorno.ahora().toISOString();
     const nota = (datos.nota ?? '').trim();
+    exigirLongitud(nota, 'nota');
     await bd.ejecutar(
       `INSERT INTO aportacion_a_objetivo (id, objetivo_id, fecha, importe, movimiento_id, nota,
                                           creado_en, modificado_en, borrado_en)

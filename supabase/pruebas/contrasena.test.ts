@@ -10,7 +10,13 @@ import { gruposDelCodigo, PARAMETROS_POR_VERSION } from '@/cripto';
 import { crearGestorDeCuenta, type ClienteDeCuenta, type Dependencias } from '@/estado/cuenta';
 import { CLAVE_DE_DATOS_EN_EL_ALMACEN, type AlmacenSeguro } from '@/lib/almacenSeguro';
 import { prepararPrueba } from '@/pruebas/bdDePrueba';
-import { INICIALES, sembrarTodo, volcar, type Dispositivo } from '@/pruebas/sincronizacionDePrueba';
+import {
+  INICIALES,
+  sembrarTodo,
+  volcar,
+  type Dispositivo,
+  entrarSubiendo,
+} from '@/pruebas/sincronizacionDePrueba';
 import { crearMotor } from '@/sincronizacion/motor';
 import { crearServidorDeFilas } from '@/sincronizacion/servidor';
 
@@ -134,11 +140,11 @@ describe('cambio de contraseña contra la instancia local', () => {
     const { correo, a, claveDeDatos, fila } = await conCuenta();
     // A sube datos de las doce tablas; B entra en la cuenta y los baja.
     const datos = await sembrarTodo(a as unknown as Dispositivo);
-    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+    expect(await entrarSubiendo(a)).toEqual({ estado: 'lista', accion: 'subir' });
     expect((await a.motor.ciclo()).estado).toBe('correcto');
     const b = await dispositivo();
     expect(await b.gestor.iniciarSesion(correo, VIEJA)).toEqual({ ok: true });
-    expect(await b.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'bajar' });
+    expect(await entrarSubiendo(b)).toEqual({ estado: 'lista', accion: 'bajar' });
     expect((await b.motor.ciclo()).estado).toBe('correcto');
     expect(await b.volcar()).toEqual(await a.volcar());
 
@@ -174,7 +180,7 @@ describe('cambio de contraseña contra la instancia local', () => {
     expect((await b.gestor.iniciarSesion(correo, VIEJA)).ok).toBe(false);
     expect(await b.gestor.iniciarSesion(correo, NUEVA)).toEqual({ ok: true });
     expect(b.clave()).toBe(claveDeDatos);
-    expect(await b.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'continuar' });
+    expect(await entrarSubiendo(b)).toEqual({ estado: 'lista', accion: 'continuar' });
     expect(await b.motor.ciclo()).toMatchObject({ estado: 'correcto', retenidas: 0 });
     expect((await b.movimientos.obtener(nuevo.id))?.importe).toBe(777);
     expect(await b.volcar()).toEqual(await a.volcar());
@@ -183,7 +189,7 @@ describe('cambio de contraseña contra la instancia local', () => {
     // Un tercer dispositivo, recién instalado, baja y descifra todo con la contraseña nueva.
     const c = await dispositivo();
     expect(await c.gestor.iniciarSesion(correo, NUEVA)).toEqual({ ok: true });
-    expect(await c.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'bajar' });
+    expect(await entrarSubiendo(c)).toEqual({ estado: 'lista', accion: 'bajar' });
     expect(await c.motor.ciclo()).toMatchObject({ estado: 'correcto', retenidas: 0 });
     expect(await c.volcar()).toEqual(await a.volcar());
 
@@ -206,7 +212,7 @@ describe('cambio de contraseña contra la instancia local', () => {
     expect(fila()).toEqual(antes);
     expect(a.gestor.estado().fase).toBe('con_sesion');
     // La sesión anterior sigue sirviendo para sincronizar.
-    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+    expect(await entrarSubiendo(a)).toEqual({ estado: 'lista', accion: 'subir' });
     expect((await a.motor.ciclo()).estado).toBe('correcto');
     expect(await entrar(correo, VIEJA)).not.toBeNull();
   }, 60_000);
@@ -320,7 +326,7 @@ describe('actualización de parámetros, contra la instancia local', () => {
   it('cuenta en versión 1 y app en versión 2: al entrar se actualiza sola y sigue descifrando', async () => {
     const { correo, a, claveDeDatos, fila } = await conCuenta();
     await sembrarTodo(a as unknown as Dispositivo);
-    await a.motor.evaluarEntrada();
+    await entrarSubiendo(a);
     await a.motor.ciclo();
     expect(fila()).toMatchObject({ largo: 98, version: 1 });
 
@@ -329,7 +335,7 @@ describe('actualización de parámetros, contra la instancia local', () => {
     expect(b.clave()).toBe(claveDeDatos);
     expect(fila()).toMatchObject({ largo: 98, version: 2 });
     // Sigue descifrando: baja las filas que subió A.
-    expect(await b.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'bajar' });
+    expect(await entrarSubiendo(b)).toEqual({ estado: 'lista', accion: 'bajar' });
     expect(await b.motor.ciclo()).toMatchObject({ estado: 'correcto', retenidas: 0 });
     expect(await b.volcar()).toEqual(await a.volcar());
 

@@ -14,7 +14,12 @@ import { iniciarSeguridad } from '@/estado/seguridad';
 import es from '@/i18n/es.json';
 import { almacenEnMemoria, servidorDeMentira } from '@/pruebas/cuentaDePrueba';
 import { nubeDeMentira, type NubeDeMentira } from '@/pruebas/nubeDeMentira';
-import { crearDispositivo, sembrarTodo, type Dispositivo } from '@/pruebas/sincronizacionDePrueba';
+import {
+  crearDispositivo,
+  sembrarTodo,
+  type Dispositivo,
+  entrarSubiendo,
+} from '@/pruebas/sincronizacionDePrueba';
 import { crearSincronizador, type Sincronizador } from '@/sincronizacion/sincronizador';
 
 jest.mock('expo-router', () => ({
@@ -92,6 +97,12 @@ async function montar() {
   return { clave };
 }
 
+/** Entra en la cuenta y, si se pregunta por subir los datos del dispositivo, responde que sí. */
+async function iniciar() {
+  await mockSinc.pedir('sesion');
+  if (mockSinc.estado().pregunta === 'subir') await mockSinc.confirmarSubida();
+}
+
 const pintar = () =>
   render(
     <ProveedorDeAvisos>
@@ -121,6 +132,8 @@ describe('estado de la sincronización en Cuenta', () => {
     expect(screen.getByTestId('ultima-sincronizacion')).toHaveTextContent(es.sinc.nunca);
 
     await fireEvent.press(screen.getByTestId('sincronizar-ahora'));
+    // El dispositivo tiene datos y la cuenta está vacía: antes de subir, pregunta.
+    await fireEvent.press(await screen.findByTestId('subir-lo-local'));
     await waitFor(() =>
       expect(screen.getByTestId('estado-de-sincronizacion')).toHaveTextContent(es.sinc.alDia),
     );
@@ -135,7 +148,7 @@ describe('estado de la sincronización en Cuenta', () => {
   it('sin conexión: mensaje comprensible y cuántos cambios esperan', async () => {
     await montar();
     await pintar();
-    await act(() => mockSinc.pedir('sesion'));
+    await act(() => iniciar());
     nube.estado.sinRed = true;
     await d.categorias.crear({ nombre: 'Uno', tipo: 'gasto' });
     await act(() => mockSinc.pedir('primer_plano'));
@@ -155,7 +168,7 @@ describe('estado de la sincronización en Cuenta', () => {
   it('sesión caducada, error del servidor y filas ilegibles: cada cosa con su texto, sin detalles internos', async () => {
     await montar();
     await pintar();
-    await act(() => mockSinc.pedir('sesion'));
+    await act(() => iniciar());
     const estado = () => screen.getByTestId('estado-de-sincronizacion');
 
     nube.estado.averiado = true;
@@ -183,15 +196,65 @@ describe('estado de la sincronización en Cuenta', () => {
   });
 });
 
+describe('entrada con datos en el dispositivo y la nube vacía', () => {
+  it('pregunta antes de subir, y avisa de que solo se suban datos propios', async () => {
+    await montar();
+    await pintar();
+    await act(() => mockSinc.pedir('sesion'));
+    const tarjeta = screen.getByTestId('cuenta-pregunta-subir');
+    expect(tarjeta).toHaveTextContent(new RegExp(es.sinc.subirTitulo.replace('?', '\\?')));
+    expect(tarjeta).toHaveTextContent(/Súbelos solo si son tuyos/);
+    // Mientras se pregunta, no ha subido nada.
+    expect(nube.filas.size).toBe(0);
+    expect(screen.queryByTestId('sincronizar-ahora')).toBeNull();
+  });
+
+  it('«Cancelar» no sube ni borra nada, deja la sesión abierta y lo dice', async () => {
+    await montar();
+    const local = await d.volcar();
+    await pintar();
+    await act(() => mockSinc.pedir('sesion'));
+    await fireEvent.press(screen.getByTestId('cancelar-subida'));
+    expect(await screen.findByTestId('estado-de-sincronizacion')).toHaveTextContent(
+      `⚠ ${es.sinc.enPausa}`,
+    );
+    expect(mockGestor.estado().fase).toBe('con_sesion');
+    expect(nube.filas.size).toBe(0);
+    expect(await d.volcar()).toEqual(local);
+    // Ni volver a primer plano ni un cambio local suben nada mientras siga en pausa.
+    await d.categorias.crear({ nombre: 'Nueva', tipo: 'gasto' });
+    await act(async () => {
+      await mockSinc.pedir('primer_plano');
+      await mockSinc.pedir('cambio');
+    });
+    expect(nube.filas.size).toBe(0);
+    // «Sincronizar ahora» vuelve a preguntar.
+    await fireEvent.press(screen.getByTestId('sincronizar-ahora'));
+    expect(await screen.findByTestId('cuenta-pregunta-subir')).toBeTruthy();
+    expect(nube.filas.size).toBe(0);
+  });
+
+  it('«Subir los datos» los sube y deja el estado al día', async () => {
+    await montar();
+    await pintar();
+    await act(() => mockSinc.pedir('sesion'));
+    await fireEvent.press(screen.getByTestId('subir-lo-local'));
+    await waitFor(() =>
+      expect(screen.getByTestId('estado-de-sincronizacion')).toHaveTextContent(es.sinc.alDia),
+    );
+    expect(nube.de(usuario).length).toBeGreaterThan(12);
+  });
+});
+
 describe('entrada en una cuenta con datos en la nube y en el dispositivo', () => {
   async function conPregunta() {
     const { clave } = await montar();
     const otro = await crearDispositivo({ servidor: nube.servidorDe(() => usuario), clave });
     await sembrarTodo(otro);
-    await otro.motor.evaluarEntrada();
+    await entrarSubiendo(otro);
     await otro.motor.ciclo();
     await pintar();
-    await act(() => mockSinc.pedir('sesion'));
+    await act(() => iniciar());
     return { otro, local: await d.volcar(), remotas: JSON.stringify([...nube.filas.values()]) };
   }
 

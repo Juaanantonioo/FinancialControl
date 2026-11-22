@@ -246,9 +246,10 @@ arrancar, si hay una sesión del 4b-1 sin ligar):
 | Nube | Dispositivo | Qué se hace |
 |---|---|---|
 | — | Ya ligado a esta misma cuenta | Se continúa: es la misma copia. Lo cambiado sin sesión se sube como un cambio hecho sin conexión |
-| Vacía | Lo que sea | Se liga y se marca **todo** como pendiente: se sube |
+| Vacía | Sin datos del usuario | Se liga y se suben las categorías iniciales. No hay nada de nadie que proteger |
+| Vacía | Con datos del usuario | **Se pregunta** (desde el bloque 5): «¿Subir los datos de este dispositivo a tu cuenta?» |
 | Con datos | Sin datos del usuario | Se quitan las categorías iniciales intactas, se liga y se baja todo |
-| Con datos | Con datos del usuario | **No se fusiona.** La app pregunta |
+| Con datos | Con datos del usuario | **No se fusiona.** La app pregunta si usar los datos de la nube |
 
 **Qué cuenta como «sin datos del usuario».** Las otras once tablas están vacías y todas
 las categorías son *iniciales intactas*: su nombre y tipo coinciden con una de las
@@ -258,7 +259,16 @@ ni color. Una categoría creada a mano con el mismo nombre que una inicial y sin
 indistinguible, y también equivalente: quitarla no pierde nada. Reordenar, renombrar o
 personalizar una categoría la convierte en dato del usuario.
 
-**La pregunta.** «Usar los datos de la nube» o «Cancelar».
+**La pregunta de subida** (nube vacía). «Subir los datos» o «Cancelar».
+
+- *Subir los datos:* se vuelve a mirar la nube. Si sigue vacía, se liga la base y todo queda
+  pendiente de subir. Si mientras tanto otro dispositivo ha subido datos, no se sube nada
+  y pasa a hacerse la otra pregunta.
+- *Cancelar:* no se sincroniza y no se borra nada. La sesión sigue abierta y Cuenta dice
+  que la sincronización no está iniciada. Se vuelve a preguntar con «Sincronizar ahora» o
+  al abrir la app otra vez.
+
+**La pregunta de la nube** (los dos con datos). «Usar los datos de la nube» o «Cancelar».
 
 - *Cancelar:* se cierra la sesión. No cambia ningún dato, ni local ni remoto.
 - *Usar los datos de la nube:* (1) se exporta lo local a un fichero y se abre la hoja de
@@ -417,14 +427,17 @@ internos: sin conexión, sesión caducada o error del servidor.
    y lo futuro. Cambiar la contraseña no lo arregla.
 6. **Dos dispositivos nuevos que entran a la vez** en una cuenta vacía suben cada uno sus
    categorías iniciales: quedan duplicadas. No se detecta.
-7. **Un dispositivo ajeno que entra en una cuenta vacía sube sus datos locales** a esa
-   cuenta (es lo que dice D-h). Si otra persona inicia sesión en un teléfono con datos de
-   otra, y su nube está vacía, esos datos acaban en su cuenta.
+7. **Un dispositivo con datos de otra persona que entra en una cuenta vacía** ya no sube
+   sin preguntar (bloque 5). Sigue dependiendo de que quien responde no diga «sí» a
+   datos que no son suyos; la pregunta lo avisa.
 8. **La base local sigue sin cifrar** (4b-3), y la exportación es un fichero en claro.
 9. **Filas de una versión futura de la app** se retienen en las versiones antiguas, que
    no las muestran hasta actualizarse.
 10. **Una transacción que tarde más de 5 minutos en confirmarse** solo se recoge en el
     repaso completo.
-11. **Una fila mayor de 64 KiB cifrada no cabe en el servidor.** No sube, se cuenta y se
-    reintenta sin fin. La app no limita hoy la longitud de una nota.
+11. **Una fila mayor de 64 KiB cifrada no cabe en el servidor.** Desde el bloque 5 la app
+    limita los textos libres (`src/dominio/textos.ts`: 200 caracteres en nombres y
+    comercio, 2.000 en notas), y la fila más grande posible ocupa menos de la mitad del
+    máximo. Un texto más largo que ya estuviera guardado no se recorta: esa fila sigue sin
+    subir hasta que se acorte.
 12. **Cambiar la contraseña no cierra las demás sesiones** (9.5).

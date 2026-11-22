@@ -10,7 +10,12 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
 import { generarClaveDeDatos } from '@/cripto';
-import { contarFilas, sembrarTodo, type Dispositivo } from '@/pruebas/sincronizacionDePrueba';
+import {
+  contarFilas,
+  sembrarTodo,
+  type Dispositivo,
+  entrarSubiendo,
+} from '@/pruebas/sincronizacionDePrueba';
 import { cifrarFila } from '@/sincronizacion/filas';
 import { crearServidorDeFilas } from '@/sincronizacion/servidor';
 import { TABLAS } from '@/sincronizacion/tablas';
@@ -39,10 +44,10 @@ async function cuentaConDosDispositivos(nombre: string) {
   const clave = await generarClaveDeDatos();
   const a = await dispositivoDe(usuario, clave);
   const datos = await sembrarTodo(a);
-  expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+  expect(await entrarSubiendo(a)).toEqual({ estado: 'lista', accion: 'subir' });
   expect((await a.motor.ciclo()).estado).toBe('correcto');
   const b = await dispositivoDe(usuario, clave);
-  expect(await b.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'bajar' });
+  expect(await entrarSubiendo(b)).toEqual({ estado: 'lista', accion: 'bajar' });
   expect((await b.motor.ciclo()).estado).toBe('correcto');
   return { usuario, clave, a, b, datos };
 }
@@ -124,11 +129,11 @@ describe('dos dispositivos con la misma cuenta', () => {
   it('dos escrituras confirmadas fuera de orden: B recibe las dos', async () => {
     const { usuario, clave, a, b, datos } = await cuentaConDosDispositivos('orden');
     const otro = await dispositivoDe(usuario, clave);
-    await otro.motor.evaluarEntrada();
+    await entrarSubiendo(otro);
     await otro.motor.ciclo();
     // Un dispositivo con cursor ingenuo (sin ventana), para comprobar que el caso se da.
     const ingenuo = await dispositivoDe(usuario, clave, { ventanaMs: 0 });
-    await ingenuo.motor.evaluarEntrada();
+    await entrarSubiendo(ingenuo);
     await ingenuo.motor.ciclo();
 
     // Alguien retiene la fila de la cuenta en el servidor durante unos segundos.
@@ -203,12 +208,12 @@ describe('dos dispositivos con la misma cuenta', () => {
       fechaSaldoInicial: '2026-01-01',
     });
     for (let i = 0; i < 1000; i += 1) await gasto(a, banco.id, `Movimiento ${i}`, i + 1);
-    await a.motor.evaluarEntrada();
+    await entrarSubiendo(a);
     const subida = await a.motor.ciclo();
     expect(subida).toMatchObject({ estado: 'correcto', noSubidas: 0 });
     expect(subida.subidas).toBe(await contarFilas(a.bd));
     const b = await dispositivoDe(usuario, clave);
-    expect(await b.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'bajar' });
+    expect(await entrarSubiendo(b)).toEqual({ estado: 'lista', accion: 'bajar' });
     const bajada = await b.motor.ciclo();
     expect(bajada).toMatchObject({ estado: 'correcto', retenidas: 0 });
     const enB = await b.volcar();
@@ -227,7 +232,7 @@ describe('dos dispositivos con la misma cuenta', () => {
     const { usuario, clave, b, datos } = await cuentaConDosDispositivos('sinred');
     const red = redEspiada();
     const c = await dispositivoDe(usuario, clave, { red: red.fetch });
-    await c.motor.evaluarEntrada();
+    await entrarSubiendo(c);
     await c.motor.ciclo();
     red.estado.cortada = true;
     const uno = await gasto(c, datos.banco.id, 'Sin cobertura 1');
@@ -247,22 +252,30 @@ describe('dos dispositivos con la misma cuenta', () => {
 describe('casos límite', () => {
   it('una fila demasiado grande para el servidor no sube, se cuenta, y no detiene a las demás', async () => {
     const { a, b, datos } = await cuentaConDosDispositivos('grande');
-    // La app no limita la longitud de una nota; el servidor admite sobres de hasta 64 KiB de texto.
-    const enorme = await a.movimientos.crear({
-      tipo: 'gasto',
-      fecha: '2026-11-21',
-      importe: 100,
-      cuentaId: datos.banco.id,
-      nombre: 'Con una nota enorme',
-      nota: 'x'.repeat(70_000),
-    });
+    // Desde el bloque 5 la app limita los textos y ya no deja crear una nota así.
+    await expect(
+      a.movimientos.crear({
+        tipo: 'gasto',
+        fecha: '2026-11-21',
+        importe: 100,
+        cuentaId: datos.banco.id,
+        nombre: 'Con una nota enorme',
+        nota: 'x'.repeat(70_000),
+      }),
+    ).rejects.toMatchObject({ codigo: 'texto_demasiado_largo' });
+    // Pero puede existir de antes: se escribe directamente en la base, como si ya estuviera.
+    const enorme = await gasto(a, datos.banco.id, 'Con una nota enorme');
+    await a.bd.ejecutar('UPDATE movimiento SET nota = ? WHERE id = ?', [
+      'x'.repeat(70_000),
+      enorme.id,
+    ]);
     const normal = await gasto(a, datos.banco.id, 'Normal');
     expect(await a.motor.ciclo()).toMatchObject({ estado: 'parcial', subidas: 1, noSubidas: 1 });
     expect(await pendientes(a)).toBe(1);
     await b.motor.ciclo();
     expect(await b.movimientos.obtener(normal.id)).not.toBeNull();
     expect(await b.movimientos.obtener(enorme.id)).toBeNull();
-    // En local la fila sigue entera; si se acorta, sube.
+    // En local la fila sigue entera, sin recortar; si se acorta, sube.
     expect((await a.movimientos.obtener(enorme.id))?.nota).toHaveLength(70_000);
     await a.movimientos.modificar(enorme.id, {
       tipo: 'gasto',
@@ -307,7 +320,7 @@ describe('lo que llega al servidor', () => {
     const red = redEspiada();
     const a = await dispositivoDe(usuario, clave, { red: red.fetch });
     const datos = await sembrarTodo(a);
-    await a.motor.evaluarEntrada();
+    await entrarSubiendo(a);
     await a.motor.ciclo();
     await a.movimientos.borrar(datos.movimiento.id);
     await a.motor.ciclo({ repaso: true });
@@ -455,7 +468,7 @@ describe('sobres manipulados y otros usuarios', () => {
     for (const claveUsada of [claveDeC, clave]) {
       const dc = await dispositivoDe(c, claveUsada);
       // C tiene «datos» en la nube (el sobre copiado): su dispositivo nuevo baja.
-      expect(await dc.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'bajar' });
+      expect(await entrarSubiendo(dc)).toEqual({ estado: 'lista', accion: 'bajar' });
       expect(await dc.motor.ciclo()).toMatchObject({
         estado: 'correcto',
         aplicadas: 0,
@@ -501,7 +514,7 @@ describe('sobres manipulados y otros usuarios', () => {
     expect(filasRemotasDe(a).find((f) => f.id === datos.banco.id)?.borrada).toBe(false);
     // Un dispositivo de C, aunque tuviera la clave de A, no baja nada: su nube está vacía.
     const dc = await dispositivoDe(c, clave);
-    expect(await dc.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+    expect(await entrarSubiendo(dc)).toEqual({ estado: 'lista', accion: 'subir' });
     expect((await dc.motor.ciclo()).aplicadas).toBe(0);
     expect((await dc.volcar()).cuenta).toEqual([]);
 
@@ -525,7 +538,7 @@ describe('sobres manipulados y otros usuarios', () => {
   it('sin sesión el servidor no entrega ni acepta nada, y el motor lo llama sesión caducada', async () => {
     const { usuario, clave, datos } = await cuentaConDosDispositivos('caduca');
     const d = await dispositivoDe(usuario, clave);
-    await d.motor.evaluarEntrada();
+    await entrarSubiendo(d);
     await d.motor.ciclo();
     await d.cliente.auth.signOut({ scope: 'local' });
     await gasto(d, datos.banco.id, 'Sin sesión');
@@ -535,13 +548,18 @@ describe('sobres manipulados y otros usuarios', () => {
 });
 
 describe('entrada en una cuenta', () => {
-  it('nube vacía y dispositivo con datos: sube', async () => {
+  it('nube vacía y dispositivo con datos: pregunta; sin respuesta no sube nada; con el «sí», sube', async () => {
     const usuario = await crearUsuario('sube');
     const clave = await generarClaveDeDatos();
     const a = await dispositivoDe(usuario, clave);
     await sembrarTodo(a);
     const total = await contarFilas(a.bd);
-    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+    const antes = await a.volcar();
+    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'preguntar', pregunta: 'subir' });
+    expect((await a.motor.ciclo()).estado).toBe('sin_ligar');
+    expect(filasRemotasDe(usuario)).toEqual([]);
+    expect(await a.volcar()).toEqual(antes);
+    expect(await a.motor.subirLoLocal()).toEqual({ estado: 'lista', accion: 'subir' });
     expect((await a.motor.ciclo()).subidas).toBe(total);
     expect(filasRemotasDe(usuario)).toHaveLength(total);
   });
@@ -562,7 +580,7 @@ describe('entrada en una cuenta', () => {
     await sembrarTodo(c);
     const local = await c.volcar();
     const remotas = filasRemotasDe(usuario);
-    expect(await c.motor.evaluarEntrada()).toEqual({ estado: 'preguntar' });
+    expect(await entrarSubiendo(c)).toEqual({ estado: 'preguntar', pregunta: 'nube' });
 
     // «Cancelar»: no se hace nada más. Ni un ciclo pedido por error sube o baja.
     expect((await c.motor.ciclo()).estado).toBe('sin_ligar');

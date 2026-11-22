@@ -13,6 +13,7 @@ import {
   crearDispositivo,
   sembrarTodo,
   type Dispositivo,
+  entrarSubiendo,
 } from '@/pruebas/sincronizacionDePrueba';
 import { cifrarFila } from '@/sincronizacion/filas';
 import { crearMotor } from '@/sincronizacion/motor';
@@ -38,10 +39,10 @@ const dispositivo = (
 async function dosDispositivos() {
   const a = await dispositivo();
   const datos = await sembrarTodo(a);
-  expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+  expect(await entrarSubiendo(a)).toEqual({ estado: 'lista', accion: 'subir' });
   expect((await a.motor.ciclo()).estado).toBe('correcto');
   const b = await dispositivo();
-  expect(await b.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'bajar' });
+  expect(await entrarSubiendo(b)).toEqual({ estado: 'lista', accion: 'bajar' });
   expect((await b.motor.ciclo()).estado).toBe('correcto');
   return { a, b, datos };
 }
@@ -61,7 +62,7 @@ describe('sin cuenta ligada', () => {
     let quien = usuario;
     const a = await dispositivo({}, () => quien);
     await sembrarTodo(a);
-    await a.motor.evaluarEntrada();
+    await entrarSubiendo(a);
     await a.motor.ciclo();
     const antes = nube.filas.size;
     quien = randomUUID();
@@ -77,9 +78,9 @@ describe('sin cuenta ligada', () => {
 
   it('sin sesión o sin clave, lo dice y no hace nada', async () => {
     const sinSesion = await dispositivo({}, () => null);
-    expect(await sinSesion.motor.evaluarEntrada()).toEqual({ estado: 'sesion_caducada' });
+    expect(await entrarSubiendo(sinSesion)).toEqual({ estado: 'sesion_caducada' });
     const a = await dispositivo();
-    await a.motor.evaluarEntrada();
+    await entrarSubiendo(a);
     const motor = crearMotor({
       bd: a.bd,
       servidor: nube.servidorDe(() => usuario),
@@ -193,10 +194,10 @@ describe('subida y bajada', () => {
         nombre: `Gasto ${i}`,
       });
     }
-    await a.motor.evaluarEntrada();
+    await entrarSubiendo(a);
     await a.motor.ciclo();
     const b = await dispositivo({ filasPorPagina: 7 });
-    await b.motor.evaluarEntrada();
+    await entrarSubiendo(b);
     await b.motor.ciclo();
     expect(await b.volcar()).toEqual(await a.volcar());
   });
@@ -204,7 +205,7 @@ describe('subida y bajada', () => {
   it('una fila que cambia mientras se sube sigue pendiente y sube después', async () => {
     const a = await dispositivo();
     const { banco } = await sembrarTodo(a);
-    await a.motor.evaluarEntrada();
+    await entrarSubiendo(a);
     const real = nube.servidorDe(() => usuario);
     let cambiada = false;
     // Un motor sobre la base de A cuyo servidor tarda: mientras la primera
@@ -232,7 +233,7 @@ describe('subida y bajada', () => {
     expect(subidasDeLaCuenta).toHaveLength(2);
     expect(await pendientes(a)).toBe(0);
     const b = await dispositivo();
-    await b.motor.evaluarEntrada();
+    await entrarSubiendo(b);
     await b.motor.ciclo();
     expect((await b.cuentas.obtener(banco.id))?.archivada).toBe(true);
   });
@@ -529,7 +530,7 @@ describe('cursor', () => {
   it('recoge una escritura confirmada fuera de orden; sin ventana se perdería', async () => {
     const { a, b, datos } = await dosDispositivos();
     const ingenuo = await dispositivo({ ventanaMs: 0 });
-    await ingenuo.motor.evaluarEntrada();
+    await entrarSubiendo(ingenuo);
     await ingenuo.motor.ciclo();
 
     const crear = (nombre: string) =>
@@ -583,7 +584,7 @@ describe('repaso completo', () => {
     expect(repaso).toMatchObject({ revertidas: 1, subidas: 1, aplicadas: 0 });
     expect((await a.cuentas.obtener(datos.banco.id))?.archivada).toBe(true);
     const b = await dispositivo();
-    await b.motor.evaluarEntrada();
+    await entrarSubiendo(b);
     await b.motor.ciclo();
     expect((await b.cuentas.obtener(datos.banco.id))?.archivada).toBe(true);
   });
@@ -622,11 +623,59 @@ describe('repaso completo', () => {
 });
 
 describe('entrada en una cuenta', () => {
-  it('nube vacía y dispositivo con datos: sube', async () => {
+  it('nube vacía y dispositivo con datos: pregunta antes de subir, y mientras tanto no hace nada', async () => {
+    const a = await dispositivo();
+    await sembrarTodo(a);
+    const antes = await a.volcar();
+    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'preguntar', pregunta: 'subir' });
+    // «Cancelar» es no responder: ni se liga la base, ni sube nada, ni se borra nada.
+    expect((await a.motor.ciclo()).estado).toBe('sin_ligar');
+    expect((await a.motor.resumen()).usuario).toBeNull();
+    expect(nube.filas.size).toBe(0);
+    expect(await a.volcar()).toEqual(antes);
+    // Y se vuelve a preguntar las veces que haga falta.
+    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'preguntar', pregunta: 'subir' });
+    // Con el «sí», sube.
+    expect(await a.motor.subirLoLocal()).toEqual({ estado: 'lista', accion: 'subir' });
+    expect((await a.motor.ciclo()).estado).toBe('correcto');
+    expect(nube.de(usuario)).toHaveLength(await contarFilas(a.bd));
+  });
+
+  it('nube vacía y dispositivo recién instalado: no hay datos de nadie, sube sin preguntar', async () => {
+    const a = await dispositivo();
+    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+    await a.motor.ciclo();
+    expect(nube.de(usuario)).toHaveLength(3);
+  });
+
+  it('si la nube recibe datos mientras se pregunta, el «sí» ya no sube: toca la otra pregunta', async () => {
+    const a = await dispositivo();
+    await sembrarTodo(a);
+    const antes = await a.volcar();
+    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'preguntar', pregunta: 'subir' });
+    const otro = await dispositivo();
+    await sembrarTodo(otro);
+    await entrarSubiendo(otro);
+    await otro.motor.ciclo();
+    const enNube = nube.filas.size;
+    expect(await a.motor.subirLoLocal()).toEqual({ estado: 'preguntar', pregunta: 'nube' });
+    expect(nube.filas.size).toBe(enNube);
+    expect(await a.volcar()).toEqual(antes);
+  });
+
+  it('sin conexión o sin sesión, el «sí» no liga nada', async () => {
+    const a = await dispositivo();
+    await sembrarTodo(a);
+    nube.estado.sinRed = true;
+    expect(await a.motor.subirLoLocal()).toEqual({ estado: 'sin_conexion' });
+    expect((await a.motor.resumen()).usuario).toBeNull();
+  });
+
+  it('con el «sí» a subir, todas las filas del dispositivo suben', async () => {
     const a = await dispositivo();
     await sembrarTodo(a);
     const total = await contarFilas(a.bd);
-    expect(await a.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'subir' });
+    expect(await entrarSubiendo(a)).toEqual({ estado: 'lista', accion: 'subir' });
     expect(await pendientes(a)).toBe(total);
     await a.motor.ciclo();
     expect(nube.de(usuario)).toHaveLength(total);
@@ -648,10 +697,10 @@ describe('entrada en una cuenta', () => {
     const c = await dispositivo();
     const [ocio] = (await c.categorias.listar()).filter((x) => x.nombre === 'Ocio');
     await c.categorias.renombrar(ocio.id, 'Tiempo libre');
-    expect(await c.motor.evaluarEntrada()).toEqual({ estado: 'preguntar' });
+    expect(await entrarSubiendo(c)).toEqual({ estado: 'preguntar', pregunta: 'nube' });
     const d = await dispositivo();
     await d.categorias.crear({ nombre: 'Mascotas', tipo: 'gasto' });
-    expect(await d.motor.evaluarEntrada()).toEqual({ estado: 'preguntar' });
+    expect(await entrarSubiendo(d)).toEqual({ estado: 'preguntar', pregunta: 'nube' });
   });
 
   it('los dos con datos: pregunta, y mientras tanto no cambia nada', async () => {
@@ -660,7 +709,7 @@ describe('entrada en una cuenta', () => {
     await sembrarTodo(c);
     const antes = await c.volcar();
     const enNube = JSON.stringify([...nube.filas.values()]);
-    expect(await c.motor.evaluarEntrada()).toEqual({ estado: 'preguntar' });
+    expect(await entrarSubiendo(c)).toEqual({ estado: 'preguntar', pregunta: 'nube' });
     // «Cancelar» es no hacer nada más: ni el ciclo sube o baja.
     expect((await c.motor.ciclo()).estado).toBe('sin_ligar');
     expect(await c.volcar()).toEqual(antes);
@@ -720,7 +769,7 @@ describe('entrada en una cuenta', () => {
   it('volver a entrar en la misma cuenta continúa: lo cambiado sin sesión sube', async () => {
     const { a, b, datos } = await dosDispositivos();
     await b.cuentas.archivar(datos.broker.id, true);
-    expect(await b.motor.evaluarEntrada()).toEqual({ estado: 'lista', accion: 'continuar' });
+    expect(await entrarSubiendo(b)).toEqual({ estado: 'lista', accion: 'continuar' });
     await b.motor.ciclo();
     await a.motor.ciclo();
     expect((await a.cuentas.obtener(datos.broker.id))?.archivada).toBe(true);

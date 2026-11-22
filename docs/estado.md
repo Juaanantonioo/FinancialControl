@@ -1869,3 +1869,28 @@ compartir. No hay capturas en `docs/capturas/b4b2/`.
 `xcrun simctl uninstall <dispositivo> es.juanantonio.financialcontrol` antes de cada
 `install`, un solo simulador a la vez, y Supabase local con
 `npx supabase start -x studio,logflare,vector,realtime,storage-api,imgproxy,edge-runtime,postgres-meta,mailpit,supavisor`.
+
+### 16.3 Fase 3 · Dos decisiones cerradas
+
+**D-b. Subir pregunta antes.** Un dispositivo con datos que entra en una cuenta con la
+nube vacía ya no sube solo: Cuenta pregunta «¿Subir los datos de este dispositivo a tu
+cuenta?». «Cancelar» deja la sesión abierta y la sincronización en pausa, sin subir ni
+borrar nada; se vuelve a preguntar con «Sincronizar ahora» o al abrir la app. Un
+dispositivo recién instalado (solo categorías iniciales sin tocar) sigue subiendo sin
+preguntar: no hay datos de nadie. Si la nube recibe datos mientras la pregunta está
+abierta, el «sí» ya no sube y pasa a hacerse la otra pregunta.
+
+**D-c. Límite de los textos libres** (`src/dominio/textos.ts`): 200 caracteres en nombres
+y comercio, 2.000 en notas. Se aplica en los repositorios, que es por donde entra todo.
+Las pantallas ya limitaban lo que se teclea a 40–80 caracteres, así que quien usa la app
+no nota nada. Un texto más largo que ya estuviera guardado no se recorta: se conserva
+mientras no se cambie, y al editar ese movimiento la pantalla avisa. Una prueba cifra la
+fila más grande posible de cada una de las doce tablas, en el peor caso de codificación, y
+comprueba que ocupa menos de la mitad de lo que admite el servidor.
+
+**Observado y no cambiado:** editar un movimiento desde su pantalla guarda `comercio` y
+`nota` vacíos, porque el formulario no los tiene y no los reenvía. Un movimiento nacido de
+una captura pierde su comercio al editarlo. Es anterior a este bloque. Queda planteado en
+el informe.
+
+Pruebas tras la fase 3: **1.266 locales en 50 suites** y **81 remotas**, en verde.

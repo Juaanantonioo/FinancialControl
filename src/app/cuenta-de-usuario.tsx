@@ -113,6 +113,16 @@ export default function CuentaDeUsuario() {
     void ejecutar(operacion, olvidarFormulario);
   };
 
+  /** «Subir los datos»: respuesta afirmativa a la pregunta de subida. */
+  async function subirLoLocal() {
+    setError(null);
+    const resultado = await sincronizacion().confirmarSubida();
+    if (resultado === 'hay_nube') setError(t('sinc.hayNube'));
+    else if (resultado === 'sin_conexion') setError(t('sinc.sinConexion'));
+    else if (resultado === 'sesion_caducada') setError(t('sinc.sesionCaducada'));
+    else if (resultado === 'error') setError(t('sinc.error'));
+  }
+
   /** «Usar los datos de la nube»: primero la copia de lo local; sin copia no se toca nada. */
   async function usarLaNube() {
     setError(null);
@@ -141,13 +151,16 @@ export default function CuentaDeUsuario() {
   const textoDeFase: Record<typeof sinc.fase, ClaveTexto> = {
     inactiva: 'sinc.inactiva',
     preguntar: 'sinc.inactiva',
+    en_pausa: 'sinc.enPausa',
     al_dia: 'sinc.alDia',
     parcial: 'sinc.parcial',
     sin_conexion: 'sinc.sinConexion',
     sesion_caducada: 'sinc.sesionCaducada',
     error: 'sinc.error',
   };
-  const hayProblema = ['parcial', 'sin_conexion', 'sesion_caducada', 'error'].includes(sinc.fase);
+  const hayProblema = ['en_pausa', 'parcial', 'sin_conexion', 'sesion_caducada', 'error'].includes(
+    sinc.fase,
+  );
 
   const campo = [estilos.campo, { color: c.texto, borderColor: c.borde, backgroundColor: c.fondo }];
   const nota = [estilos.nota, { color: c.textoSecundario }];
@@ -274,6 +287,48 @@ export default function CuentaDeUsuario() {
             setConfirmando(false);
           }}
           testID="volver-al-codigo"
+        />
+      </Tarjeta>
+    );
+  } else if (
+    estado.fase === 'con_sesion' &&
+    sinc.fase === 'preguntar' &&
+    sinc.pregunta === 'subir'
+  ) {
+    // Este dispositivo tiene datos y la cuenta está vacía: no suben sin que la persona lo diga.
+    cuerpo = (
+      <Tarjeta titulo={t('sinc.subirTitulo')} testID="cuenta-pregunta-subir">
+        <Text maxFontSizeMultiplier={1.6} style={[estilos.texto, { color: c.texto }]}>
+          {t('sinc.subirTexto')}
+        </Text>
+        <Text maxFontSizeMultiplier={1.6} style={nota}>
+          {`⚠ ${t('sinc.subirAviso')}`}
+        </Text>
+        <TextoDeError texto={error} />
+        {sinc.trabajando ? (
+          <View style={estilos.trabajando} testID="sincronizando">
+            <ActivityIndicator color={c.acento} />
+            <Text maxFontSizeMultiplier={1.6} style={nota}>
+              {t('sinc.trabajando')}
+            </Text>
+          </View>
+        ) : null}
+        <Boton
+          texto={t('sinc.subir')}
+          variante="primario"
+          desactivado={sinc.trabajando || estado.ocupado}
+          alPulsar={() => void subirLoLocal()}
+          testID="subir-lo-local"
+        />
+        <Boton
+          texto={t('sinc.subirCancelar')}
+          desactivado={sinc.trabajando || estado.ocupado}
+          alPulsar={() => {
+            setError(null);
+            sincronizacion().posponerSubida();
+            mostrarAviso({ texto: t('sinc.subirCancelado') });
+          }}
+          testID="cancelar-subida"
         />
       </Tarjeta>
     );

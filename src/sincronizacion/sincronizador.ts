@@ -14,8 +14,10 @@ import type { Motor, ResultadoDeCiclo, ResultadoDeUsarLaNube, Resumen } from './
 export type FaseDeSincronizacion =
   /** No hay sesión, o todavía no se ha intentado nada. */
   | 'inactiva'
-  /** Nube y dispositivo tienen datos: hay que preguntar a la persona (D-h). */
+  /** Hay que preguntar a la persona antes de sincronizar. Cuál de las dos preguntas: `pregunta`. */
   | 'preguntar'
+  /** La persona ha dicho «ahora no» a subir sus datos: hay sesión, pero no se sincroniza. */
+  | 'en_pausa'
   | 'al_dia'
   /** Alguna fila local no se ha podido subir. */
   | 'parcial'
@@ -25,6 +27,11 @@ export type FaseDeSincronizacion =
 
 export type EstadoDeSincronizacion = {
   fase: FaseDeSincronizacion;
+  /**
+   * Con `fase: 'preguntar'`: «subir» (¿subir los datos de este dispositivo a la
+   * cuenta?) o «nube» (¿usar los datos de la nube?). Si no, `null`.
+   */
+  pregunta: 'subir' | 'nube' | null;
   /** Hay un ciclo en marcha ahora mismo. */
   trabajando: boolean;
   /** Cambios locales que aún no han subido. */
@@ -55,7 +62,18 @@ const TEMPORIZADOR_REAL: Temporizador = {
   quitar: (reloj) => clearTimeout(reloj as ReturnType<typeof setTimeout>),
 };
 
-type MotorUsado = Pick<Motor, 'ciclo' | 'evaluarEntrada' | 'usarLaNube' | 'desligar' | 'resumen'>;
+type MotorUsado = Pick<
+  Motor,
+  'ciclo' | 'evaluarEntrada' | 'subirLoLocal' | 'usarLaNube' | 'desligar' | 'resumen'
+>;
+
+export type ResultadoDeSubir =
+  | 'hecho'
+  /** Mientras se preguntaba, la nube ha recibido datos: ahora toca la otra pregunta. */
+  | 'hay_nube'
+  | 'sin_conexion'
+  | 'sesion_caducada'
+  | 'error';
 
 export type DependenciasDelSincronizador = {
   /** El motor, cuando la base de datos esté abierta. */
@@ -73,6 +91,7 @@ export type Sincronizador = ReturnType<typeof crearSincronizador>;
 
 const INICIAL: EstadoDeSincronizacion = {
   fase: 'inactiva',
+  pregunta: null,
   trabajando: false,
   pendientes: 0,
   ilegibles: 0,
@@ -97,6 +116,10 @@ export function crearSincronizador(dependencias: DependenciasDelSincronizador) {
 
   function fijar(cambios: Partial<EstadoDeSincronizacion>): void {
     estado = { ...estado, ...cambios };
+    // La pregunta solo existe mientras se pregunta.
+    if (estado.fase !== 'preguntar' && estado.pregunta !== null) {
+      estado = { ...estado, pregunta: null };
+    }
     oyentes.forEach((avisar) => avisar());
   }
 
@@ -134,7 +157,12 @@ export function crearSincronizador(dependencias: DependenciasDelSincronizador) {
       const entrada = await motor.evaluarEntrada();
       if (entrada.estado === 'preguntar') {
         // No se reintenta sola: espera la respuesta de la persona.
-        fijar({ fase: 'preguntar', ...deResumen(await motor.resumen()), pendientes: 0 });
+        fijar({
+          fase: 'preguntar',
+          pregunta: entrada.pregunta,
+          ...deResumen(await motor.resumen()),
+          pendientes: 0,
+        });
         return;
       }
       if (entrada.estado !== 'lista') {
@@ -181,7 +209,12 @@ export function crearSincronizador(dependencias: DependenciasDelSincronizador) {
     enMarcha = (async () => {
       try {
         await unaVuelta(repaso);
-        while (otraVez && haySesion() && estado.fase !== 'preguntar') {
+        while (
+          otraVez &&
+          haySesion() &&
+          estado.fase !== 'preguntar' &&
+          estado.fase !== 'en_pausa'
+        ) {
           const conRepaso = repasoPedido;
           otraVez = false;
           repasoPedido = false;
@@ -212,6 +245,10 @@ export function crearSincronizador(dependencias: DependenciasDelSincronizador) {
     }
     // Con la pregunta abierta solo la respuesta de la persona mueve algo.
     if (estado.fase === 'preguntar' && motivo !== 'sesion') return Promise.resolve();
+    // En pausa solo se vuelve a preguntar si la persona lo pide.
+    if (estado.fase === 'en_pausa' && motivo !== 'sesion' && motivo !== 'manual') {
+      return Promise.resolve();
+    }
     if (motivo === 'cambio') {
       if (relojDeCambio !== null) temporizador.quitar(relojDeCambio);
       relojDeCambio = temporizador.poner(() => {
@@ -252,6 +289,38 @@ export function crearSincronizador(dependencias: DependenciasDelSincronizador) {
     return resultado;
   }
 
+  /** Respuesta «sí» a «¿Subir los datos de este dispositivo a tu cuenta?». */
+  async function confirmarSubida(): Promise<ResultadoDeSubir> {
+    if (enMarcha) await enMarcha;
+    fijar({ trabajando: true });
+    let entrada: Awaited<ReturnType<MotorUsado['subirLoLocal']>>;
+    try {
+      entrada = await (await dependencias.motor()).subirLoLocal();
+    } catch {
+      entrada = { estado: 'error' };
+    } finally {
+      fijar({ trabajando: false });
+    }
+    if (entrada.estado === 'lista') {
+      await pedir('sesion');
+      return 'hecho';
+    }
+    if (entrada.estado === 'preguntar') {
+      fijar({ fase: 'preguntar', pregunta: entrada.pregunta });
+      return 'hay_nube';
+    }
+    return entrada.estado === 'sin_clave' ? 'error' : entrada.estado;
+  }
+
+  /**
+   * Respuesta «cancelar» a esa misma pregunta: no se sincroniza y no se borra
+   * nada. La sesión sigue abierta. Se vuelve a preguntar con «Sincronizar ahora»
+   * o la próxima vez que se abra la app.
+   */
+  function posponerSubida(): void {
+    if (estado.fase === 'preguntar' && estado.pregunta === 'subir') fijar({ fase: 'en_pausa' });
+  }
+
   /** Al cerrar sesión: se para todo. La base sigue ligada, para continuar al volver a entrar. */
   function alCerrarSesion(): void {
     quitarRelojes();
@@ -272,6 +341,8 @@ export function crearSincronizador(dependencias: DependenciasDelSincronizador) {
 
   return {
     pedir,
+    confirmarSubida,
+    posponerSubida,
     usarLaNube,
     alCerrarSesion,
     alBorrarCuenta,

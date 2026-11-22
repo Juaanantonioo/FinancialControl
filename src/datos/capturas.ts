@@ -22,6 +22,7 @@ import {
 } from '@/dominio/captura';
 import { ErrorDeDominio, normalizarNombre, type Movimiento } from '@/dominio/modelo';
 
+import { exigirLongitud } from '@/dominio/textos';
 import type { BaseDeDatos, Entorno } from './bd';
 import { filaACategoria, type FilaCategoria } from './categorias';
 import { filaACuenta, type FilaCuenta } from './cuentas';
@@ -144,6 +145,7 @@ export function crearRepositorioDeCapturas(
    */
   async function fijarAlias(tarjetaTexto: string, cuentaId: string): Promise<AliasDeTarjeta> {
     const texto = normalizarTarjeta(tarjetaTexto);
+    exigirLongitud(texto, 'comercio');
     if (texto === '') throw new ErrorDeDominio('alias_vacio');
     const cuentas = await bd.consultar<{ id: string }>(
       'SELECT id FROM cuenta WHERE id = ? AND borrado_en IS NULL',
@@ -213,6 +215,7 @@ export function crearRepositorioDeCapturas(
   /** Recuerda la categoría de un comercio. La última guardada manda. */
   async function recordarComercio(comercioTexto: string, categoriaId: string): Promise<void> {
     const comercio = normalizarComercio(comercioTexto);
+    exigirLongitud(comercio, 'comercio');
     if (comercio === '') return;
     const ahora = entorno.ahora().toISOString();
     const existentes = await bd.consultar<FilaRegla>(

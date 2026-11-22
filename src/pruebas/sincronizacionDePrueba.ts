@@ -58,6 +58,19 @@ export async function crearDispositivo(opciones: Opciones) {
 export type Dispositivo = Awaited<ReturnType<typeof crearDispositivo>>;
 
 /**
+ * Entra en la cuenta desde un dispositivo y, si la app pregunta «¿Subir los
+ * datos de este dispositivo a tu cuenta?», responde que sí. La otra pregunta
+ * (usar los datos de la nube) se devuelve sin responder.
+ */
+export async function entrarSubiendo(d: Pick<Dispositivo, 'motor'>) {
+  const entrada = await d.motor.evaluarEntrada();
+  if (entrada.estado === 'preguntar' && entrada.pregunta === 'subir') {
+    return d.motor.subirLoLocal();
+  }
+  return entrada;
+}
+
+/**
  * Crea al menos una fila en cada una de las doce tablas, con los
  * repositorios de la app. Devuelve lo que hace falta para seguir trabajando.
  */

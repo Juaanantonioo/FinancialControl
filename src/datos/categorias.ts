@@ -10,6 +10,7 @@ import {
   type TipoDeCategoria,
 } from '@/dominio/modelo';
 
+import { exigirLongitud } from '@/dominio/textos';
 import type { BaseDeDatos, Entorno } from './bd';
 
 export type FilaCategoria = {
@@ -90,6 +91,7 @@ export function crearRepositorioDeCategorias(bd: BaseDeDatos, entorno: Entorno) 
     const limpio = nombre.trim().replace(/\s+/g, ' ');
     if (limpio === '') throw new ErrorDeDominio('nombre_vacio');
     const existentes = await listar({ tipo, incluirArchivadas: true });
+    exigirLongitud(limpio, 'nombre', existentes.find((c) => c.id === idPropio)?.nombre);
     const clave = normalizarNombre(limpio);
     if (existentes.some((c) => c.id !== idPropio && normalizarNombre(c.nombre) === clave)) {
       throw new ErrorDeDominio('nombre_duplicado');

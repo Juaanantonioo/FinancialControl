@@ -63,6 +63,7 @@ jest.mock('@/estado/sincronizacionDeLaApp', () => ({
   sincronizacion: () => ({ pedir: jest.fn(), usarLaNube: jest.fn() }),
   useSincronizacion: () => ({
     fase: 'inactiva',
+    pregunta: null,
     trabajando: false,
     pendientes: 0,
     ilegibles: 0,

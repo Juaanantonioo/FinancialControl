@@ -85,6 +85,7 @@ export type Movimiento = CamposComunes & {
 /** Códigos de error de las reglas de negocio. Cada uno tiene su texto en el catálogo. */
 export type CodigoDeError =
   | 'nombre_vacio'
+  | 'texto_demasiado_largo'
   | 'nombre_duplicado'
   | 'importe_no_valido'
   | 'importe_cero'

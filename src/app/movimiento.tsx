@@ -27,6 +27,7 @@ import type { Captura } from '@/dominio/captura';
 import { fechaLocal, type Movimiento } from '@/dominio/modelo';
 import { aspectoDeCategoria } from '@/estado/aspecto';
 import { useAviso } from '@/estado/Aviso';
+import { superaElLimite } from '@/dominio/textos';
 import { textoDeError, useConsulta, useDatos } from '@/estado/Datos';
 import { diaLocalDe } from '@/estado/fechas';
 import { formatoRegional } from '@/estado/formato';
@@ -328,6 +329,17 @@ export default function PantallaDeMovimiento() {
         </Text>
 
         <TextoDeError texto={error} />
+        {original &&
+        (superaElLimite(original.nombre, 'nombre') ||
+          superaElLimite(original.comercio, 'comercio') ||
+          superaElLimite(original.nota, 'nota')) ? (
+          <Text
+            maxFontSizeMultiplier={1.6}
+            style={{ color: c.textoSecundario, fontSize: 13, lineHeight: 18 }}
+            testID="aviso-texto-largo">
+            {`⚠ ${t('errores.textoGuardadoLargo')}`}
+          </Text>
+        ) : null}
         {captura ? (
           <Text
             style={{ color: c.textoSecundario, fontSize: Letra.pequeno, textAlign: 'center' }}
