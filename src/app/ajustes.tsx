@@ -7,7 +7,11 @@ import { Tarjeta } from '@/componentes/Tarjeta';
 import { elegirApariencia, useApariencia } from '@/estado/apariencia';
 import { t } from '@/i18n';
 import { APARIENCIAS } from '@/lib/apariencia';
+import { ES_WEB } from '@/lib/plataforma';
 import { Espacio, Letra, TactilMinimo, useColores } from '@/theme';
+
+/** Accesos que solo tienen sentido en el iPhone: en la web no se muestran. */
+const SOLO_EN_EL_IPHONE: readonly string[] = ['/apple-pay', '/avisos'];
 
 /** Los accesos de Ajustes, en el orden en que se muestran. */
 export const ACCESOS_DE_AJUSTES = [
@@ -69,28 +73,31 @@ export default function Ajustes() {
           </Text>
         </Tarjeta>
         <Tarjeta estilo={estilos.tarjeta}>
-          <Pressable
-            onPress={() => router.push('/seguridad')}
-            accessibilityRole="button"
-            accessibilityLabel={`${t('seguridad.titulo')}. ${t('ajustes.seguridadAyuda')}`}
-            testID="abrir-seguridad"
-            style={({ pressed }) => [estilos.fila, { opacity: pressed ? 0.6 : 1 }]}>
-            <View style={estilos.textos}>
-              <Text maxFontSizeMultiplier={1.6} style={[estilos.titulo, { color: c.texto }]}>
-                {t('seguridad.titulo')}
-              </Text>
+          {/* El bloqueo con Face ID y el modo privado no existen en un navegador. */}
+          {ES_WEB ? null : (
+            <Pressable
+              onPress={() => router.push('/seguridad')}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('seguridad.titulo')}. ${t('ajustes.seguridadAyuda')}`}
+              testID="abrir-seguridad"
+              style={({ pressed }) => [estilos.fila, { opacity: pressed ? 0.6 : 1 }]}>
+              <View style={estilos.textos}>
+                <Text maxFontSizeMultiplier={1.6} style={[estilos.titulo, { color: c.texto }]}>
+                  {t('seguridad.titulo')}
+                </Text>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
+                  {t('ajustes.seguridadAyuda')}
+                </Text>
+              </View>
               <Text
-                maxFontSizeMultiplier={1.6}
-                style={{ color: c.textoSecundario, fontSize: Letra.pequeno, lineHeight: 18 }}>
-                {t('ajustes.seguridadAyuda')}
+                allowFontScaling={false}
+                style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>
+                ›
               </Text>
-            </View>
-            <Text
-              allowFontScaling={false}
-              style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>
-              ›
-            </Text>
-          </Pressable>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => router.push('/cuenta-de-usuario')}
             accessibilityRole="button"
@@ -98,7 +105,7 @@ export default function Ajustes() {
             testID="abrir-cuenta"
             style={({ pressed }) => [
               estilos.fila,
-              { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.borde },
+              !ES_WEB && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.borde },
               { opacity: pressed ? 0.6 : 1 },
             ]}>
             <View style={estilos.textos}>
@@ -145,7 +152,9 @@ export default function Ajustes() {
           </Pressable>
         </Tarjeta>
         <Tarjeta estilo={estilos.tarjeta}>
-          {ACCESOS_DE_AJUSTES.map((acceso, i) => (
+          {ACCESOS_DE_AJUSTES.filter(
+            (acceso) => !ES_WEB || !SOLO_EN_EL_IPHONE.includes(acceso.ruta),
+          ).map((acceso, i) => (
             <Pressable
               key={acceso.ruta}
               onPress={() => router.push(acceso.ruta)}
@@ -175,6 +184,38 @@ export default function Ajustes() {
             </Pressable>
           ))}
         </Tarjeta>
+        {ES_WEB ? (
+          <Tarjeta estilo={estilos.tarjeta}>
+            {(
+              [
+                ['/privacidad', 'legal.privacidadTitulo', 'ajuste-privacidad'],
+                ['/condiciones', 'legal.condicionesTitulo', 'ajuste-condiciones'],
+              ] as const
+            ).map(([ruta, titulo, testID], i) => (
+              <Pressable
+                key={ruta}
+                onPress={() => router.push(ruta)}
+                accessibilityRole="link"
+                testID={testID}
+                style={({ pressed }) => [
+                  estilos.fila,
+                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.borde },
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}>
+                <View style={estilos.textos}>
+                  <Text maxFontSizeMultiplier={1.6} style={[estilos.titulo, { color: c.texto }]}>
+                    {t(titulo)}
+                  </Text>
+                </View>
+                <Text
+                  allowFontScaling={false}
+                  style={{ color: c.textoSecundario, fontSize: Letra.subtitulo }}>
+                  ›
+                </Text>
+              </Pressable>
+            ))}
+          </Tarjeta>
+        ) : null}
       </ScrollView>
     </View>
   );

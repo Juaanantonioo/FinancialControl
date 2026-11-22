@@ -8,6 +8,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ES_WEB } from '@/lib/plataforma';
 import { Boton } from '@/componentes/basicos';
 import { BarraDePresupuesto, FilaDeCobro, FilaDeObjetivo } from '@/componentes/plan/Piezas';
 import { abrirCobro } from '@/componentes/plan/SeccionFijos';
@@ -201,7 +202,7 @@ export function BloquePendiente({ panel }: { panel: Panel }) {
         </View>
       ) : null}
 
-      {porRevisar > 0 ? (
+      {porRevisar > 0 && !ES_WEB ? (
         <Pressable
           onPress={() => router.push('/capturas')}
           accessibilityRole="button"

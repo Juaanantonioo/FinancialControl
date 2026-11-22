@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { ES_WEB } from '@/lib/plataforma';
 import {
   Boton,
   BotonAnadir,
@@ -126,14 +127,17 @@ export default function Movimientos() {
   return (
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
       <Cabecera titulo={t('movimientos.titulo')}>
-        <Boton
-          texto={
-            pendientes ? t('bandeja.accesoConNumero', { total: pendientes }) : t('bandeja.acceso')
-          }
-          etiqueta={t('bandeja.accesoLeido', { total: pendientes ?? 0 })}
-          alPulsar={() => router.push('/capturas')}
-          testID="abrir-bandeja"
-        />
+        {/* La bandeja de pagos capturados es de la app del iPhone. */}
+        {ES_WEB ? null : (
+          <Boton
+            texto={
+              pendientes ? t('bandeja.accesoConNumero', { total: pendientes }) : t('bandeja.acceso')
+            }
+            etiqueta={t('bandeja.accesoLeido', { total: pendientes ?? 0 })}
+            alPulsar={() => router.push('/capturas')}
+            testID="abrir-bandeja"
+          />
+        )}
       </Cabecera>
       <View style={estilos.busqueda}>
         <TextInput
