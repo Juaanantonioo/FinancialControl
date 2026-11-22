@@ -1,0 +1,28 @@
+# Cabeceras del sitio web de FinancialControl (bloque 5).
+#
+# Las lee el alojamiento (Cloudflare Pages o Netlify) y también el servidor de
+# pruebas local (`npm run web:servir`). Explicadas una a una en
+# docs/seguridad/diseno-web.md, apartado 6.
+#
+# __SUPABASE__ se sustituye por la dirección del proyecto de Supabase al
+# exportar (scripts/cabeceras-web.cjs). No lo cambies a mano aquí.
+
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; img-src 'self'; font-src 'self'; connect-src 'self' __SUPABASE__; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: accelerometer=(), autoplay=(), bluetooth=(), camera=(), display-capture=(), encrypted-media=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: same-origin
+  Cache-Control: no-store
+
+# Los ficheros de la aplicación llevan un resumen de su contenido en el nombre:
+# si cambian, cambia el nombre. Se pueden guardar en la caché del navegador.
+/_expo/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
