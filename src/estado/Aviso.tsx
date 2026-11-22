@@ -93,6 +93,9 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: TactilMinimo + Espacio.s,
+    // En una pantalla ancha (la web en escritorio) el aviso no se estira de lado a lado.
+    maxWidth: 560,
+    marginHorizontal: 'auto',
   },
   texto: { flex: 1, fontSize: Letra.secundario, paddingVertical: Espacio.s },
   accion: {

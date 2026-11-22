@@ -1,14 +1,6 @@
 import { Stack } from 'expo-router';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Boton, Cabecera, CabeceraConVuelta, TextoDeError } from '@/componentes/basicos';
@@ -22,7 +14,10 @@ import { describirFecha, diaLocalDe, horaLocalDe } from '@/estado/fechas';
 import { sincronizacion, useSincronizacion } from '@/estado/sincronizacionDeLaApp';
 import type { ResultadoDeExportar } from '@/exportacion/exportador';
 import { t, type ClaveTexto } from '@/i18n';
+import { compartirTexto } from '@/lib/compartirTexto';
 import { LONGITUD_MAXIMA_DE_CONTRASENA } from '@/lib/contrasena';
+import { guardarCorreoRecordado, leerCorreoRecordado } from '@/lib/correoRecordado';
+import { ES_WEB } from '@/lib/plataforma';
 import { Espacio, Letra, Radio, TactilMinimo, useColores } from '@/theme';
 
 type Modo = 'crear' | 'entrar';
@@ -41,13 +36,22 @@ const textoDelError = (error: ErrorDeCuenta | 'no_coinciden'): string =>
  * de qué datos usar. Queda detrás del bloqueo de la app como todas.
  */
 export default function CuentaDeUsuario() {
+  return <PantallaDeCuenta />;
+}
+
+/**
+ * La pantalla en sí. `antes` es lo que la puerta de la web pone encima del
+ * formulario de entrada (el aviso de beta); en iOS no se usa.
+ */
+export function PantallaDeCuenta({ antes }: { antes?: ReactNode }) {
   const c = useColores();
   const margen = useSafeAreaInsets();
   const estado = useCuenta();
   const sinc = useSincronizacion();
   const mostrarAviso = useAviso();
   const [modo, setModo] = useState<Modo>('crear');
-  const [correo, setCorreo] = useState('');
+  // En la web se recuerda el correo de la última entrada; en iOS esto devuelve vacío.
+  const [correo, setCorreo] = useState(leerCorreoRecordado);
   const [contrasena, setContrasena] = useState('');
   const [repetida, setRepetida] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +114,10 @@ export default function CuentaDeUsuario() {
         ? () => cuenta().crearCuenta(correo, contrasena)
         : () => cuenta().iniciarSesion(correo, contrasena);
     // La contraseña se quita de la pantalla en cuanto ha servido.
-    void ejecutar(operacion, olvidarFormulario);
+    void ejecutar(operacion, () => {
+      guardarCorreoRecordado(correo);
+      olvidarFormulario();
+    });
   };
 
   /** «Subir los datos»: respuesta afirmativa a la pregunta de subida. */
@@ -211,12 +218,13 @@ export default function CuentaDeUsuario() {
         <Boton
           texto={t('usuario.codigoGuardar')}
           alPulsar={() => {
-            Share.share({
-              message: t('usuario.codigoParaCompartir', {
+            void compartirTexto(
+              t('usuario.codigoFichero'),
+              t('usuario.codigoParaCompartir', {
                 correo: estado.correo ?? '',
                 codigo: estado.codigo ?? '',
               }),
-            }).catch(() => undefined);
+            );
           }}
           testID="guardar-codigo"
         />
@@ -600,14 +608,18 @@ export default function CuentaDeUsuario() {
     const crear = modo === 'crear';
     cuerpo = (
       <>
-        <Tarjeta titulo={t('usuario.sinSesionTitulo')} testID="cuenta-sin-sesion">
-          <Text maxFontSizeMultiplier={1.6} style={[estilos.texto, { color: c.texto }]}>
-            {t('usuario.sinSesionTexto')}
-          </Text>
-          <Text maxFontSizeMultiplier={1.6} style={nota}>
-            {t('usuario.conCuenta')}
-          </Text>
-        </Tarjeta>
+        {antes}
+        {/* «Tus datos están solo en este dispositivo» es cierto en el iPhone, no en un navegador. */}
+        {ES_WEB ? null : (
+          <Tarjeta titulo={t('usuario.sinSesionTitulo')} testID="cuenta-sin-sesion">
+            <Text maxFontSizeMultiplier={1.6} style={[estilos.texto, { color: c.texto }]}>
+              {t('usuario.sinSesionTexto')}
+            </Text>
+            <Text maxFontSizeMultiplier={1.6} style={nota}>
+              {t('usuario.conCuenta')}
+            </Text>
+          </Tarjeta>
+        )}
         <Tarjeta titulo={t(crear ? 'usuario.crear' : 'usuario.entrar')} testID="cuenta-formulario">
           {crear ? (
             <View
@@ -617,7 +629,7 @@ export default function CuentaDeUsuario() {
                 {`⚠ ${t('usuario.avisoContrasenaTitulo')}`}
               </Text>
               <Text maxFontSizeMultiplier={1.6} style={nota}>
-                {t('usuario.avisoContrasenaTexto')}
+                {t(ES_WEB ? 'usuario.avisoContrasenaTextoWeb' : 'usuario.avisoContrasenaTexto')}
               </Text>
             </View>
           ) : null}
@@ -713,7 +725,8 @@ export default function CuentaDeUsuario() {
     <View style={[estilos.pantalla, { backgroundColor: c.fondo }]}>
       {/* Con el código a la vista no se sale: ni con el gesto ni con el botón de volver. */}
       <Stack.Screen options={{ gestureEnabled: !pendiente }} />
-      {pendiente ? (
+      {/* En la web, sin sesión esta pantalla es la puerta de entrada: no hay a dónde volver. */}
+      {pendiente || (ES_WEB && estado.fase !== 'con_sesion') ? (
         <Cabecera titulo={t('usuario.titulo')} />
       ) : (
         <CabeceraConVuelta titulo={t('usuario.titulo')} />

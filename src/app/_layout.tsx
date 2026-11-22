@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { PuertaDeSeguridad } from '@/componentes/seguridad/Puerta';
+import { PuertaDeLaWeb } from '@/componentes/web/PuertaDeLaWeb';
 import { iniciarApariencia } from '@/estado/apariencia';
 import { ProveedorDeAvisos } from '@/estado/Aviso';
 import { seguirReducirMovimiento } from '@/estado/animacion';
@@ -57,8 +58,11 @@ function Proveedores({ children }: { children: ReactNode }) {
   return (
     <ProveedorDeDatos>
       <ProveedorDeAvisos>
-        <AvisosDelSistema />
-        {children}
+        {/* En iOS no hace nada. En la web, la cuenta es obligatoria: sin sesión solo deja ver la entrada. */}
+        <PuertaDeLaWeb>
+          <AvisosDelSistema />
+          {children}
+        </PuertaDeLaWeb>
       </ProveedorDeAvisos>
     </ProveedorDeDatos>
   );
@@ -94,6 +98,8 @@ export default function RootLayout() {
           <Stack.Screen name="seguridad" options={{ headerShown: false }} />
           <Stack.Screen name="cuenta-de-usuario" options={{ headerShown: false }} />
           <Stack.Screen name="exportar" options={{ headerShown: false }} />
+          <Stack.Screen name="privacidad" options={{ headerShown: false }} />
+          <Stack.Screen name="condiciones" options={{ headerShown: false }} />
           <Stack.Screen name="avisos" options={{ headerShown: false }} />
           <Stack.Screen name="apple-pay" options={{ headerShown: false }} />
           <Stack.Screen name="objetivo" options={{ headerShown: false }} />
