@@ -521,3 +521,74 @@ describe('Diagnóstico: conexión con el servidor', () => {
     expect(JSON.stringify(es.diagnostico)).not.toContain('{{mensaje}}');
   });
 });
+
+describe('Cuenta: cambiar la contraseña', () => {
+  const NUEVA = 'otra frase larga y distinta 42';
+
+  async function abrirElCambio() {
+    await pintar();
+    await darDeAlta();
+    await confirmarGrupos();
+    await fireEvent.press(await screen.findByTestId('cambiar-contrasena'));
+  }
+
+  async function rellenar(actual: string, nueva: string, repetida = nueva) {
+    await escribir('contrasena-actual', actual);
+    await escribir('contrasena-nueva', nueva);
+    await escribir('repetir-nueva', repetida);
+    await fireEvent.press(screen.getByTestId('confirmar-cambio'));
+  }
+
+  it('explica qué cambia y qué no, y pide la contraseña actual', async () => {
+    await abrirElCambio();
+    const tarjeta = screen.getByTestId('cuenta-cambiar-contrasena');
+    expect(tarjeta).toHaveTextContent(/no se vuelven a cifrar/);
+    expect(tarjeta).toHaveTextContent(/código de recuperación sigue siendo el mismo/);
+    expect(tarjeta).toHaveTextContent(/siguen con ella hasta que caduque/);
+    for (const id of ['contrasena-actual', 'contrasena-nueva', 'repetir-nueva']) {
+      expect(screen.getByTestId(id).props.secureTextEntry).toBe(true);
+    }
+    // Sin los tres campos no se puede enviar.
+    expect(screen.getByTestId('confirmar-cambio')).toBeDisabled();
+  });
+
+  it('con la actual correcta cambia la contraseña, avisa y vacía los campos', async () => {
+    await abrirElCambio();
+    await rellenar(CONTRASENA, NUEVA);
+    await waitFor(() => expect(screen.queryByTestId('contrasena-actual')).toBeNull());
+    expect(await screen.findByText(es.usuario.contrasenaCambiada)).toBeTruthy();
+    expect(mockGestor.estado().fase).toBe('con_sesion');
+    expect(servidor.estado.llamadas).toContain('updateUser');
+    // Al volver a abrir el formulario no queda nada escrito.
+    await fireEvent.press(screen.getByTestId('cambiar-contrasena'));
+    expect(screen.getByTestId('contrasena-actual').props.value).toBe('');
+    expect(screen.getByTestId('contrasena-nueva').props.value).toBe('');
+  });
+
+  it('cada error tiene su texto y no cambia nada', async () => {
+    await abrirElCambio();
+    const error = async () => (await screen.findByTestId('texto-de-error')).props.children;
+    await rellenar(CONTRASENA, NUEVA, 'no es igual que la nueva');
+    expect(await error()).toContain(es.usuario.error_no_coinciden);
+    await rellenar('la actual no es esta', NUEVA);
+    await waitFor(async () => expect(await error()).toContain(es.usuario.error_contrasena_actual));
+    await rellenar(CONTRASENA, 'corta');
+    await waitFor(async () => expect(await error()).toContain(es.usuario.error_contrasena_corta));
+    await rellenar(CONTRASENA, CONTRASENA);
+    await waitFor(async () => expect(await error()).toContain(es.usuario.error_contrasena_igual));
+    servidor.estado.sinRed = true;
+    await rellenar(CONTRASENA, NUEVA);
+    await waitFor(async () => expect(await error()).toContain(es.usuario.error_sin_conexion));
+    expect(servidor.estado.llamadas).not.toContain('updateUser');
+    expect(mockGestor.estado().fase).toBe('con_sesion');
+  });
+
+  it('cancelar cierra el formulario y borra lo escrito', async () => {
+    await abrirElCambio();
+    await escribir('contrasena-actual', CONTRASENA);
+    await fireEvent.press(screen.getByTestId('cancelar-cambio'));
+    expect(screen.queryByTestId('contrasena-actual')).toBeNull();
+    await fireEvent.press(screen.getByTestId('cambiar-contrasena'));
+    expect(screen.getByTestId('contrasena-actual').props.value).toBe('');
+  });
+});

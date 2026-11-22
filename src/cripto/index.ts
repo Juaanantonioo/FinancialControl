@@ -42,6 +42,7 @@ import { cargarSodio } from './sodio';
 
 export { ErrorDeCripto } from './errores';
 export {
+  CARACTERES_DE_CLAVE_ENVUELTA,
   GRUPOS_DEL_CODIGO,
   PARAMETROS_POR_VERSION,
   VERSION_DE_DERIVACION,

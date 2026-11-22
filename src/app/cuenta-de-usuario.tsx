@@ -57,6 +57,11 @@ export default function CuentaDeUsuario() {
   // Borrado: primer toque abre la confirmación; hay que escribir la palabra.
   const [borrando, setBorrando] = useState(false);
   const [palabra, setPalabra] = useState('');
+  // Cambio de contraseña: la actual, la nueva y la nueva repetida.
+  const [cambiando, setCambiando] = useState(false);
+  const [actual, setActual] = useState('');
+  const [nueva, setNueva] = useState('');
+  const [nuevaRepetida, setNuevaRepetida] = useState('');
 
   const pendiente = estado.fase === 'pendiente_de_codigo';
 
@@ -67,7 +72,26 @@ export default function CuentaDeUsuario() {
     setConfirmando(false);
     setBorrando(false);
     setPalabra('');
+    setCambiando(false);
+    setActual('');
+    setNueva('');
+    setNuevaRepetida('');
   }
+
+  const cambiarContrasena = () => {
+    if (nueva !== nuevaRepetida) {
+      setError(textoDelError('no_coinciden'));
+      return;
+    }
+    void ejecutar(
+      () => cuenta().cambiarContrasena(actual, nueva),
+      () => {
+        // Las contraseñas se quitan de la pantalla en cuanto han servido.
+        olvidarFormulario();
+        mostrarAviso({ texto: t('usuario.contrasenaCambiada') });
+      },
+    );
+  };
 
   async function ejecutar(operacion: () => Promise<Resultado>, alTerminar?: () => void) {
     setError(null);
@@ -308,7 +332,7 @@ export default function CuentaDeUsuario() {
           <Text maxFontSizeMultiplier={1.6} style={nota}>
             {t('usuario.conSesionTexto')}
           </Text>
-          <TextoDeError texto={borrando ? null : error} />
+          <TextoDeError texto={borrando || cambiando ? null : error} />
           <Boton
             texto={t('usuario.cerrar')}
             desactivado={estado.ocupado}
@@ -376,6 +400,84 @@ export default function CuentaDeUsuario() {
             testID="sincronizar-ahora"
           />
         </Tarjeta>
+        <Tarjeta titulo={t('usuario.cambiarTitulo')} testID="cuenta-cambiar-contrasena">
+          <Text maxFontSizeMultiplier={1.6} style={nota}>
+            {t('usuario.cambiarTexto')}
+          </Text>
+          {cambiando ? (
+            <>
+              <Text maxFontSizeMultiplier={1.6} style={nota}>
+                {t('usuario.cambiarSesiones')}
+              </Text>
+              <TextoDeError texto={error} />
+              {(
+                [
+                  ['contrasenaActual', actual, setActual, 'contrasena-actual', false],
+                  ['contrasenaNueva', nueva, setNueva, 'contrasena-nueva', true],
+                  ['repetirNueva', nuevaRepetida, setNuevaRepetida, 'repetir-nueva', true],
+                ] as const
+              ).map(([clave, valor, fijarValor, id, esNueva]) => (
+                <View key={id} style={estilos.bloque}>
+                  <Text maxFontSizeMultiplier={1.6} style={[estilos.etiqueta, { color: c.texto }]}>
+                    {t(`usuario.${clave}`)}
+                  </Text>
+                  <TextInput
+                    value={valor}
+                    onChangeText={fijarValor}
+                    secureTextEntry
+                    textContentType={esNueva ? 'newPassword' : 'password'}
+                    autoComplete={esNueva ? 'new-password' : 'current-password'}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={LONGITUD_MAXIMA_DE_CONTRASENA}
+                    accessibilityLabel={t(`usuario.${clave}`)}
+                    testID={id}
+                    style={campo}
+                  />
+                </View>
+              ))}
+              <Text maxFontSizeMultiplier={1.6} style={nota}>
+                {t('usuario.contrasenaAyuda')}
+              </Text>
+              {estado.ocupado ? (
+                <View style={estilos.trabajando} testID="cuenta-trabajando">
+                  <ActivityIndicator color={c.acento} />
+                  <Text maxFontSizeMultiplier={1.6} style={nota}>
+                    {t('usuario.trabajando')}
+                  </Text>
+                </View>
+              ) : null}
+              <Boton
+                texto={t('usuario.cambiarConfirmar')}
+                variante="primario"
+                desactivado={
+                  estado.ocupado || actual === '' || nueva === '' || nuevaRepetida === ''
+                }
+                alPulsar={cambiarContrasena}
+                testID="confirmar-cambio"
+              />
+              <Boton
+                texto={t('comun.cancelar')}
+                desactivado={estado.ocupado}
+                alPulsar={() => {
+                  olvidarFormulario();
+                  setError(null);
+                }}
+                testID="cancelar-cambio"
+              />
+            </>
+          ) : (
+            <Boton
+              texto={t('usuario.cambiar')}
+              alPulsar={() => {
+                setError(null);
+                setBorrando(false);
+                setCambiando(true);
+              }}
+              testID="cambiar-contrasena"
+            />
+          )}
+        </Tarjeta>
         <Tarjeta titulo={t('usuario.borrarTitulo')} testID="cuenta-borrar">
           <Text maxFontSizeMultiplier={1.6} style={[estilos.texto, { color: c.texto }]}>
             {t('usuario.borrarTexto')}
@@ -430,6 +532,7 @@ export default function CuentaDeUsuario() {
               variante="peligro"
               alPulsar={() => {
                 setError(null);
+                setCambiando(false);
                 setBorrando(true);
               }}
               testID="borrar-cuenta"

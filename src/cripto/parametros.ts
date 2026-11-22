@@ -52,6 +52,12 @@ export const SUBCLAVE_DE_RECUPERACION = { numero: 1, contexto: 'FCrecupe' } as c
 export const USO_CLAVE_POR_CONTRASENA = 'clave-de-datos/contrasena';
 export const USO_CLAVE_POR_RECUPERACION = 'clave-de-datos/recuperacion';
 
+/**
+ * Caracteres de una clave de datos envuelta: 1 byte de versión, 24 de nonce, 32
+ * de clave y 16 de etiqueta son 73 bytes, 98 caracteres en base64 sin relleno.
+ */
+export const CARACTERES_DE_CLAVE_ENVUELTA = 98;
+
 export const BYTES_DE_CLAVE = 32;
 export const BYTES_DE_SAL = 16;
 export const BYTES_DE_NONCE = 24;

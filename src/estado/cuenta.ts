@@ -1,9 +1,9 @@
 /**
  * La cuenta de usuario: alta, inicio y cierre de sesión, y borrado.
  *
- * En este bloque la cuenta NO sincroniza nada: crea las claves con las que
- * se cifrarán los datos y las deja guardadas. Los datos financieros siguen
- * solo en el dispositivo y ninguna función de aquí los toca.
+ * Aquí se crean y se guardan las claves con las que se cifran los datos, y se
+ * cambia la contraseña. Ninguna función de este fichero toca los datos
+ * financieros: sincronizarlos es de `src/sincronizacion/`.
  *
  * Qué sale del dispositivo: el correo, la subclave de autenticación (en
  * lugar de la contraseña) y la clave de datos ya cifrada. Nunca la
@@ -18,10 +18,17 @@
  * alta se interrumpe antes, queda un usuario sin claves; al volver a entrar
  * con el mismo correo y la misma contraseña el alta se reanuda con un código
  * nuevo. Nunca queda una cuenta con claves cuyo código nadie ha visto.
+ *
+ * Invariante del cambio de contraseña: en cada momento hay exactamente una
+ * contraseña que abre la cuenta entera. Mientras dura el cambio, la columna
+ * `clave_por_contrasena` lleva dos sobres seguidos (el nuevo y el anterior);
+ * quien entra después termina o deshace el cambio según cuál abra su
+ * contraseña (`docs/seguridad/diseno-sincronizacion.md`, apartado 9).
  */
 import { autocomprobarCripto, type ResultadoDeAutocomprobacion } from '@/cripto/autocomprobacion';
 import {
   borrar,
+  CARACTERES_DE_CLAVE_ENVUELTA,
   claveATexto,
   claveDeTexto,
   derivarClaves,
@@ -32,9 +39,12 @@ import {
   generarCodigoDeRecuperacion,
   gruposDelCodigo,
   normalizarCorreo,
+  PARAMETROS_POR_VERSION,
   posicionesAlAzar,
   VERSION_DE_DERIVACION,
   VERSION_DE_FORMATO,
+  type ClavesDeLaContrasena,
+  type ParametrosDeDerivacion,
 } from '@/cripto';
 import {
   CLAVE_DE_DATOS_EN_EL_ALMACEN,
@@ -61,6 +71,11 @@ export interface ClienteDeCuenta {
       password: string;
     }): Promise<{ data: { session: Sesion }; error: ErrorRemoto }>;
     signOut(opciones: { scope: 'local' }): Promise<{ error: ErrorRemoto }>;
+    /** Cambia la «contraseña» del servidor, que es la subclave de autenticación. */
+    updateUser(datos: {
+      password: string;
+      current_password?: string;
+    }): Promise<{ error: ErrorRemoto }>;
     getSession(): Promise<{ data: { session: Sesion }; error: ErrorRemoto }>;
   };
   from(tabla: 'claves_de_usuario'): {
@@ -68,6 +83,15 @@ export interface ClienteDeCuenta {
       maybeSingle(): PromiseLike<{ data: Record<string, unknown> | null; error: ErrorRemoto }>;
     };
     insert(fila: Record<string, unknown>): PromiseLike<{ error: ErrorRemoto }>;
+    update(fila: Record<string, unknown>): {
+      eq(
+        columna: 'user_id',
+        valor: string,
+      ): {
+        /** Devuelve las filas cambiadas: si no hay ninguna, no se ha guardado nada. */
+        select(columnas: string): PromiseLike<{ data: unknown[] | null; error: ErrorRemoto }>;
+      };
+    };
   };
   rpc(funcion: 'borrar_mi_cuenta'): PromiseLike<{ error: ErrorRemoto }>;
 }
@@ -105,6 +129,10 @@ export type ErrorDeCuenta =
   /** Correo o contraseña incorrectos. No se dice cuál. */
   | 'credenciales'
   | 'codigo_no_coincide'
+  /** Al cambiar la contraseña: la actual no es correcta. */
+  | 'contrasena_actual'
+  /** Al cambiar la contraseña: la nueva es la misma que la actual. */
+  | 'contrasena_igual'
   | 'sin_conexion'
   | 'no_disponible'
   | 'desconocido';
@@ -152,7 +180,21 @@ export type Dependencias = {
   pausaAntesDeCalcular?: number;
   /** Se llama cuando la cuenta se ha borrado del servidor, para desligar de ella la base local. */
   alBorrarCuenta?: () => Promise<void>;
+  /**
+   * Versiones de derivación que conoce la app y cuál es la actual. Por defecto,
+   * las de `src/cripto/parametros.ts`. Las pruebas añaden aquí una versión 2.
+   */
+  derivacion?: { actual: number; parametros: Readonly<Record<number, ParametrosDeDerivacion>> };
 };
+
+/** Los sobres que hay en `clave_por_contrasena`: uno, o dos durante un cambio (nuevo y anterior). */
+export function sobresDeLaColumna(columna: unknown): string[] | null {
+  if (typeof columna !== 'string') return null;
+  const largo = CARACTERES_DE_CLAVE_ENVUELTA;
+  if (columna.length === largo) return [columna];
+  if (columna.length === 2 * largo) return [columna.slice(0, largo), columna.slice(largo)];
+  return null;
+}
 
 export type GestorDeCuenta = ReturnType<typeof crearGestorDeCuenta>;
 
@@ -161,6 +203,13 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
   const autocomprobar = dependencias.autocomprobar ?? autocomprobarCripto;
   const limite = dependencias.esperaMaxima ?? ESPERA_MAXIMA_MS;
   const pausa = dependencias.pausaAntesDeCalcular ?? 50;
+  const versionActual = dependencias.derivacion?.actual ?? VERSION_DE_DERIVACION;
+  const parametrosPorVersion = dependencias.derivacion?.parametros ?? PARAMETROS_POR_VERSION;
+  /** Las versiones con las que puede haberse creado una cuenta: la actual primero. */
+  const versionesConocidas = Object.keys(parametrosPorVersion)
+    .map(Number)
+    .filter((version) => version <= versionActual)
+    .sort((a, b) => b - a);
   // La derivación de claves ocupa el hilo de la interfaz medio segundo o más.
   const cederALaPantalla = () => new Promise<void>((seguir) => setTimeout(seguir, pausa));
 
@@ -277,35 +326,199 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
     });
   }
 
+  // --------------------------------------------- entrada y envoltura de la clave
+
+  type Entrada =
+    | { ok: true; claves: ClavesDeLaContrasena; version: number; usuario: string }
+    | { ok: false; error: 'credenciales' | 'sin_conexion' };
+
   /**
-   * Con una sesión recién abierta: si la cuenta ya tiene claves, las abre con
-   * la contraseña y las guarda en el llavero; si no las tiene (alta
-   * interrumpida), reanuda el alta.
+   * Inicia sesión en el servidor con la contraseña. Prueba la versión de
+   * derivación actual y, si el servidor la rechaza, las anteriores. Quien
+   * recibe las claves debe borrar la de envoltura.
    */
-  async function entrarConSesion(correo: string, envoltura: Uint8Array): Promise<Resultado> {
+  async function entrarEnElServidor(correo: string, contrasena: string): Promise<Entrada> {
+    for (const version of versionesConocidas) {
+      const claves = await derivarClaves(contrasena, correo, parametrosPorVersion[version]);
+      let dentro = false;
+      try {
+        const entrada = await conLimite(
+          cliente!.auth.signInWithPassword({ email: correo, password: claves.autenticacion }),
+          limite,
+        );
+        if (entrada.error && esDeRed(entrada.error)) return { ok: false, error: 'sin_conexion' };
+        const usuario = entrada.data.session?.user.id;
+        if (!entrada.error && usuario) {
+          dentro = true;
+          return { ok: true, claves, version, usuario };
+        }
+      } finally {
+        if (!dentro) borrar(claves.envoltura);
+      }
+    }
+    return { ok: false, error: 'credenciales' };
+  }
+
+  /** Guarda el contenido de `clave_por_contrasena`. `true` si el servidor lo ha guardado. */
+  async function guardarSobres(
+    usuario: string,
+    sobres: string,
+    version?: number,
+  ): Promise<'guardado' | 'red' | 'rechazado'> {
+    const fila: Record<string, unknown> = { clave_por_contrasena: sobres };
+    if (version !== undefined) fila.version_de_derivacion = version;
+    try {
+      const { data, error } = await conLimite(
+        cliente!.from('claves_de_usuario').update(fila).eq('user_id', usuario).select('user_id'),
+        limite,
+      );
+      if (error) return esDeRed(error) ? 'red' : 'rechazado';
+      return data?.length === 1 ? 'guardado' : 'rechazado';
+    } catch {
+      return 'red';
+    }
+  }
+
+  type Abierta = { claveDeDatos: Uint8Array; sobre: string };
+
+  /**
+   * Abre la clave de datos con la clave de envoltura de quien acaba de entrar.
+   * Si la columna trae dos sobres es que un cambio de contraseña se cortó: si
+   * abre el nuevo, el cambio se termina; si abre el anterior, se deshace.
+   * Devuelve `null` si ningún sobre se abre.
+   */
+  async function abrirClaveDeDatos(
+    usuario: string,
+    columna: unknown,
+    envoltura: Uint8Array,
+    version: number,
+  ): Promise<Abierta | null> {
+    const sobres = sobresDeLaColumna(columna);
+    if (!sobres) return null;
+    for (const [posicion, sobre] of sobres.entries()) {
+      let claveDeDatos: Uint8Array;
+      try {
+        claveDeDatos = await desenvolverConContrasena(sobre, envoltura);
+      } catch {
+        continue;
+      }
+      if (sobres.length === 2) {
+        // Terminar (posición 0) guarda también la versión; deshacer (posición 1) no la toca.
+        // Si no se puede guardar ahora, la cuenta sigue abriéndose y se hará en la próxima entrada.
+        await guardarSobres(usuario, sobre, posicion === 0 ? version : undefined);
+      }
+      return { claveDeDatos, sobre };
+    }
+    return null;
+  }
+
+  /**
+   * Cambia las claves que salen de la contraseña sin cambiar la clave de
+   * datos, en tres pasos: (1) guardar el sobre nuevo junto al anterior,
+   * (2) cambiar la contraseña del servidor, (3) dejar solo el sobre nuevo.
+   * Tras cada paso hay exactamente una contraseña que abre la cuenta.
+   */
+  async function rehacerEnvoltura(
+    usuario: string,
+    abierta: Abierta,
+    anteriores: ClavesDeLaContrasena,
+    nuevas: ClavesDeLaContrasena,
+    version: number,
+  ): Promise<Resultado> {
+    const nuevo = await envolverConContrasena(abierta.claveDeDatos, nuevas.envoltura);
+    const paso1 = await guardarSobres(usuario, nuevo + abierta.sobre);
+    if (paso1 !== 'guardado') return fallo(paso1 === 'red' ? 'sin_conexion' : 'desconocido');
+
+    let cambio: { error: ErrorRemoto };
+    try {
+      cambio = await conLimite(
+        cliente!.auth.updateUser({
+          password: nuevas.autenticacion,
+          current_password: anteriores.autenticacion,
+        }),
+        limite,
+      );
+    } catch {
+      // No se sabe si el servidor llegó a cambiarla: se dejan los dos sobres, que
+      // valen para las dos respuestas. Se resuelve al volver a entrar o al repetir el cambio.
+      return fallo('sin_conexion');
+    }
+    if (cambio.error) {
+      if (esDeRed(cambio.error)) return fallo('sin_conexion');
+      // Rechazado: la contraseña sigue siendo la anterior. Se deshace el paso 1.
+      await guardarSobres(usuario, abierta.sobre);
+      return fallo('desconocido');
+    }
+    // La contraseña ya es la nueva. Si el paso 3 no se guarda ahora, lo hará la próxima entrada.
+    await guardarSobres(usuario, nuevo, version);
+    return OK;
+  }
+
+  async function leerColumnaDeClaves(): Promise<
+    { ok: true; columna: unknown; hay: boolean } | { ok: false; error: ErrorDeCuenta }
+  > {
     const { data, error } = await conLimite(
       cliente!.from('claves_de_usuario').select('clave_por_contrasena').maybeSingle(),
       limite,
     );
-    if (error) {
+    if (error) return { ok: false, error: esDeRed(error) ? 'sin_conexion' : 'desconocido' };
+    return { ok: true, columna: data?.clave_por_contrasena, hay: Boolean(data) };
+  }
+
+  /**
+   * Con una sesión recién abierta: si la cuenta ya tiene claves, las abre con
+   * la contraseña y las guarda en el llavero; si no las tiene (alta
+   * interrumpida), reanuda el alta. Si la cuenta se derivó con una versión
+   * anterior a la actual, la actualiza a continuación.
+   */
+  async function entrarConSesion(
+    correo: string,
+    contrasena: string,
+    entrada: Extract<Entrada, { ok: true }>,
+  ): Promise<Resultado> {
+    const leida = await leerColumnaDeClaves();
+    if (!leida.ok) {
       await limpiarDispositivo();
-      return fallo(esDeRed(error) ? 'sin_conexion' : 'desconocido');
+      return fallo(leida.error);
     }
-    if (!data) {
-      await prepararClaves(correo, envoltura);
+    if (!leida.hay) {
+      if (entrada.version !== versionActual) {
+        // Un alta a medias solo puede ser de la versión actual.
+        await limpiarDispositivo();
+        return fallo('desconocido');
+      }
+      await prepararClaves(correo, entrada.claves.envoltura);
       return OK;
     }
-    let claveDeDatos: Uint8Array | null = null;
+    let abierta: Abierta | null = null;
     try {
-      claveDeDatos = await desenvolverConContrasena(String(data.clave_por_contrasena), envoltura);
+      abierta = await abrirClaveDeDatos(
+        entrada.usuario,
+        leida.columna,
+        entrada.claves.envoltura,
+        entrada.version,
+      );
+      if (!abierta) throw new Error('Las claves no se abren.');
       await almacen.guardar(CORREO_EN_EL_ALMACEN, correo);
-      await almacen.guardar(CLAVE_DE_DATOS_EN_EL_ALMACEN, await claveATexto(claveDeDatos));
+      await almacen.guardar(CLAVE_DE_DATOS_EN_EL_ALMACEN, await claveATexto(abierta.claveDeDatos));
+      if (entrada.version < versionActual) {
+        // Parámetros anteriores: se rehace la envoltura con los actuales. Si falla,
+        // la sesión vale igual y se intentará en la próxima entrada.
+        const nuevas = await derivarClaves(contrasena, correo, parametrosPorVersion[versionActual]);
+        try {
+          await rehacerEnvoltura(entrada.usuario, abierta, entrada.claves, nuevas, versionActual);
+        } catch {
+          // Igual: no impide entrar.
+        } finally {
+          borrar(nuevas.envoltura);
+        }
+      }
     } catch {
       // Las claves del servidor no se abren con esta contraseña, o no se pueden guardar.
       await limpiarDispositivo();
       return fallo('desconocido');
     } finally {
-      borrar(claveDeDatos);
+      borrar(abierta?.claveDeDatos);
     }
     fijar({ fase: 'con_sesion', correo, codigo: null, gruposPedidos: [] });
     return OK;
@@ -333,7 +546,7 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
       if (invalido) return fallo(invalido);
       const correo = normalizarCorreo(correoEscrito);
       await cederALaPantalla();
-      const claves = await derivarClaves(contrasena, correo);
+      const claves = await derivarClaves(contrasena, correo, parametrosPorVersion[versionActual]);
       try {
         const alta = await conLimite(
           cliente!.auth.signUp({ email: correo, password: claves.autenticacion }),
@@ -350,8 +563,14 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
           limite,
         );
         if (entrada.error && esDeRed(entrada.error)) return fallo('sin_conexion');
-        if (entrada.error || !entrada.data.session) return fallo('alta_rechazada');
-        return await entrarConSesion(correo, claves.envoltura);
+        const usuario = entrada.data.session?.user.id;
+        if (entrada.error || !usuario) return fallo('alta_rechazada');
+        return await entrarConSesion(correo, contrasena, {
+          ok: true,
+          claves,
+          version: versionActual,
+          usuario,
+        });
       } finally {
         borrar(claves.envoltura);
       }
@@ -379,7 +598,7 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
         cliente!.from('claves_de_usuario').insert({
           clave_por_contrasena: pendiente.porContrasena,
           clave_por_recuperacion: pendiente.porRecuperacion,
-          version_de_derivacion: VERSION_DE_DERIVACION,
+          version_de_derivacion: versionActual,
           version_de_formato: VERSION_DE_FORMATO,
         }),
         limite,
@@ -410,17 +629,68 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
       if (!esCorreoValido(correoEscrito) || contrasena.length === 0) return fallo('credenciales');
       const correo = normalizarCorreo(correoEscrito);
       await cederALaPantalla();
-      const claves = await derivarClaves(contrasena, correo);
+      const entrada = await entrarEnElServidor(correo, contrasena);
+      if (!entrada.ok) return fallo(entrada.error);
       try {
-        const entrada = await conLimite(
-          cliente!.auth.signInWithPassword({ email: correo, password: claves.autenticacion }),
-          limite,
-        );
-        if (entrada.error && esDeRed(entrada.error)) return fallo('sin_conexion');
-        if (entrada.error || !entrada.data.session) return fallo('credenciales');
-        return await entrarConSesion(correo, claves.envoltura);
+        return await entrarConSesion(correo, contrasena, entrada);
       } finally {
-        borrar(claves.envoltura);
+        borrar(entrada.claves.envoltura);
+      }
+    });
+  }
+
+  /**
+   * Cambia la contraseña. Pide la actual y la comprueba iniciando sesión con
+   * ella. La clave de datos no cambia: no hay que volver a cifrar nada. Si un
+   * intento anterior se cortó después de cambiarla en el servidor, repetirlo
+   * con los mismos datos lo termina.
+   */
+  function cambiarContrasena(actual: string, nueva: string): Promise<Resultado> {
+    return operar(['con_sesion'], async () => {
+      const correo = estado.correo;
+      if (!correo) return fallo('desconocido');
+      if (actual.length === 0) return fallo('contrasena_actual');
+      const invalido = validar(correo, nueva);
+      if (invalido) return fallo(invalido);
+      if (actual.normalize('NFKC') === nueva.normalize('NFKC')) return fallo('contrasena_igual');
+      await cederALaPantalla();
+
+      let entrada = await entrarEnElServidor(correo, actual);
+      let yaCambiada = false;
+      if (!entrada.ok && entrada.error === 'credenciales') {
+        // ¿Se cortó un cambio anterior justo después de cambiarla en el servidor?
+        entrada = await entrarEnElServidor(correo, nueva);
+        if (!entrada.ok) {
+          return fallo(entrada.error === 'credenciales' ? 'contrasena_actual' : entrada.error);
+        }
+        yaCambiada = true;
+      }
+      if (!entrada.ok) return fallo(entrada.error);
+
+      let abierta: Abierta | null = null;
+      let nuevas: ClavesDeLaContrasena | null = null;
+      try {
+        const leida = await leerColumnaDeClaves();
+        if (!leida.ok) return fallo(leida.error);
+        // Si había un cambio a medias, aquí se termina o se deshace.
+        abierta = await abrirClaveDeDatos(
+          entrada.usuario,
+          leida.columna,
+          entrada.claves.envoltura,
+          entrada.version,
+        );
+        if (!abierta) return fallo('desconocido');
+        if (yaCambiada && entrada.version === versionActual) return OK;
+        nuevas = await derivarClaves(nueva, correo, parametrosPorVersion[versionActual]);
+        return await rehacerEnvoltura(
+          entrada.usuario,
+          abierta,
+          entrada.claves,
+          nuevas,
+          versionActual,
+        );
+      } finally {
+        borrar(abierta?.claveDeDatos, entrada.claves.envoltura, nuevas?.envoltura);
       }
     });
   }
@@ -471,6 +741,7 @@ export function crearGestorDeCuenta(dependencias: Dependencias) {
     cancelarAlta,
     iniciarSesion,
     cerrarSesion,
+    cambiarContrasena,
     borrarCuenta,
     leerClaveDeDatos,
     estado: () => estado,

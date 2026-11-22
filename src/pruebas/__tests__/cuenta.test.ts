@@ -499,6 +499,7 @@ describe('sin conexión en cada paso', () => {
         maybeSingle: async () => ({ data: null, error: { message: 'fetch failed' } }),
       }),
       insert: async () => ({ error: null }),
+      update: () => ({ eq: () => ({ select: async () => ({ data: null, error: null }) }) }),
     }));
     expect(await m.gestor.iniciarSesion(CORREO, CONTRASENA)).toEqual(SIN);
     // No queda una sesión a medias.

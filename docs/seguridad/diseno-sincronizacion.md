@@ -328,10 +328,25 @@ gasta un intento de inicio de sesión por versión.
 
 ### 9.5 Otras sesiones
 
-Tras cambiar la contraseña, los demás dispositivos conservan la clave de datos en su
-llavero y sus datos locales. Su sesión deja de valer cuando el servidor la rechace;
-entonces Cuenta pide volver a entrar. Al entrar con la contraseña nueva la base ya está
-ligada a esa cuenta y la sincronización continúa.
+Comprobado contra la instancia local de Supabase: **cambiar la contraseña no cierra al
+momento las sesiones abiertas en otros dispositivos.** Un dispositivo que ya tenía sesión
+sigue sincronizando después del cambio. Una prueba lo vigila
+(`supabase/pruebas/contrasena.test.ts`). Qué pasa cuando ese dispositivo tenga que renovar
+su sesión no se ha comprobado.
+
+Consecuencia: cambiar la contraseña **no sirve para echar a quien ya tenga una sesión
+robada**, ni le quita la clave de datos a quien ya la tenga. La pantalla lo dice. Cerrar
+las demás sesiones desde la app queda planteado para el 4c.
+
+Los demás dispositivos conservan la clave de datos en su llavero y sus datos locales.
+Cuando su sesión deje de valer, Cuenta pide cerrar sesión y volver a entrar; al entrar con
+la contraseña nueva la base ya está ligada a esa cuenta y la sincronización continúa.
+
+### 9.6 La contraseña actual
+
+Se comprueba de dos maneras: la app inicia sesión con ella antes de empezar, y además la
+envía (su subclave de autenticación) como `current_password` junto a la nueva, para los
+proyectos que tengan activada esa exigencia.
 
 ## 10. Qué ve y qué puede hacer el servidor
 
