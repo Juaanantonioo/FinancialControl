@@ -25,6 +25,18 @@ export const ARGON2ID = {
   memoria: 64 * 1024 * 1024,
 } as const;
 
+/** Coste de Argon2id de una versión de derivación. */
+export type ParametrosDeDerivacion = { readonly pasadas: number; readonly memoria: number };
+
+/**
+ * Parámetros de cada versión de derivación. La cuenta guarda con qué versión
+ * se derivaron sus claves; al iniciar sesión con una anterior a la actual, la
+ * app rehace la envoltura con la actual (bloque 4b-2). Hoy solo existe la 1.
+ */
+export const PARAMETROS_POR_VERSION: Readonly<Record<number, ParametrosDeDerivacion>> = {
+  [VERSION_DE_DERIVACION]: ARGON2ID,
+};
+
 /** Clave de BLAKE2b con la que se calcula la sal a partir del correo. */
 export const CONSTANTE_DE_SAL = 'FinancialControl/sal-de-cuenta/v1';
 /** Clave de BLAKE2b con la que se calcula la suma de control del código de recuperación. */

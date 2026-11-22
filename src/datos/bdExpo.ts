@@ -4,13 +4,13 @@
  */
 import * as SQLite from 'expo-sqlite';
 
-import type { BaseDeDatos, ValorSql } from './bd';
+import { conTransaccionesEnSerie, type BaseDeDatos, type ValorSql } from './bd';
 
 export const NOMBRE_DE_LA_BD = 'financialcontrol.db';
 
 export async function abrirBdExpo(nombre: string = NOMBRE_DE_LA_BD): Promise<BaseDeDatos> {
   const sqlite = await SQLite.openDatabaseAsync(nombre);
-  return {
+  return conTransaccionesEnSerie({
     async ejecutar(sql: string, parametros: ValorSql[] = []) {
       await sqlite.runAsync(sql, parametros);
     },
@@ -24,5 +24,5 @@ export async function abrirBdExpo(nombre: string = NOMBRE_DE_LA_BD): Promise<Bas
       });
       return resultado;
     },
-  };
+  });
 }

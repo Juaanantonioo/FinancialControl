@@ -25,6 +25,13 @@ describe('migraciones', () => {
       'presupuesto',
       'regla_de_comercio',
       'regla_recurrente',
+      // Estado de la sincronización (migración 5).
+      'sinc_estado',
+      'sinc_pendiente',
+      'sinc_remota',
+      'sinc_retenida',
+      // La crea SQLite para el contador de `sinc_pendiente`.
+      'sqlite_sequence',
       'valor_de_inversion',
     ]);
   });

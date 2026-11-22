@@ -24,3 +24,26 @@ export type Entorno = {
   /** Devuelve el instante actual. */
   ahora: () => Date;
 };
+
+/**
+ * Devuelve la misma base de datos con las transacciones puestas en fila: una
+ * no empieza hasta que termina la anterior.
+ *
+ * Hace falta desde que la sincronización escribe por su cuenta mientras la
+ * persona usa la app: SQLite no admite una transacción dentro de otra, así que
+ * sin esto guardar un movimiento justo cuando se aplican filas bajadas daría
+ * un error. Las tareas no deben abrir otra transacción dentro de la suya.
+ */
+export function conTransaccionesEnSerie(bd: BaseDeDatos): BaseDeDatos {
+  let anterior: Promise<unknown> = Promise.resolve();
+  return {
+    ejecutar: (sql, parametros) => bd.ejecutar(sql, parametros),
+    consultar: (sql, parametros) => bd.consultar(sql, parametros),
+    transaccion<T>(tarea: () => Promise<T>): Promise<T> {
+      const turno = anterior.then(() => bd.transaccion(tarea));
+      // La fila sigue aunque esta transacción falle; el error lo recibe quien la pidió.
+      anterior = turno.catch(() => undefined);
+      return turno;
+    },
+  };
+}

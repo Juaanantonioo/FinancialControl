@@ -36,11 +36,18 @@ import {
   USO_CLAVE_POR_CONTRASENA,
   USO_CLAVE_POR_RECUPERACION,
   VERSION_DE_FORMATO,
+  type ParametrosDeDerivacion,
 } from './parametros';
 import { cargarSodio } from './sodio';
 
 export { ErrorDeCripto } from './errores';
-export { GRUPOS_DEL_CODIGO, VERSION_DE_DERIVACION, VERSION_DE_FORMATO } from './parametros';
+export {
+  GRUPOS_DEL_CODIGO,
+  PARAMETROS_POR_VERSION,
+  VERSION_DE_DERIVACION,
+  VERSION_DE_FORMATO,
+  type ParametrosDeDerivacion,
+} from './parametros';
 
 /** Claves que salen de la contraseña. */
 export type ClavesDeLaContrasena = {
@@ -89,7 +96,11 @@ export async function salDelCorreo(correo: string): Promise<Uint8Array> {
  * contraseña dé lo mismo en cualquier teclado y plataforma) con la sal del
  * correo. Tarda a propósito. No sale nunca del dispositivo.
  */
-export async function derivarClaveMaestra(contrasena: string, correo: string): Promise<Uint8Array> {
+export async function derivarClaveMaestra(
+  contrasena: string,
+  correo: string,
+  parametros: ParametrosDeDerivacion = ARGON2ID,
+): Promise<Uint8Array> {
   const sodio = await cargarSodio();
   const sal = await salDelCorreo(correo);
   const bytes = utf8(contrasena.normalize('NFKC'));
@@ -98,8 +109,8 @@ export async function derivarClaveMaestra(contrasena: string, correo: string): P
       BYTES_DE_CLAVE,
       bytes,
       sal,
-      ARGON2ID.pasadas,
-      ARGON2ID.memoria,
+      parametros.pasadas,
+      parametros.memoria,
       sodio.crypto_pwhash_ALG_ARGON2ID13,
     );
   } catch {
@@ -139,8 +150,9 @@ export async function subclavesDe(maestra: Uint8Array): Promise<ClavesDeLaContra
 export async function derivarClaves(
   contrasena: string,
   correo: string,
+  parametros: ParametrosDeDerivacion = ARGON2ID,
 ): Promise<ClavesDeLaContrasena> {
-  const maestra = await derivarClaveMaestra(contrasena, correo);
+  const maestra = await derivarClaveMaestra(contrasena, correo, parametros);
   try {
     return await subclavesDe(maestra);
   } finally {
@@ -214,6 +226,32 @@ export async function descifrar(
     );
   } catch {
     throw new ErrorDeCripto();
+  }
+}
+
+/** Cifra un texto (en UTF-8) en un sobre. */
+export async function cifrarTexto(clave: Uint8Array, texto: string, uso: string): Promise<string> {
+  const bytes = utf8(texto);
+  try {
+    return await cifrar(clave, bytes, uso);
+  } finally {
+    borrar(bytes);
+  }
+}
+
+/** Abre un sobre que guarda un texto en UTF-8. */
+export async function descifrarTexto(
+  clave: Uint8Array,
+  sobre: string,
+  uso: string,
+): Promise<string> {
+  const bytes = await descifrar(clave, sobre, uso);
+  try {
+    return (await cargarSodio()).to_string(bytes);
+  } catch {
+    throw new ErrorDeCripto();
+  } finally {
+    borrar(bytes);
   }
 }
 

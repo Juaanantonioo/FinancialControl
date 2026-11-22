@@ -18,6 +18,38 @@ const COMUNES = `
   modificado_en TEXT NOT NULL,
   borrado_en TEXT`;
 
+/**
+ * Las doce tablas que se sincronizan, tal como eran en la versión 5. Esta lista
+ * pertenece a la migración 5 y no se toca: una tabla sincronizada nueva lleva
+ * sus disparadores en su propia migración.
+ */
+const TABLAS_CON_COLA_V5 = [
+  'cuenta',
+  'categoria',
+  'movimiento',
+  'valor_de_inversion',
+  'objetivo',
+  'aportacion_a_objetivo',
+  'regla_recurrente',
+  'presupuesto',
+  'linea_de_presupuesto',
+  'captura',
+  'alias_de_tarjeta',
+  'regla_de_comercio',
+];
+
+/** Apunta en la cola de subida la fila recién escrita, con un número de cambio nuevo. */
+function disparadoresDeCola(tabla: string): string[] {
+  return ['INSERT', 'UPDATE'].map(
+    (operacion) =>
+      `CREATE TRIGGER sinc_${operacion.toLowerCase()}_${tabla} AFTER ${operacion} ON ${tabla}
+       BEGIN
+         DELETE FROM sinc_pendiente WHERE tabla = '${tabla}' AND id = NEW.id;
+         INSERT INTO sinc_pendiente (tabla, id) VALUES ('${tabla}', NEW.id);
+       END`,
+  );
+}
+
 export const MIGRACIONES: Migracion[] = [
   {
     version: 1,
@@ -232,6 +264,47 @@ export const MIGRACIONES: Migracion[] = [
         ${COMUNES}
       )`,
       `CREATE UNIQUE INDEX aviso_por_clave ON aviso_emitido (clave) WHERE borrado_en IS NULL`,
+    ],
+  },
+  {
+    // B4b-2: estado de la sincronización cifrada. Solo añade tablas y
+    // disparadores; no toca ninguna tabla ni fila existente. Va en la base de
+    // datos, y no en las preferencias, porque la cola y el cursor tienen que
+    // cambiar en la misma transacción que los datos
+    // (docs/seguridad/diseno-sincronizacion.md, apartado 4).
+    version: 5,
+    sentencias: [
+      // Cuenta a la que está ligada la base, cursor y fechas del motor.
+      `CREATE TABLE sinc_estado (
+        clave TEXT PRIMARY KEY NOT NULL,
+        valor TEXT NOT NULL
+      )`,
+      // Filas locales por subir. `cambio` solo crece: sirve para saber si una
+      // fila volvió a cambiar mientras se subía.
+      `CREATE TABLE sinc_pendiente (
+        cambio INTEGER PRIMARY KEY AUTOINCREMENT,
+        tabla TEXT NOT NULL,
+        id TEXT NOT NULL,
+        UNIQUE (tabla, id)
+      )`,
+      // Última marca de tiempo del servidor que este dispositivo conoce de cada fila.
+      `CREATE TABLE sinc_remota (
+        tabla TEXT NOT NULL,
+        id TEXT NOT NULL,
+        actualizada_en TEXT NOT NULL,
+        PRIMARY KEY (tabla, id)
+      )`,
+      // Filas remotas que no se han podido aplicar. De las ilegibles no se
+      // guarda el contenido; de las no aplicables, el sobre cifrado, para reintentar.
+      `CREATE TABLE sinc_retenida (
+        tabla TEXT NOT NULL,
+        id TEXT NOT NULL,
+        motivo TEXT NOT NULL CHECK (motivo IN ('ilegible', 'no_aplicable')),
+        contenido TEXT,
+        actualizada_en TEXT NOT NULL,
+        PRIMARY KEY (tabla, id)
+      )`,
+      ...TABLAS_CON_COLA_V5.flatMap(disparadoresDeCola),
     ],
   },
 ];

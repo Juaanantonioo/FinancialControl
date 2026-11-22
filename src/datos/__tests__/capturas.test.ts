@@ -110,7 +110,13 @@ describe('migración 4: capturas y avisos', () => {
     const antes = await volcar();
     expect(tablas.every((t) => antes[t].length > 0)).toBe(true);
 
-    expect(await migrar(bd)).toEqual({ desde: 3, hasta: 4 });
+    // Solo la migración 4: la 5 (sincronización) tiene su propia prueba.
+    expect(
+      await migrar(
+        bd,
+        MIGRACIONES.filter((m) => m.version <= 4),
+      ),
+    ).toEqual({ desde: 3, hasta: 4 });
     expect(await volcar()).toEqual(antes);
     expect(await repos.cuentas.saldo(banco.id)).toBe(215000 - 2340 - 5000);
 
@@ -131,7 +137,7 @@ describe('migración 4: capturas y avisos', () => {
       expect(sentencia).toMatch(/^CREATE (TABLE|INDEX|UNIQUE INDEX)/);
       expect(sentencia).not.toMatch(/ALTER|DROP|UPDATE|DELETE|INSERT/i);
     }
-    expect(MIGRACIONES.map((m) => m.version)).toEqual([1, 2, 3, 4]);
+    expect(MIGRACIONES.map((m) => m.version)).toEqual([1, 2, 3, 4, 5]);
   });
 
   it('la base de datos rechaza por sí misma los datos incoherentes', async () => {
