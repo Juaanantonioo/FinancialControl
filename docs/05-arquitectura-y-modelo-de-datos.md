@@ -338,14 +338,14 @@ dato financiero en claro. Diseño del cifrado: `docs/seguridad/diseno-criptograf
 | Columna | Contenido | ¿En claro? |
 |---|---|---|
 | `user_id` | Clave primaria. Referencia a `auth.users`, con borrado en cascada. Por defecto, `auth.uid()` | Sí |
-| `clave_por_contrasena` | La clave de datos, cifrada en el dispositivo con la clave que sale de la contraseña | Cifrado |
+| `clave_por_contrasena` | La clave de datos, cifrada en el dispositivo con la clave que sale de la contraseña. Un sobre de 98 caracteres; **dos seguidos (196) mientras dura un cambio de contraseña** | Cifrado |
 | `clave_por_recuperacion` | La misma clave de datos, cifrada con la que sale del código de recuperación | Cifrado |
 | `version_de_derivacion` | Con qué parámetros se derivaron las claves de la contraseña | Sí |
 | `version_de_formato` | Formato de los dos sobres | Sí |
 | `creado_en`, `actualizada_en` | Las pone el servidor | Sí |
 
-**`fila_cifrada`**: una fila por cada fila de la base local. **En el 4b-1 queda creada y
-vacía**; la usa el 4b-2.
+**`fila_cifrada`**: una fila por cada fila de la base local. La llena la sincronización
+desde el 4b-2 (apartado 4.9).
 
 | Columna | Contenido | ¿En claro? |
 |---|---|---|
@@ -379,6 +379,52 @@ puede ejecutarla el rol `authenticated`.
 
 **Pruebas.** 33 de aislamiento y 8 de la cuenta, contra una instancia local:
 `npx supabase start`, `npx supabase db reset`, `npm run test:remoto`.
+
+**Segunda migración remota (4b-2).** `20261122120000_retirar_execute_de_rls_auto_enable.sql`
+retira a `public`, `anon` y `authenticated` el permiso de ejecutar
+`public.rls_auto_enable()`, una función que crea Supabase en el proyecto. No cambia tablas.
+No hace nada si la función no existe.
+
+### 4.9 Sincronización cifrada (22/11/2026, bloque 4b-2)
+
+Diseño completo: `docs/seguridad/diseno-sincronizacion.md`. Código: `src/sincronizacion/`.
+
+**Esquema local, versión 5.** Solo añade tablas internas y disparadores; ninguna tabla ni
+fila existente cambia.
+
+| Tabla | Contenido |
+|---|---|
+| `sinc_pendiente` | Filas locales por subir (`cambio`, `tabla`, `id`). `cambio` solo crece |
+| `sinc_remota` | Última marca de tiempo del servidor conocida de cada fila |
+| `sinc_retenida` | Filas remotas que no se han podido aplicar: `ilegible` o `no_aplicable` |
+| `sinc_estado` | Cuenta a la que está ligada la base, cursor, última sincronización y último repaso |
+
+Cada una de las doce tablas sincronizadas tiene dos disparadores (`AFTER INSERT` y
+`AFTER UPDATE`) que apuntan la fila en `sinc_pendiente`. Los repositorios no cambian.
+
+**Piezas.**
+
+| Fichero | Qué hace |
+|---|---|
+| `tablas.ts` | Catálogo de las doce tablas: columnas, reglas de unicidad y orden de dependencia. Una prueba lo compara con el esquema real |
+| `filas.ts` | Fila ↔ sobre cifrado. Datos autenticados: `FC1\|fila/<user_id>/<tabla>/<id>` |
+| `servidor.ts` | Lo que el motor necesita del servidor, sobre el cliente de Supabase. Sin mensajes internos |
+| `motor.ts` | Subir, bajar, aplicar, repaso completo y entrada en una cuenta |
+| `sincronizador.ts` | Cuándo se sincroniza, reintentos y estado para la pantalla |
+| `src/estado/sincronizacionDeLaApp.ts` | Une lo anterior con la base, el cliente y la cuenta reales |
+
+**Reglas.** Un ciclo es subir y luego bajar. Gana la última escritura que llega al
+servidor, por fila. Los borrados son lógicos; nunca se usa `DELETE` en `fila_cifrada`. La
+base local se liga a una cuenta y no se sincroniza con ninguna otra. Si la nube y el
+dispositivo tienen datos, no se fusiona: se pregunta.
+
+**Transacciones.** Como la sincronización escribe mientras la persona usa la app, el
+adaptador de la base (`bdExpo.ts`) pone las transacciones en fila: una no empieza hasta
+que acaba la anterior.
+
+**Exportación** (`src/exportacion/`, Ajustes › Exportar mis datos). Un JSON con todas las
+filas de todas las tablas de datos (formato `financialcontrol.exportacion`, versión 1) y
+un CSV de movimientos con signo y divisa. En claro. No depende de la cuenta.
 
 ## 5. Correspondencia con el Notion del primer usuario
 

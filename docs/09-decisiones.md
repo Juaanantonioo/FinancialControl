@@ -62,7 +62,39 @@ vincula a la biometría; el modo privado es independiente del bloqueo y viene de
 
 Pendiente del dueño tras el 4b-1: aplicar las migraciones al proyecto remoto y fijar los
 parámetros de Argon2id con sus medidas. Pasos en
-`docs/seguridad/pasos-del-propietario-4b1.md`.
+`docs/seguridad/pasos-del-propietario-4b1.md`. Hecho el 22/11/2026: migración aplicada,
+alta e inicio de sesión probados en el iPhone, y Argon2id (64 MiB, 8 pasadas) medido en
+unos 220 ms.
+
+### Decisiones del 22/11/2026 (bloque 4b-2)
+
+Del dueño, en el encargo del bloque:
+
+| Id | Asunto | Decisión |
+|---|---|---|
+| D24 | Qué se sincroniza | Las doce tablas de `fila_cifrada`. `aviso_emitido`, no |
+| D25 | Qué se cifra | Cada fila entera, con la clave de datos. El sobre queda atado a su usuario, su tabla y su id |
+| D26 | Conflictos | Gana la última escritura que llega al servidor, por fila. Si dos dispositivos cambian la misma fila sin conexión, la que sube antes se pierde |
+| D27 | Borrados | Lógicos. Nunca `DELETE` de filas de datos en el servidor |
+| D28 | Entrada en una cuenta | Nube vacía: sube. Dispositivo sin datos: baja. Los dos con datos: no se fusiona; se pregunta «Usar los datos de la nube» (con copia previa) o «Cancelar» |
+| D29 | Cuándo se sincroniza | Al abrir, al volver de segundo plano, poco después de un cambio y a mano. Nunca con la app cerrada |
+| D30 | Cambio de contraseña | Se rehace la envoltura de la misma clave de datos. No se recifra ninguna fila. Se pide la contraseña actual |
+| D31 | Exportación | JSON con todo y CSV de movimientos, en claro, por la hoja de compartir, con autenticación previa si hay bloqueo. Con y sin cuenta |
+| D32 | Alcance | Recuperación con el código y cifrado de la base local pasan al 4b-3 |
+
+De Claude Code, sin consultar. Están explicadas en `docs/informes/b4b2-informe-final.md`,
+apartado «Decisiones propias»; las que el dueño puede querer cambiar, en «Te toca decidir».
+
+| Id | Asunto | Decisión |
+|---|---|---|
+| C1 | Cola de cambios locales | Disparadores de SQLite sobre las doce tablas, en una migración local nueva (la 5). Los repositorios no cambian |
+| C2 | Cursor | Ventana de solape de 5 minutos, paginación por clave y un repaso completo semanal y en «Sincronizar ahora» |
+| C3 | Dos filas que chocan por una regla de unicidad | Se conserva la de id menor; la otra se marca borrada |
+| C4 | Cambio de contraseña sin ventana | Dos sobres seguidos en `clave_por_contrasena` durante el cambio. Sin cambio de esquema |
+| C5 | Tamaño de los sobres | El texto de cada fila se rellena a múltiplos de 256 bytes |
+| C6 | La marca `borrada` del servidor | No se cree: decide el contenido descifrado |
+| C7 | «Cancelar» en la pregunta de entrada | Cierra la sesión |
+| C8 | Límite de inicios de sesión de la instancia local | Subido a 600 cada cinco minutos en `supabase/config.toml`, solo para las pruebas |
 
 Estado de D7 a 17/11/2026: el bloque 1 está hecho en la rama `h3-vision-completa`. El
 detalle y lo que queda pendiente de cada tarea están en `07`, apartado 2.2, y en

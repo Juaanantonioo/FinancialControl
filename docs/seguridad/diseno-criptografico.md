@@ -176,7 +176,7 @@ donde `<uso>` dice para qué es el sobre, en caracteres ASCII visibles sin espac
 |---|---|
 | `clave-de-datos/contrasena` | Clave de datos envuelta con la subclave de envoltura |
 | `clave-de-datos/recuperacion` | Clave de datos envuelta con la clave de recuperación |
-| `fila/<tabla>/<id>` | (4b-2) Una fila. Así el servidor no puede cambiar una fila por otra |
+| `fila/<user_id>/<tabla>/<id>` | Una fila (desde el 4b-2). Así el servidor no puede cambiar una fila por otra, ni de tabla, ni de usuario. Ver `diseno-sincronizacion.md` |
 
 Con la versión dentro de los datos autenticados, cambiar el byte de versión invalida el
 sobre. Un sobre con una versión que el código no conoce se rechaza sin intentar abrirlo.
@@ -217,7 +217,7 @@ truncado, versión desconocida, base64 inválido, uso distinto) produce el mismo
 | Sesión de Supabase | Llavero del sistema | — |
 | Código de recuperación | En memoria durante el alta. Nunca en disco | Nunca |
 | Correo de la cuenta abierta | Llavero del sistema, junto a la clave. No es un secreto; se guarda para saber qué cuenta está abierta sin preguntar al servidor | En claro: identifica la cuenta |
-| Datos financieros | Base local SQLite, **sin cifrar** (se cifra en 4b-2) | En este bloque, nada |
+| Datos financieros | Base local SQLite, **sin cifrar** (se cifra en 4b-3) | Desde el 4b-2, cada fila cifrada en el dispositivo |
 
 En web no hay llavero. La interfaz de almacenamiento es abstracta
 (`src/lib/almacenSeguro.ts`) y la decisión de dónde guardar la clave en un navegador queda
@@ -253,10 +253,10 @@ comprobación.
 
 | Se pierde | Se conserva | Resultado |
 |---|---|---|
-| Contraseña | Código | (4b-2) Se abre la clave de datos con el código y se pone una contraseña nueva. **En este bloque no está construido** |
+| Contraseña | Código | (4b-3) Se abre la clave de datos con el código y se pone una contraseña nueva. **Todavía no está construido** |
 | Contraseña | Un dispositivo con sesión y datos | Los datos locales siguen ahí. Puede crear otra cuenta. La cuenta antigua queda inaccesible |
-| Código | Contraseña | Todo funciona. (4b-2) Podrá generarse un código nuevo |
-| Dispositivo | Contraseña | Se inicia sesión en otro. En este bloque no hay datos que recuperar; desde 4b-2, se descargan y se descifran |
+| Código | Contraseña | Todo funciona. (4b-3) Podrá generarse un código nuevo |
+| Dispositivo | Contraseña | Se inicia sesión en otro y, desde el 4b-2, los datos se descargan y se descifran |
 | Dispositivo | Solo el código | Como «contraseña perdida con código» |
 | Contraseña y código | Un dispositivo con datos | Los datos locales siguen ahí; lo del servidor es irrecuperable |
 | Contraseña, código y dispositivos | Nada | **Los datos se pierden para siempre.** Nadie puede recuperarlos: ni el dueño del servicio ni Supabase. No hay restablecimiento por correo |
@@ -279,7 +279,7 @@ Riesgos del diseño, sin suavizar:
 7. **JavaScript no garantiza el borrado de memoria.** Las claves se ponen a cero al terminar,
    pero la contraseña es un texto y los textos no se pueden borrar; el motor puede haber
    hecho copias.
-8. **La base local sigue sin cifrar** hasta 4b-2.
+8. **La base local sigue sin cifrar** hasta 4b-3.
 9. **El paquete nativo de libsodium lleva un parche propio** y sus autores no responden a la
    incidencia. Ver `docs/seguridad/riesgo-de-dependencia-libsodium.md`.
 10. **En web, el código lo sirve el servidor en cada visita.** Quien controle el alojamiento

@@ -345,3 +345,52 @@ Hallazgo nuevo de este bloque, ya corregido:
 | R-28 (con bloqueo, ninguna pantalla sin autenticar) | Cumplido para Cuenta, con prueba |
 | R-29 (modo privado en avisos nuevos) | No aplica: este bloque no añade avisos |
 | R-30 (parámetros de ruta por `leerParametros`) | Cumplido: la pantalla nueva no lee parámetros |
+
+## 7. Estado tras el bloque 4b-2 (22/11/2026)
+
+Rama `b4b2-sincronizacion`. Desde este bloque los datos
+financieros salen del dispositivo, cifrados. Diseño: `diseno-sincronizacion.md`. Lo que un
+servidor comprometido aún puede hacer está en su apartado 10 y alimenta el 4c.
+
+### 7.1 Requisitos del apartado 4
+
+| Requisito | Estado tras el 4b-2 |
+|---|---|
+| R-01, R-03 (el servidor solo guarda cifrado; cifrado autenticado) | **Cumplido también para las filas.** Probado espiando las peticiones y leyendo la tabla remota: ningún campo de ninguna fila aparece en claro. Un sobre alterado o movido de fila, de tabla o de usuario no se abre |
+| R-02 (columnas en claro mínimas) | Cumplido. Viajan en claro: usuario, tabla, id, versión del formato, marca de borrado y marca de tiempo. El tamaño del contenido va por tramos de 256 bytes |
+| R-04 (biblioteca auditada, nada a mano) | Cumplido. La sincronización cifra con la misma función del 4b-1; lo propio es el JSON de la fila y los datos autenticados |
+| R-05 (la contraseña no sale; dos claves distintas) | Cumplido. En el cambio de contraseña tampoco sale ninguna de las dos, con prueba contra un Supabase real |
+| R-06 (parámetros con versión) | Cumplido, y ahora se puede usar: al iniciar sesión con una versión anterior la app rehace la envoltura con la actual. Probado con una versión 2 que solo existe en las pruebas |
+| R-07 (clave de datos aleatoria envuelta) | **Cumplido entero:** el cambio de contraseña rehace la envoltura sin recifrar ninguna fila, y en ningún paso la cuenta queda inaccesible |
+| R-08 (claves en el llavero, sin biometría) | Sin cambios. Leer los atributos reales en un iPhone: NO DEMOSTRADO |
+| R-09 (claves fuera de registros y `UserDefaults`) | Cumplido. El código nuevo no escribe en ningún registro. El estado de la sincronización que va a SQLite no incluye claves ni contenido descifrado; de una fila ilegible no se guarda nada |
+| R-10, R-12 | Sin cambios |
+| R-11 (recuperar con el código) | **4b-3** |
+| R-13 (volver a subir los datos locales) | Parcial. El mecanismo existe: un dispositivo con datos que entra en una cuenta con la nube vacía los sube. El restablecimiento de la cuenta en sí es del 4b-3 |
+| R-14, R-15 (RLS; dos usuarios) | Cumplido en local y, según comprobó el dueño el 22/11 en el panel, en remoto. Prueba nueva: un tercer usuario no ve ni puede escribir filas de otro aunque conozca sus ids |
+| R-16, R-17, R-18 | Sin cambios. La sincronización usa el mismo cliente y la misma clave pública |
+| R-19 (límite de intentos de inicio de sesión) | Lo pone Supabase Auth. Sus valores en el proyecto remoto: NO COMPROBADO. El límite de la instancia local se ha subido para las pruebas; no debe llevarse al remoto |
+| R-20 a R-23 (SQLCipher y migración de la base local) | **4b-3.** La base local sigue sin cifrar |
+| R-24 (exportación) | **Cumplido.** JSON con todas las tablas y CSV de movimientos, con y sin cuenta. En un iPhone real: NO DEMOSTRADO |
+| R-25 (borrado de cuenta) | Cumplido. Probado que borra también todas las filas cifradas. Al borrar, la base local deja de estar ligada a la cuenta y los datos locales se conservan |
+| R-26 (explicar qué ve el servidor antes del alta) | Cumplido en lo esencial: la pantalla dice, antes del alta, que los datos salen cifrados y que el servidor ve cuántos apuntes hay, de qué clase y cuándo cambian. La política de privacidad, 4c |
+| R-27 (el bloqueo no toca claves) | Cumplido. Exportar pide autenticación sin leer ni cambiar ninguna clave |
+| R-28 (con bloqueo, ninguna pantalla sin autenticar) | Cumplido: la pantalla nueva (Exportar) queda detrás del bloqueo como todas, y además pide autenticación antes de entregar el fichero |
+| R-29 (modo privado en avisos nuevos) | No aplica: este bloque no añade avisos del sistema |
+| R-30 (parámetros de ruta por `leerParametros`) | Cumplido: la pantalla nueva no lee parámetros |
+
+### 7.2 Riesgos nuevos o que cambian
+
+1. **Los datos ya salen del dispositivo.** Hasta ahora un fallo del cifrado no exponía
+   nada, porque no viajaba nada. Desde este bloque, sí.
+2. **Servidor malicioso:** puede revertir una fila a una versión anterior sin que la app lo
+   note, ocultar filas a un dispositivo nuevo y ver metadatos. Tabla completa en
+   `diseno-sincronizacion.md`, apartado 10.2.
+3. **Cambiar la contraseña no cierra las demás sesiones** ni cambia la clave de datos.
+   No sirve para echar a quien ya tenga una sesión o la clave.
+4. **El fichero de exportación va en claro** y sale de la app por la hoja de compartir. A
+   partir de ahí lo protege quien lo guarda. La copia temporal se borra al cerrar la hoja.
+5. **Un dispositivo con datos de otra persona que entra en una cuenta vacía sube esos
+   datos a esa cuenta** (regla de entrada D-h).
+6. **Pérdida silenciosa por conflicto:** de dos cambios sin conexión a la misma fila, se
+   pierde el que sube antes.

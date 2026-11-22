@@ -164,10 +164,15 @@ para restar la ventana (redondear ahí solo la agranda).
 
 ### 6.3 Aplicación
 
-Todas las filas de una bajada se descifran y luego se aplican en **una transacción**,
-junto con el cursor nuevo. Por cada fila:
+Todas las filas de una bajada se descifran primero y se aplican después, en transacciones
+de 200 filas como mucho, para no retener la base mientras la persona usa la app. El
+cursor nuevo se guarda en la última, cuando todo lo anterior ya está escrito: si la app se
+cierra a medias, la siguiente bajada repite lo que falte. Por cada fila:
 
-1. Si su `actualizada_en` es la que ya consta en `sinc_remota`: nada.
+1. Si su `actualizada_en` es la que ya consta en `sinc_remota`: nada. Si es **anterior** a
+   la que consta y la fila existe en local: no se aplica, se vuelve a subir la versión
+   local y se cuenta como revertida (la marca de una fila no retrocede en un servidor que
+   funciona bien).
 2. Si no se puede descifrar o validar: se retiene como ilegible (7.3). No se aplica ni se
    borra del servidor.
 3. Si la fila local tiene un cambio pendiente de subir: no se aplica. La versión local se
@@ -189,9 +194,8 @@ Además del cursor, el motor hace un repaso completo en «Sincronizar ahora» y,
 último tiene más de siete días: pide **solo los metadatos** de todas las filas (`tabla`,
 `id`, `actualizada_en`; sin contenido) y los compara con `sinc_remota`:
 
-- Fila con marca distinta o desconocida: se baja y se aplica como en 6.3.
-- Fila con marca **anterior** a la conocida: no se aplica; se vuelve a subir la local y
-  se cuenta como revertida.
+- Fila con marca distinta o desconocida: se baja y pasa por 6.3, que es donde se rechaza
+  una marca **anterior** a la conocida.
 - Fila que este dispositivo subió o bajó y el servidor ya no lista: se vuelve a subir y
   se cuenta como desaparecida.
 
@@ -259,9 +263,9 @@ personalizar una categoría la convierte en dato del usuario.
 - *Cancelar:* se cierra la sesión. No cambia ningún dato, ni local ni remoto.
 - *Usar los datos de la nube:* (1) se exporta lo local a un fichero y se abre la hoja de
   compartir; si la persona la cierra sin guardar, no se sigue. (2) Se baja y se descifra
-  **toda** la nube en memoria. (3) En una sola transacción se vacían las tablas locales,
-  se escriben las filas bajadas y se liga la base. Si la bajada falla, no se ha tocado
-  nada local.
+  **toda** la nube en memoria. (3) En una sola transacción se vacían las tablas locales
+  (también `aviso_emitido`, que hablaba de los datos anteriores), se escriben las filas
+  bajadas y se liga la base. Si la bajada falla, no se ha tocado nada local.
 
 Nunca se sube lo local encima de la nube en este caso.
 
@@ -393,7 +397,9 @@ cerrada. Solo hay un ciclo a la vez; si se pide otro mientras tanto, se hace uno
 terminar.
 
 Si un ciclo falla se reintenta con espera creciente (5 s, 15 s, 1 min, 5 min, y cada 5
-min), mientras la app esté abierta. Un ciclo correcto pone la espera a cero.
+min), mientras la app esté abierta. Un ciclo correcto pone la espera a cero. Una sesión
+caducada no se reintenta: reintentar no la arregla, hay que volver a entrar. Con la
+pregunta de entrada abierta tampoco se hace nada hasta que la persona responda.
 
 Cuenta muestra: la última sincronización correcta, cuántos cambios hay pendientes,
 cuántas filas remotas no se han podido aplicar y, si algo falla, un mensaje sin detalles
@@ -419,3 +425,6 @@ internos: sin conexión, sesión caducada o error del servidor.
    no las muestran hasta actualizarse.
 10. **Una transacción que tarde más de 5 minutos en confirmarse** solo se recoge en el
     repaso completo.
+11. **Una fila mayor de 64 KiB cifrada no cabe en el servidor.** No sube, se cuenta y se
+    reintenta sin fin. La app no limita hoy la longitud de una nota.
+12. **Cambiar la contraseña no cierra las demás sesiones** (9.5).

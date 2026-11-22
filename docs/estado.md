@@ -1691,3 +1691,132 @@ No borrar el stash de respaldo (`27c3df3`) hasta dar el bloque por bueno.
   seguimiento está en la rama, y que sus ficheros sin seguimiento están en la rama iguales
   o en una versión posterior (`cuenta.ts`, `cuenta.test.ts`, `almacenSeguro.ts` y el diseño
   criptográfico cambiaron después). Borrado.
+
+### 15.2 Hecho por fase
+
+| Fase | Qué | Commit |
+|---|---|---|
+| 0 | Baseline, lectura y borrado del stash antiguo | `485cc2c` |
+| 1 | Diseño por escrito: `docs/seguridad/diseno-sincronizacion.md` | `ac21756` |
+| 2 | Motor de sincronización en `src/sincronizacion/` y migración local 5 | `8662010` |
+| 3 | Migración remota de `rls_auto_enable()` y pruebas contra la instancia local | `3287c00` |
+| 4 | Integración en la app: cuándo se sincroniza, estado en Cuenta, entrada en una cuenta | `469ae8d` |
+| 5 | Cambio de contraseña y actualización de parámetros de derivación | `2171cb3` |
+| 6 | Exportación a JSON y CSV | `33371f3` |
+| 7 | Casos límite, capturas y regresión | ver `git log` |
+| 8 | Documentación, pasos del propietario e informe | ver `git log` |
+
+### 15.3 Cómo funciona, en corto
+
+- **Cola de cambios.** Disparadores de SQLite apuntan en `sinc_pendiente` cada alta y cada
+  cambio de las doce tablas. Los repositorios no se han tocado.
+- **Subida.** Cada fila pendiente se convierte en JSON, se rellena a múltiplos de 256 bytes
+  y se cifra con la clave de datos; los datos autenticados llevan usuario, tabla e id. Va
+  en lotes de 100 con `upsert`.
+- **Bajada.** Por cursor de `actualizada_en` con 5 minutos de solape y paginación por clave.
+  Lo ya conocido se descarta sin descifrar. Todo se aplica en transacciones.
+- **Repaso completo.** En «Sincronizar ahora» y cada siete días: compara las marcas de
+  todas las filas del servidor con las conocidas.
+- **Entrada en una cuenta.** La base local se liga a una cuenta. Nube vacía: sube.
+  Dispositivo sin datos: baja. Los dos con datos: pregunta.
+- **Cambio de contraseña.** Tres pasos, con dos sobres en `clave_por_contrasena` durante
+  el cambio. En cada momento una sola contraseña abre la cuenta entera.
+- **Sin cuenta** la app no hace nada nuevo: al arrancar solo mira si el llavero guarda una
+  clave.
+
+### 15.4 Cambios en pruebas que ya existían
+
+Ninguna prueba se ha debilitado. Se han cambiado cuatro porque lo que comprobaban ha
+cambiado a propósito:
+
+1. `migraciones.test.ts`: la lista de tablas de una base nueva incluye las cuatro `sinc_`.
+2. `capturas.test.ts`: la prueba «de la versión 3 a la 4» aplica las migraciones hasta la
+   4 (antes, todas, que eran hasta la 4), y la lista de versiones acaba en 5. La migración
+   5 tiene su propia prueba sobre una base en versión 4 con datos en todas las tablas.
+3. `cuentaPantalla.test.tsx`: dos comprobaciones exigían el texto «todavía no sincroniza
+   nada» y que ningún texto dijera que se sincroniza. Ahora exigen que la pantalla diga,
+   antes del alta, qué sale y qué ve el servidor, y que ningún texto prometa que los datos
+   no se pueden perder.
+4. `cuenta.test.ts`: un cliente de mentira de una prueba necesita el método `update` que
+   ahora forma parte de la interfaz.
+
+### 15.5 Defectos encontrados y corregidos durante el bloque
+
+1. **Resta de la ventana del cursor.** Al restar la ventana a una marca de tiempo se
+   perdían sus milisegundos (se redondeaba al segundo). Solo agrandaba la ventana, pero no
+   era lo escrito. Lo encontró la prueba del cursor sin ventana.
+2. **Una marca que retrocede se trataba distinto** en la bajada normal (se aplicaba) y en
+   el repaso (se rechazaba). Unificado: no se aplica y se vuelve a subir la versión local.
+3. **Una fila rechazada se contaba dos veces** cuando el ciclo hacía una segunda pasada de
+   subida.
+4. **Límite de inicios de sesión de la instancia local** (30 cada 5 minutos): las pruebas
+   nuevas lo superan. Subido a 600 solo en `supabase/config.toml`.
+
+### 15.6 Pruebas
+
+| | Antes | Después |
+|---|---|---|
+| `npm test` | 1.092 en 38 suites | **1.236 en 49 suites** |
+| `npm run test:remoto` (instancia local) | 41 en 2 suites | **81 en 5 suites** |
+| `npm run lint`, `npm run typecheck`, `prettier --check` | sin avisos | sin avisos |
+
+Las pruebas del apartado 8 del encargo y dónde están:
+
+| Prueba | Fichero |
+|---|---|
+| A y B: alta, cambio y borrado en los dos sentidos | `supabase/pruebas/sincronizacion.test.ts` y `src/sincronizacion/__tests__/motor.test.ts` |
+| Las doce tablas, campo a campo | los dos |
+| Conflicto: gana la que sube después | los dos |
+| Dos escrituras confirmadas fuera de orden | `supabase/pruebas/sincronizacion.test.ts`, con una transacción retenida en PostgreSQL de verdad; con ventana cero la prueba comprueba que la fila se pierde |
+| Mil movimientos | `supabase/pruebas/sincronizacion.test.ts` |
+| Sin conexión | los dos, y `sincronizador.test.ts` |
+| Sobre manipulado, movido de id, de tabla o de usuario | los dos |
+| El usuario C no ve nada de A | `supabase/pruebas/sincronizacion.test.ts` |
+| Nada en claro: peticiones espiadas y tabla remota leída | `supabase/pruebas/sincronizacion.test.ts` |
+| Entrada en una cuenta, los tres casos | los dos, y `sincronizacionPantalla.test.tsx` |
+| Cambio de contraseña y filas que se siguen descifrando | `supabase/pruebas/contrasena.test.ts` |
+| Corte en cada paso del cambio | `supabase/pruebas/contrasena.test.ts` (6 cortes) y `src/pruebas/__tests__/contrasena.test.ts` (7 cortes) |
+| Versión de derivación 1 → 2 | los dos |
+| Exportación JSON y CSV | `src/exportacion/__tests__/exportacion.test.ts` y `exportarPantalla.test.tsx` |
+| Sin cuenta, igual que antes | `sincronizacionAutomatica.test.tsx`, y las 1.092 de partida |
+| Migración local 5 sobre una base en versión 4 con datos | `src/sincronizacion/__tests__/migracion5.test.ts` |
+| Migración remota de `rls_auto_enable()` | `supabase/pruebas/rls_auto_enable.test.ts` |
+
+### 15.7 Prebuild y compilación
+
+- `npx expo prebuild --clean --platform ios`: correcto.
+- `npx expo run:ios` para el simulador: **Build Succeeded, 0 errores**, 1 aviso.
+- Entitlements tras el prebuild: sin `aps-environment`. Identificador
+  (`es.juanantonio.financialcontrol`) y esquema de URL (`financialcontrol`) sin cambios.
+- Ninguna dependencia nueva. `expo-file-system`, que usa la exportación, ya venía con
+  `expo` y ya estaba enlazada.
+
+### 15.8 Capturas: NO HECHAS
+
+No hay capturas de este bloque. Tras compilar, el simulador dejó de responder: instalar la
+app, abrir una URL y hacer una captura se quedaban colgados, también después de reiniciar
+el servicio del simulador. Se intentó en dos simuladores. **Ninguna pantalla nueva se ha
+visto pintada en un simulador ni en un iPhone**; lo que hay son pruebas de pantalla con
+`@testing-library/react-native`.
+
+### 15.9 NO DEMOSTRADO
+
+1. Dos dispositivos reales con la misma cuenta contra el proyecto remoto.
+2. La app nueva arrancando en un simulador o en un iPhone: la migración local 5 sobre la
+   base real, la sincronización al abrir y al volver de segundo plano (`AppState`), y la
+   hoja de compartir con un fichero.
+3. Que `Share.share` de iOS diga «compartido» al guardar en Archivos y «descartado» al
+   cerrar la hoja, que es de lo que depende la copia previa a «Usar los datos de la nube».
+4. Que `public.rls_auto_enable()` del proyecto remoto sea la que publica Supabase en su
+   documentación. La prueba local usa esa definición.
+5. Qué hace Supabase con las sesiones de otros dispositivos cuando tienen que renovarse
+   tras un cambio de contraseña. Comprobado solo que no se cierran al momento.
+6. El ajuste «Secure password change» del proyecto remoto.
+7. Rendimiento con miles de filas en un iPhone. Mil movimientos se suben y se bajan en
+   segundos en un Mac.
+8. Una transacción del servidor que tarde más de 5 minutos en confirmarse.
+
+### 15.10 Pendiente del dueño
+
+`docs/seguridad/pasos-del-propietario-4b2.md`: aplicar la migración remota, instalar en el
+iPhone y hacer la prueba con dos dispositivos. Informe: `docs/informes/b4b2-informe-final.md`.

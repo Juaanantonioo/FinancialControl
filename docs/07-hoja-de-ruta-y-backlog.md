@@ -48,7 +48,8 @@ Los hitos y las tareas conservan su identificador. Cambia el orden en que se abo
 | 3c · Apariencia | Apariencia automática, clara u oscura desde Ajustes | Sin tareas nuevas | Hecho en la rama `b3c-apariencia`. Solo JavaScript. Ver `estado.md`, apartado 12 |
 | 4a · Seguridad local | Auditoría con OWASP MASVS, bloqueo de la app, modo privado, validación de entradas externas y modelo de amenazas | Sin tareas nuevas: prepara H4 | Hecho en la rama `b4a-seguridad-local`, sin probar en un iPhone. Ver apartado 2.5 |
 | 4b-1 · Cuenta y claves | Alta, inicio y cierre de sesión, borrado de cuenta, claves, código de recuperación y esquema remoto con RLS. No sincroniza | H4 en parte; requisitos R-01 a R-30 según `docs/seguridad/modelo-de-amenazas.md`, apartado 6 | Hecho en la rama `b4b1-cuenta-y-claves`, sin probar en un iPhone y sin aplicar al proyecto remoto. Ver apartado 2.6 |
-| 4b-2 · Sincronización cifrada | Registro, inicio de sesión, cifrado de extremo a extremo con código de recuperación, sincronización con Supabase y cifrado de la base local con SQLCipher | H4, más los requisitos R-01 a R-30 de `docs/seguridad/modelo-de-amenazas.md` | Pendiente (D10 y D11) |
+| 4b-2 · Sincronización cifrada | Sincronización fila a fila con cifrado en el dispositivo, entrada en una cuenta, cambio de contraseña y exportación | H4 en parte; R-01, R-03, R-07, R-13 y R-24 | Hecho en la rama `b4b2-sincronizacion`, sin probar con dos dispositivos reales y con una migración remota por aplicar. Ver apartado 2.7 |
+| 4b-3 · Recuperación y base local cifrada | Recuperación con el código (necesita una función en el servidor) y cifrado de la base local con SQLCipher | R-11 y R-20 a R-23 | Pendiente |
 | 4c · Privacidad y cierre de seguridad | Política de privacidad, exportación y borrado visibles, aviso de actualización obligatoria y repetición de la auditoría con la red ya en uso | T-102 y T-103 de H9, y parte de H8 | Pendiente |
 | 5 · Versión web | Exportación a web contra Supabase, alojamiento y pruebas en navegador | Sin tareas todavía: se definen al cerrar el bloque 4 | Pendiente (D8) |
 | 6 · Publicación y suscripción | Calidad, beta, envío a revisión y suscripción | H8, H9 y T-120 a T-127 | Pendiente (D9) |
@@ -128,17 +129,33 @@ El bloque 4 se parte en tres para no mezclar la seguridad del dispositivo con la
 
 ### 2.6 Estado del bloque 4b-1 a 22/11/2026 (rama `b4b1-cuenta-y-claves`)
 
-El bloque 4b se partió en dos. El 4b-1 está hecho; el 4b-2 no ha empezado.
+El bloque 4b se partió primero en dos y después en tres. El 4b-1 y el 4b-2 están hechos
+(apartado 2.7); el 4b-3 no ha empezado.
 
 | | Qué | Estado |
 |---|---|---|
 | 4b-1 | Módulo criptográfico sobre libsodium (`src/cripto/`), diseño por escrito, esquema remoto con RLS y pruebas de aislamiento, y la cuenta en la app (Ajustes › Cuenta) | **Hecho.** Compila para el simulador. La cuenta se ha probado contra una instancia local de Supabase |
 | 4b-1, pendiente del dueño | Aplicar las migraciones al proyecto remoto, crear `.env`, desactivar la confirmación de correo y fijar Argon2id con sus medidas | `docs/seguridad/pasos-del-propietario-4b1.md` |
-| 4b-2 | Sincronización fila a fila, cambio de contraseña, recuperación con el código, exportación y cifrado de la base local con SQLCipher | **Pendiente** |
+| 4b-2 | Sincronización fila a fila, cambio de contraseña y exportación | **Hecho** (apartado 2.7) |
+| 4b-3 | Recuperación con el código y cifrado de la base local con SQLCipher | **Pendiente** |
 | 4c | Privacidad, forzar actualización, segunda auditoría y revisión del riesgo de `react-native-libsodium` | **Pendiente** |
 
-Hoy la cuenta **no sincroniza nada**: crea las claves y las deja preparadas. Los datos
-financieros siguen solo en el dispositivo.
+Al cerrar el 4b-1 la cuenta no sincronizaba nada. Desde el 4b-2 sí (apartado 2.7).
+
+### 2.7 Estado del bloque 4b-2 a 22/11/2026 (rama `b4b2-sincronizacion`)
+
+| Qué | Estado |
+|---|---|
+| Motor de sincronización (`src/sincronizacion/`): cifrado de cada fila con usuario, tabla e id autenticados, subida por lotes, bajada por cursor con solape, repaso completo, filas retenidas | **Hecho**, probado contra una instancia local de Supabase |
+| Migración local 5: cola de pendientes, marcas remotas, filas retenidas y estado | **Hecho.** Solo añade tablas y disparadores |
+| Cuándo se sincroniza, estado en Cuenta y «Sincronizar ahora» | **Hecho** |
+| Entrada en una cuenta: subir, bajar o preguntar; nunca fusionar | **Hecho** |
+| Cambio de contraseña sin ventana de cuenta inaccesible, y actualización de parámetros de derivación | **Hecho**, probado cortando en cada paso |
+| Exportación a JSON y CSV (Ajustes › Exportar mis datos) | **Hecho** |
+| Migración remota que retira EXECUTE de `rls_auto_enable()` | **Escrita y probada en local. La aplica el dueño** |
+| Prueba con dos dispositivos reales | **Pendiente del dueño**: `docs/seguridad/pasos-del-propietario-4b2.md` |
+| Recuperación con el código, cifrado de la base local | 4b-3 |
+| Qué puede hacer un servidor malicioso y no se detecta | Documentado para el 4c: `docs/seguridad/diseno-sincronizacion.md`, apartado 10 |
 
 ## 3. Backlog
 
