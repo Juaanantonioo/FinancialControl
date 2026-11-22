@@ -1834,3 +1834,38 @@ iPhone y hacer la prueba con dos dispositivos. Informe: `docs/informes/b4b2-info
 - `git status` al empezar: limpio salvo el encargo de este bloque, sin seguimiento.
 - El proyecto sigue enlazado al remoto. En este bloque solo se usan órdenes contra la
   instancia local. Ninguna con `--remote`, ni `login`, `link`, `db push` o `config push`.
+
+### 16.2 Parte A · Diagnóstico del simulador (fase 1)
+
+**Hecho observado.** `xcrun simctl install` no terminaba (más de 240 s) en los simuladores
+donde la app ya estaba instalada. Mientras tanto el simulador respondía: arrancaba en 4 a
+10 s y dejaba hacer capturas de la pantalla de inicio.
+
+**Datos del Mac.** 8 GiB de memoria y 8 núcleos. Al empezar el diagnóstico: intercambio a
+6,0 de 7,2 GiB, disco de datos al 97 % (13 GiB libres) y un aviso de memoria del sistema
+(`JetsamEvent`) a las 18:30, con la máquina virtual de Docker como mayor proceso (4,1 GiB).
+
+| Hipótesis | Comprobación | Resultado |
+|---|---|---|
+| 1. Falta de memoria: Docker con los doce contenedores de Supabase, Metro, la compilación y el simulador no caben en 8 GiB | Supabase local reducido a cuatro contenedores (base, auth, REST y pasarela: de unos 2,4 GiB a unos 220 MiB). Nueva instalación con el 54 % de memoria libre | **No basta:** la instalación siguió sin terminar |
+| 2. El instalador del simulador está ocupado | Muestreo de `installd` durante el cuelgue | Descartada: 0 % de CPU, parado esperando un mensaje |
+| 3. Se atasca la **sustitución** de una app ya instalada | Registro del simulador: la instalación entra como «Install (Parallel Placeholder)» y no llega a «Success»; SpringBoard anota «Error resuming app replacement» (`IXErrorDomain` 34). En un simulador recién creado: desinstalar (3 s) e instalar de nuevo | **Confirmada una vez:** tras desinstalar, la instalación termina en **4 s**, con «Success (End) : Install» en el registro |
+
+**Causa.** La más probable, vista una sola vez: en este Xcode (27.2, iOS 27.2) instalar
+encima de una instalación existente se queda esperando; desinstalar antes lo evita. La
+falta de memoria agrava todo pero no es la causa del cuelgue.
+
+**Por qué se para aquí.** Mientras arrancaba el segundo simulador, con Docker en marcha,
+el Mac se reinició. No sé si lo provocó esta carga; con 8 GiB es verosímil. El dueño indicó
+seguir sin simuladores. Los dos simuladores creados para la prueba (`FC-A`, `FC-B`) están
+borrados; no se ha tocado ningún otro.
+
+**Fase 2 (prueba con dos simuladores): NO HECHA.** Sigue sin verse en ningún dispositivo:
+la migración local 5 sobre una base real, la sincronización entre dos dispositivos, la
+pregunta de entrada, el cambio de contraseña, la exportación y lo que devuelve la hoja de
+compartir. No hay capturas en `docs/capturas/b4b2/`.
+
+**Para quien lo retome**, en un Mac con más memoria o con Docker parado:
+`xcrun simctl uninstall <dispositivo> es.juanantonio.financialcontrol` antes de cada
+`install`, un solo simulador a la vez, y Supabase local con
+`npx supabase start -x studio,logflare,vector,realtime,storage-api,imgproxy,edge-runtime,postgres-meta,mailpit,supavisor`.
